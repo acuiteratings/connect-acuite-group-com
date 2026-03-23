@@ -84,3 +84,19 @@ class ErrorEvent(models.Model):
 
     def __str__(self):
         return f"{self.exception_type} at {self.occurred_at:%Y-%m-%d %H:%M:%S}"
+
+
+class BuildState(models.Model):
+    singleton_key = models.CharField(max_length=32, unique=True, default="primary")
+    counter = models.PositiveIntegerField(default=1)
+    display_number = models.CharField(max_length=32, default="1.0000001")
+    commit_sha = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Build state"
+        verbose_name_plural = "Build state"
+
+    def __str__(self):
+        return self.display_number

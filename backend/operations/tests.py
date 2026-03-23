@@ -1,11 +1,15 @@
 import json
+import os
+from unittest.mock import patch
 
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from accounts.models import User
 from feed.models import Comment, Post
 
-from .models import AnalyticsEvent, AuditLog, ErrorEvent
+from .builds import get_current_build_number
+from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent
 
 
 class OperationsApiTests(TestCase):
@@ -103,3 +107,26 @@ class ErrorMonitoringMiddlewareTests(TestCase):
         error_event = ErrorEvent.objects.get()
         self.assertEqual(error_event.exception_type, "RuntimeError")
         self.assertEqual(error_event.path, "/boom/")
+
+
+class BuildNumberTests(TestCase):
+    def test_login_page_uses_registered_build_number(self):
+        BuildState.objects.create(counter=7, display_number="1.0000007")
+
+        response = self.client.get("/login.html")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Built with care by Sankar Chakraborti | BUILD 1.0000007")
+
+    @override_settings(APP_BUILD_NUMBER="1.0000006")
+    def test_build_number_falls_back_to_settings_when_state_missing(self):
+        self.assertEqual(get_current_build_number(), "1.0000006")
+
+    @patch.dict(os.environ, {"APP_BUILD_COUNTER_SEED": "6", "RENDER_GIT_COMMIT": "abc123"})
+    def test_register_build_command_increments_database_counter(self):
+        call_command("register_build_deploy")
+
+        state = BuildState.objects.get(singleton_key="primary")
+        self.assertEqual(state.counter, 7)
+        self.assertEqual(state.display_number, "1.0000007")
+        self.assertEqual(state.commit_sha, "abc123")

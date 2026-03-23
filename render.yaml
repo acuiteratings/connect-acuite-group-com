@@ -10,7 +10,7 @@ services:
     runtime: python
     plan: starter
     buildCommand: ./build.sh
-    preDeployCommand: cd backend && python manage.py migrate
+    preDeployCommand: cd backend && python manage.py migrate && python manage.py register_build_deploy
     startCommand: cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker
     healthCheckPath: /api/ops/health/
     envVars:
@@ -22,8 +22,8 @@ services:
         value: "false"
       - key: APP_BUILD_NUMBER
         value: "1.0000001"
-      - key: APP_BUILD_BASE_COMMIT_COUNT
-        value: "3"
+      - key: APP_BUILD_COUNTER_SEED
+        value: "6"
       - key: APP_BUILD_CREDIT
         value: Built with care by Sankar Chakraborti
       - key: DATABASE_URL
