@@ -1,26 +1,63 @@
-const DEMO_PASSWORD = "acuite@123";
+const authFlow = {
+  challengeToken: "",
+  email: "",
+  authPolicy: null,
+};
 
-let pendingCode = "";
-let validatedEmail = "";
+document.addEventListener("DOMContentLoaded", () => {
+  void initLoginPage();
+});
 
-document.addEventListener("DOMContentLoaded", initLoginPage);
-
-function initLoginPage() {
+async function initLoginPage() {
   const auth = window.AcuiteConnectAuth;
-  if (auth) {
-    auth.redirectIfAuthenticated({ homePath: "/" });
+  if (!auth) {
+    return;
   }
 
-  const accessForm = document.getElementById("connect-access-form");
-  const passwordForm = document.getElementById("connect-password-form");
-  const passwordToggle = document.getElementById("password-toggle");
+  const session = await auth.fetchCurrentSession({ forceRefresh: true });
+  if (session.authenticated) {
+    window.location.href = "/";
+    return;
+  }
 
-  accessForm.addEventListener("submit", handleAccessForm);
-  passwordForm.addEventListener("submit", handlePasswordForm);
-  passwordToggle.addEventListener("click", togglePasswordVisibility);
+  authFlow.authPolicy = session.auth_policy || null;
+  updatePolicyCopy();
+  disablePasswordStep();
+  hidePasswordResetStep();
+
+  document.getElementById("connect-access-form").addEventListener("submit", (event) => {
+    void handleAccessForm(event);
+  });
+  document.getElementById("connect-password-form").addEventListener("submit", (event) => {
+    void handlePasswordForm(event);
+  });
+  document
+    .getElementById("connect-password-change-form")
+    .addEventListener("submit", (event) => {
+      void handlePasswordChangeForm(event);
+    });
+
+  bindToggle("password-toggle", "login-password");
+  bindToggle("new-password-toggle", "new-password");
+  bindToggle("confirm-password-toggle", "confirm-password");
 }
 
-function handleAccessForm(event) {
+function bindToggle(buttonId, inputId) {
+  const button = document.getElementById(buttonId);
+  const input = document.getElementById(inputId);
+  if (!button || !input) {
+    return;
+  }
+
+  button.addEventListener("click", () => {
+    const showingPassword = input.type === "text";
+    input.type = showingPassword ? "password" : "text";
+    button.textContent = showingPassword ? "Show" : "Hide";
+    button.setAttribute("aria-pressed", String(!showingPassword));
+  });
+}
+
+async function handleAccessForm(event) {
   event.preventDefault();
 
   const submitter = event.submitter;
@@ -31,61 +68,130 @@ function handleAccessForm(event) {
 
   clearErrors();
 
-  if (action === "send_code") {
-    if (!window.AcuiteConnectAuth.isCompanyEmail(email)) {
-      showFieldError("email-error", "Use your Acuité company email ending with @acuite.in.");
-      return;
-    }
+  if (!email) {
+    showFieldError("email-error", "Enter your employee email ID.");
+    return;
+  }
 
-    pendingCode = String(Math.floor(100000 + Math.random() * 900000));
-    validatedEmail = "";
-    codeInput.disabled = false;
-    document.getElementById("validate-code-button").disabled = false;
-    disablePasswordStep();
-    showStatus(`Code generated for ${email}. Preview code: ${pendingCode}`);
+  if (action === "send_code") {
+    await withButtonBusy(submitter, async () => {
+      const response = await window.AcuiteConnectAuth.apiRequest(
+        "/api/accounts/auth/request-otp/",
+        {
+          method: "POST",
+          body: { email },
+        }
+      );
+
+      authFlow.challengeToken = response.challenge_token;
+      authFlow.email = email;
+      codeInput.disabled = false;
+      codeInput.value = "";
+      document.getElementById("validate-code-button").disabled = false;
+      disablePasswordStep();
+      hidePasswordResetStep();
+      showStatus(response.detail, "success");
+      updateStep(
+        "Step 2 of 3",
+        "Enter the OTP from your email to unlock the password step."
+      );
+      showOtpPreview(response.preview_code || "");
+      codeInput.focus();
+    }, "email-error");
     return;
   }
 
   if (action === "validate_code") {
-    if (!pendingCode) {
-      showFieldError("code-error", "Send a code first.");
+    if (!authFlow.challengeToken) {
+      showFieldError("code-error", "Request an OTP first.");
       return;
     }
 
-    const enteredCode = codeInput.value.trim();
-    if (enteredCode !== pendingCode) {
-      showFieldError("code-error", "That code does not match the current preview code.");
-      return;
-    }
+    await withButtonBusy(submitter, async () => {
+      const response = await window.AcuiteConnectAuth.apiRequest(
+        "/api/accounts/auth/verify-otp/",
+        {
+          method: "POST",
+          body: {
+            challenge_token: authFlow.challengeToken,
+            otp: codeInput.value.trim(),
+          },
+        }
+      );
 
-    validatedEmail = email;
-    enablePasswordStep();
-    showStatus(`Code validated for ${validatedEmail}. Enter your password to continue.`);
+      showStatus(response.detail, "success");
+      enablePasswordStep();
+      updateStep(
+        "Step 3 of 3",
+        "OTP verified. Enter your password to continue."
+      );
+      document.getElementById("login-password").focus();
+    }, "code-error");
   }
 }
 
-function handlePasswordForm(event) {
+async function handlePasswordForm(event) {
   event.preventDefault();
-
-  const passwordInput = document.getElementById("login-password");
   clearErrors();
 
-  if (!validatedEmail) {
-    showFieldError("password-error", "Validate your code before logging in.");
+  if (!authFlow.challengeToken) {
+    showFieldError("password-error", "Request and validate an OTP before logging in.");
     return;
   }
 
-  if (passwordInput.value !== DEMO_PASSWORD) {
-    showFieldError("password-error", "Incorrect password for this preview environment.");
-    return;
-  }
+  const password = document.getElementById("login-password").value;
+  const submitButton = document.getElementById("login-button");
 
-  const user = window.AcuiteConnectAuth.buildUser(validatedEmail);
-  window.AcuiteConnectAuth.writeSession(user);
-  showStatus(`Login successful for ${validatedEmail}. Redirecting...`);
-  window.setTimeout(() => {
-    window.location.href = "/";
-  }, 350);
+  await withButtonBusy(submitButton, async () => {
+    const response = await window.AcuiteConnectAuth.apiRequest("/api/accounts/auth/login/", {
+      method: "POST",
+      body: {
+        challenge_token: authFlow.challengeToken,
+        password,
+      },
+    });
+
+    if (response.requires_password_change) {
+      showPasswordResetStep(response.reason);
+      showStatus(response.detail, "warning");
+      updateStep(
+        "Password update required",
+        "Set a new password before Acuité Connect can sign you in."
+      );
+      return;
+    }
+
+    showStatus("Login successful. Redirecting to Acuité Connect...", "success");
+    window.setTimeout(() => {
+      window.location.href = "/";
+    }, 350);
+  }, "password-error");
+}
+
+async function handlePasswordChangeForm(event) {
+  event.preventDefault();
+  clearErrors();
+
+  const submitButton = document.getElementById("change-password-button");
+  const newPassword = document.getElementById("new-password").value;
+  const confirmPassword = document.getElementById("confirm-password").value;
+
+  await withButtonBusy(submitButton, async () => {
+    await window.AcuiteConnectAuth.apiRequest("/api/accounts/auth/change-password/", {
+      method: "POST",
+      body: {
+        challenge_token: authFlow.challengeToken,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      },
+    });
+
+    showStatus("Password updated. Redirecting to Acuité Connect...", "success");
+    updateStep("Access granted", "Your password has been updated and your session is now active.");
+    window.setTimeout(() => {
+      window.location.href = "/";
+    }, 450);
+  }, "new-password-error", "confirm-password-error");
 }
 
 function enablePasswordStep() {
@@ -107,13 +213,31 @@ function disablePasswordStep() {
   loginButton.disabled = true;
 }
 
-function togglePasswordVisibility() {
-  const passwordInput = document.getElementById("login-password");
-  const passwordToggle = document.getElementById("password-toggle");
-  const showingPassword = passwordInput.type === "text";
-  passwordInput.type = showingPassword ? "password" : "text";
-  passwordToggle.textContent = showingPassword ? "Show" : "Hide";
-  passwordToggle.setAttribute("aria-pressed", String(!showingPassword));
+function showPasswordResetStep(reason) {
+  const panel = document.getElementById("connect-password-change-form");
+  const copy = document.getElementById("password-reset-copy");
+  panel.hidden = false;
+  copy.textContent =
+    reason === "expired"
+      ? "Your password has crossed the 90-day rotation window. Set a new one to continue."
+      : "This is your first login or an administrator has reset your password. Choose a new password to continue.";
+  document.getElementById("new-password").focus();
+}
+
+function hidePasswordResetStep() {
+  const panel = document.getElementById("connect-password-change-form");
+  panel.hidden = true;
+  document.getElementById("new-password").value = "";
+  document.getElementById("confirm-password").value = "";
+  ["new-password", "confirm-password"].forEach((inputId) => {
+    const input = document.getElementById(inputId);
+    input.type = "password";
+  });
+  ["new-password-toggle", "confirm-password-toggle"].forEach((buttonId) => {
+    const button = document.getElementById(buttonId);
+    button.textContent = "Show";
+    button.setAttribute("aria-pressed", "false");
+  });
 }
 
 function showFieldError(id, message) {
@@ -123,15 +247,88 @@ function showFieldError(id, message) {
 }
 
 function clearErrors() {
-  ["email-error", "code-error", "password-error"].forEach((id) => {
+  [
+    "email-error",
+    "code-error",
+    "password-error",
+    "new-password-error",
+    "confirm-password-error",
+  ].forEach((id) => {
     const node = document.getElementById(id);
     node.hidden = true;
     node.textContent = "";
   });
 }
 
-function showStatus(message) {
+function showStatus(message, tone = "info") {
   const node = document.getElementById("auth-status");
   node.hidden = false;
+  node.dataset.tone = tone;
   node.textContent = message;
+}
+
+function updateStep(label, copy) {
+  document.getElementById("auth-step-label").textContent = label;
+  document.getElementById("auth-step-copy").textContent = copy;
+}
+
+function showOtpPreview(code) {
+  const node = document.getElementById("otp-preview-line");
+  if (!code) {
+    node.hidden = true;
+    node.textContent = "";
+    return;
+  }
+
+  node.hidden = false;
+  node.innerHTML = `Preview OTP for this environment: <code>${escapeHtml(code)}</code>`;
+}
+
+function updatePolicyCopy() {
+  const maxAgeDays =
+    (authFlow.authPolicy && authFlow.authPolicy.password_max_age_days) || 90;
+  document.getElementById("password-policy-days").textContent = String(maxAgeDays);
+  document.getElementById(
+    "password-policy-copy"
+  ).textContent = `Passwords must be changed on first login and every ${maxAgeDays} days after that.`;
+}
+
+async function withButtonBusy(button, action, ...errorIds) {
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    await action();
+  } catch (error) {
+    const targetId = selectErrorTarget(error, errorIds);
+    showFieldError(targetId, error.message || "Something went wrong. Please try again.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+function selectErrorTarget(error, errorIds) {
+  if (error && error.code === "password_confirmation_mismatch") {
+    return "confirm-password-error";
+  }
+  if (
+    error &&
+    error.code === "password_invalid" &&
+    Array.isArray(error.payload && error.payload.validation_messages)
+  ) {
+    return "new-password-error";
+  }
+  return errorIds[0] || "password-error";
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }

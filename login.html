@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>Login | Acuité Connect</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
@@ -14,13 +15,13 @@
         <img src="{% static 'img/acuite-logo.png' %}" alt="Acuité" class="connect-auth-logo">
         <div class="connect-auth-brand-copy">
           <p class="widget-kicker">Acuité Connect</p>
-          <h1>Employee sign-in preview</h1>
-          <p>A familiar Karma-style login sequence while real employee authentication is being wired in.</p>
+          <h1>Employee sign-in</h1>
+          <p>Acuité Connect now uses employee accounts, email OTP, and mandatory password rotation for internal access.</p>
         </div>
       </div>
       <div class="connect-auth-badge">
-        <strong>Current preview</strong>
-        <span>Demo authentication is still active</span>
+        <strong>Employee-only access</strong>
+        <span>Manual account provisioning with OTP and password controls</span>
       </div>
     </header>
 
@@ -30,7 +31,7 @@
           <div class="connect-auth-card-head">
             <p class="widget-kicker">Employee Access</p>
             <h2>Login</h2>
-            <p>Use your company email, validate the code, then sign in to enter Connect.</p>
+            <p>Use your employee email, validate the OTP sent to that email, then enter your password. First-time and overdue passwords must be changed before entry.</p>
           </div>
 
           <div class="auth-sequence">
@@ -47,16 +48,21 @@
               </div>
 
               <div class="form-field">
-                <label for="login-code">CODE</label>
+                <label for="login-code">OTP</label>
                 <div class="auth-inline-group">
                   <div class="auth-inline-field">
-                    <input id="login-code" name="verification_code" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code" autocomplete="one-time-code" disabled required>
+                    <input id="login-code" name="verification_code" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" autocomplete="one-time-code" disabled required>
                   </div>
                   <button type="submit" name="action" value="validate_code" class="button connect-button-secondary auth-inline-button" id="validate-code-button" disabled>VALIDATE</button>
                 </div>
                 <div class="field-error" id="code-error" hidden></div>
               </div>
             </form>
+
+            <div class="auth-step-line">
+              <strong id="auth-step-label">Step 1 of 3</strong>
+              <span id="auth-step-copy">Request an OTP on your employee email to begin sign-in.</span>
+            </div>
 
             <div class="auth-status" id="auth-status" hidden></div>
 
@@ -77,35 +83,69 @@
 
               <button type="submit" class="button connect-button-primary button-block" id="login-button" disabled>LOG IN</button>
             </form>
+
+            <form id="connect-password-change-form" class="stack-form auth-password-form password-reset-panel" autocomplete="off" novalidate hidden>
+              <div class="password-reset-head">
+                <p class="widget-kicker">Password Update</p>
+                <h3>Choose a new password to continue</h3>
+                <p id="password-reset-copy">For security, this account must set a new password before entering Acuité Connect.</p>
+              </div>
+
+              <div class="form-field">
+                <label for="new-password">New Password</label>
+                <div class="password-input-wrap">
+                  <input id="new-password" name="new_password" type="password" placeholder="Create a new password" autocomplete="new-password" required>
+                  <button type="button" class="password-toggle" id="new-password-toggle" aria-label="Show new password" aria-pressed="false">Show</button>
+                </div>
+                <div class="field-error" id="new-password-error" hidden></div>
+              </div>
+
+              <div class="form-field">
+                <label for="confirm-password">Confirm Password</label>
+                <div class="password-input-wrap">
+                  <input id="confirm-password" name="confirm_password" type="password" placeholder="Re-enter the new password" autocomplete="new-password" required>
+                  <button type="button" class="password-toggle" id="confirm-password-toggle" aria-label="Show confirm password" aria-pressed="false">Show</button>
+                </div>
+                <div class="field-error" id="confirm-password-error" hidden></div>
+              </div>
+
+              <div class="password-policy-box">
+                <strong>Password policy</strong>
+                <span id="password-policy-copy">Passwords must be changed on first login and every 90 days after that.</span>
+              </div>
+
+              <button type="submit" class="button connect-button-primary button-block" id="change-password-button">UPDATE PASSWORD &amp; LOG IN</button>
+            </form>
           </div>
         </div>
 
         <div class="auth-support">
           <div class="auth-support-block">
-            <p class="auth-support-line" id="demo-credentials">Preview mode: use any <code>@acuite.in</code> email. After clicking Send Code, the one-time code will appear below. Password: <code>acuite@123</code>.</p>
+            <p class="auth-support-line">Accounts are created and deleted manually by Acuité administrators. If this is your first time here and your account is not ready, please contact the internal admin team.</p>
+            <p class="auth-support-line" id="otp-preview-line" hidden></p>
           </div>
-          <p class="auth-assistance">This sign-in flow still uses demo authentication for preview access. The backend is now in place for real OTP or SSO next.</p>
+          <p class="auth-assistance">The login sequence is fixed in this order: employee email, email OTP, then password. Password access is blocked until OTP validation succeeds.</p>
         </div>
       </section>
 
       <aside class="connect-auth-side">
         <div class="connect-auth-info-card">
-          <p class="widget-kicker">What changed</p>
-          <h3>Connect now starts behind a real entry page</h3>
+          <p class="widget-kicker">Access Policy</p>
+          <h3>How login now works</h3>
           <ul class="connect-auth-list">
-            <li>Preserves the Acuité logo and the existing internal-product feel.</li>
-            <li>Uses the same staged pattern as Karma: email, code, password.</li>
-            <li>Keeps a local session so the app behaves like a real signed-in workspace.</li>
+            <li>Only provisioned employee email IDs can request an OTP.</li>
+            <li>Email OTP must be validated before the password step is unlocked.</li>
+            <li>Passwords are forced to change on first login and every <span id="password-policy-days">90</span> days.</li>
           </ul>
         </div>
 
         <div class="connect-auth-info-card">
-          <p class="widget-kicker">Ready next</p>
-          <h3>Best next backend hooks</h3>
+          <p class="widget-kicker">Provisioning</p>
+          <h3>How accounts are managed</h3>
           <ul class="connect-auth-list">
-            <li>Company roster validation for allowed users.</li>
-            <li>Email OTP delivery and expiry handling.</li>
-            <li>Role-aware home feed and tool permissions.</li>
+            <li>Company administrators can create accounts manually for new joins.</li>
+            <li>Employee roster uploads can be imported into the backend in bulk.</li>
+            <li>Exited employees can be deactivated or deleted from the admin side.</li>
           </ul>
         </div>
       </aside>

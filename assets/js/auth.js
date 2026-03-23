@@ -1,87 +1,150 @@
 (function attachAuthHelpers() {
-  const AUTH_STORAGE_KEY = "acuite-connect-auth-v1";
   const COMPANY_DOMAIN = "@acuite.in";
+  const ME_ENDPOINT = "/api/accounts/me/";
+  let cachedSession = null;
+  let sessionRequest = null;
 
-  function readSession() {
+  function readCookie(name) {
+    const prefix = `${name}=`;
+    const cookies = document.cookie ? document.cookie.split(";") : [];
+    for (const cookie of cookies) {
+      const trimmed = cookie.trim();
+      if (trimmed.startsWith(prefix)) {
+        return decodeURIComponent(trimmed.slice(prefix.length));
+      }
+    }
+    return "";
+  }
+
+  function getCsrfToken() {
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    if (metaToken && metaToken.content) {
+      return metaToken.content;
+    }
+    return readCookie("csrftoken");
+  }
+
+  async function parseJson(response) {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
     try {
-      const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      return JSON.parse(text);
     } catch (error) {
-      return null;
+      return { detail: text };
     }
   }
 
-  function writeSession(session) {
-    try {
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-    } catch (error) {
-      return;
+  async function apiRequest(path, options = {}) {
+    const requestOptions = { ...options };
+    const method = (requestOptions.method || "GET").toUpperCase();
+    const headers = new Headers(requestOptions.headers || {});
+    const isJsonBody =
+      requestOptions.body &&
+      typeof requestOptions.body === "object" &&
+      !(requestOptions.body instanceof FormData);
+
+    if (isJsonBody) {
+      headers.set("Content-Type", "application/json");
+      requestOptions.body = JSON.stringify(requestOptions.body);
     }
+
+    if (!["GET", "HEAD", "OPTIONS", "TRACE"].includes(method)) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers.set("X-CSRFToken", csrfToken);
+      }
+    }
+
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      ...requestOptions,
+      headers,
+    });
+    const payload = await parseJson(response);
+
+    if (!response.ok) {
+      const error = new Error(payload.detail || "Request failed.");
+      error.status = response.status;
+      error.code = payload.code || "request_failed";
+      error.payload = payload;
+      throw error;
+    }
+
+    return payload;
   }
 
   function clearSession() {
-    try {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    } catch (error) {
-      return;
-    }
+    cachedSession = null;
+    sessionRequest = null;
   }
 
-  function buildUser(email) {
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-    const localPart = normalizedEmail.split("@")[0] || "employee";
-    const segments = localPart.split(/[._-]+/).filter(Boolean);
-    const name = segments.length
-      ? segments.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
-      : "Acuité Employee";
-    const initials = segments.length >= 2
-      ? `${segments[0][0]}${segments[1][0]}`.toUpperCase()
-      : name.slice(0, 2).toUpperCase();
+  async function fetchCurrentSession({ forceRefresh = false } = {}) {
+    if (!forceRefresh && cachedSession) {
+      return cachedSession;
+    }
+    if (!forceRefresh && sessionRequest) {
+      return sessionRequest;
+    }
 
-    return {
-      email: normalizedEmail,
-      name,
-      initials,
-      role: "Employee - Acuité Connect",
-      city: "Mumbai",
-      signedInAt: new Date().toISOString(),
-    };
+    sessionRequest = apiRequest(ME_ENDPOINT)
+      .then((payload) => {
+        cachedSession = payload;
+        return payload;
+      })
+      .finally(() => {
+        sessionRequest = null;
+      });
+
+    return sessionRequest;
   }
 
   function isCompanyEmail(email) {
     return String(email || "").trim().toLowerCase().endsWith(COMPANY_DOMAIN);
   }
 
-  function requireAuth(options) {
-    const loginPath = (options && options.loginPath) || "/login.html";
-    const session = readSession();
-    if (session && session.email) {
-      return session;
+  async function requireAuth(options = {}) {
+    const loginPath = options.loginPath || "/login.html";
+    const session = await fetchCurrentSession({ forceRefresh: true });
+    if (session && session.authenticated && session.user) {
+      return session.user;
     }
     window.location.href = loginPath;
     return null;
   }
 
-  function redirectIfAuthenticated(options) {
-    const homePath = (options && options.homePath) || "/";
-    const session = readSession();
-    if (session && session.email) {
+  async function redirectIfAuthenticated(options = {}) {
+    const homePath = options.homePath || "/";
+    const session = await fetchCurrentSession({ forceRefresh: true });
+    if (session && session.authenticated && session.user) {
       window.location.href = homePath;
-      return session;
+      return session.user;
     }
     return null;
   }
 
+  async function logout() {
+    try {
+      await apiRequest("/api/accounts/auth/logout/", { method: "POST" });
+    } finally {
+      clearSession();
+    }
+  }
+
   window.AcuiteConnectAuth = {
-    AUTH_STORAGE_KEY,
     COMPANY_DOMAIN,
-    readSession,
-    writeSession,
+    apiRequest,
     clearSession,
-    buildUser,
+    fetchCurrentSession,
+    getAuthenticatedUser() {
+      return cachedSession && cachedSession.authenticated ? cachedSession.user : null;
+    },
+    getCsrfToken,
     isCompanyEmail,
-    requireAuth,
+    logout,
     redirectIfAuthenticated,
-    getAuthenticatedUser: readSession,
+    requireAuth,
   };
 })();

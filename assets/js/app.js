@@ -802,11 +802,13 @@ let elements = {};
 let latestSearchResults = [];
 let toastTimeoutId = null;
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  void init();
+});
 
-function init() {
+async function init() {
   const authenticatedUser = window.AcuiteConnectAuth && window.AcuiteConnectAuth.requireAuth
-    ? window.AcuiteConnectAuth.requireAuth({ loginPath: "/login.html" })
+    ? await window.AcuiteConnectAuth.requireAuth({ loginPath: "/login.html" })
     : null;
   if (window.AcuiteConnectAuth && !authenticatedUser) {
     return;
@@ -841,7 +843,9 @@ function init() {
 }
 
 function bindEvents() {
-  document.addEventListener("click", handleDocumentClick);
+  document.addEventListener("click", (event) => {
+    void handleDocumentClick(event);
+  });
   document.addEventListener("submit", handleSubmit);
 
   elements.searchInput.addEventListener("input", handleSearchInput);
@@ -859,7 +863,7 @@ function bindEvents() {
   });
 }
 
-function handleDocumentClick(event) {
+async function handleDocumentClick(event) {
   const searchResult = event.target.closest("[data-search-result]");
   if (searchResult) {
     const index = Number(searchResult.dataset.searchResult);
@@ -886,8 +890,8 @@ function handleDocumentClick(event) {
     }
 
     if (actionName === "logout") {
-      if (window.AcuiteConnectAuth && window.AcuiteConnectAuth.clearSession) {
-        window.AcuiteConnectAuth.clearSession();
+      if (window.AcuiteConnectAuth && window.AcuiteConnectAuth.logout) {
+        await window.AcuiteConnectAuth.logout();
       }
       window.location.href = "/login.html";
       return;

@@ -48,3 +48,25 @@ services:
         value: production
       - key: SENTRY_TRACES_SAMPLE_RATE
         value: "0.1"
+      - key: AUTH_PASSWORD_MAX_AGE_DAYS
+        value: "90"
+      - key: AUTH_OTP_TTL_MINUTES
+        value: "10"
+      - key: AUTH_OTP_CODE_LENGTH
+        value: "6"
+      - key: AUTH_OTP_RESEND_COOLDOWN_SECONDS
+        value: "60"
+      - key: AUTH_DEBUG_OTP_PREVIEW
+        value: "false"
+      - key: DEFAULT_FROM_EMAIL
+        value: connect@acuite-group.com
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "true"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false

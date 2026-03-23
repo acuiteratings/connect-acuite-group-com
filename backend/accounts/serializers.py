@@ -13,6 +13,11 @@ def serialize_user(user):
         "access_level": user.access_level,
         "is_staff": user.is_staff,
         "is_directory_visible": user.is_directory_visible,
+        "must_change_password": user.must_change_password,
+        "password_change_required": user.password_change_required,
+        "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
+        "password_due_at": user.password_due_at.isoformat() if user.password_due_at else None,
+        "password_days_until_expiry": user.password_days_until_expiry,
         "last_seen_at": user.last_seen_at.isoformat() if user.last_seen_at else None,
         "date_joined": user.date_joined.isoformat() if user.date_joined else None,
     }

@@ -2311,6 +2311,38 @@ select {
   font-size: 13px;
 }
 
+.auth-status[data-tone="warning"] {
+  background: rgba(255, 199, 44, 0.14);
+  border-color: rgba(247, 148, 29, 0.2);
+  color: #915100;
+}
+
+.auth-status[data-tone="info"] {
+  background: rgba(46, 173, 43, 0.08);
+  border-color: rgba(46, 173, 43, 0.16);
+  color: #256b24;
+}
+
+.auth-step-line {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.auth-step-line strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.auth-step-line span {
+  font-size: 13px;
+  color: var(--text2);
+}
+
 .password-input-wrap input {
   padding-right: 86px;
 }
@@ -2338,6 +2370,10 @@ select {
 .stack-form {
   display: grid;
   gap: 18px;
+}
+
+.button-block {
+  width: 100%;
 }
 
 .field-error {
@@ -2381,6 +2417,50 @@ select {
   border-radius: 10px;
   padding: 2px 6px;
   font-size: 12px;
+}
+
+.password-reset-panel {
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(247, 148, 29, 0.22);
+  background: linear-gradient(180deg, rgba(255, 199, 44, 0.08), rgba(255, 255, 255, 0.88));
+}
+
+.password-reset-head {
+  display: grid;
+  gap: 6px;
+}
+
+.password-reset-head h3 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+}
+
+.password-reset-head p {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.password-policy-box {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(247, 148, 29, 0.18);
+}
+
+.password-policy-box strong {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.password-policy-box span {
+  color: var(--text2);
+  font-size: 13px;
 }
 
 .connect-auth-side {
