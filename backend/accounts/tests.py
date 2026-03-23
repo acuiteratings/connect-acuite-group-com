@@ -3,8 +3,14 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.utils import timezone
+
+from directory.models import DirectoryProfile
+from feed.models import Comment, Post
+from operations.models import AnalyticsEvent, AuditLog, ErrorEvent
 
 from .models import LoginChallenge, TrustedAppLoginGrant, User
 
@@ -249,3 +255,59 @@ class AuthApiTests(TestCase):
         match = re.search(r"(\d{6})", body)
         self.assertIsNotNone(match)
         return match.group(1)
+
+
+class RemoveEmployeeAccountCommandTests(TestCase):
+    def test_remove_employee_account_deletes_related_employee_data(self):
+        user = User.objects.create_user(
+            email="notapplicable@notvalid.in",
+            password="314159",
+            display_name="Placeholder User",
+        )
+        DirectoryProfile.objects.create(user=user, company_name="Acuite", office_location="Mumbai")
+        post = Post.objects.create(
+            author=user,
+            title="Placeholder post",
+            body="Body",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        Comment.objects.create(author=user, post=post, body="Placeholder comment")
+        LoginChallenge.objects.create(
+            user=user,
+            email=user.email,
+            code_hash="hash",
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        TrustedAppLoginGrant.objects.create(
+            user=user,
+            client_id="karma",
+            redirect_uri="https://karma.example.com/accounts/connect/callback/",
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        AnalyticsEvent.objects.create(actor=user, category="auth", event_name="login")
+        AuditLog.objects.create(actor=user, action="test", summary="test summary")
+        ErrorEvent.objects.create(actor=user, exception_type="ValueError", message="boom")
+
+        call_command("remove_employee_account", user.email)
+
+        self.assertFalse(User.objects.filter(email=user.email).exists())
+        self.assertFalse(DirectoryProfile.objects.filter(user_id=user.id).exists())
+        self.assertEqual(Post.objects.count(), 0)
+        self.assertEqual(Comment.objects.count(), 0)
+        self.assertEqual(LoginChallenge.objects.count(), 0)
+        self.assertEqual(TrustedAppLoginGrant.objects.count(), 0)
+        self.assertEqual(AnalyticsEvent.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(ErrorEvent.objects.count(), 0)
+
+    def test_remove_employee_account_refuses_staff_user(self):
+        staff_user = User.objects.create_user(
+            email="admin@acuite.in",
+            password="314159",
+            is_staff=True,
+        )
+
+        with self.assertRaisesMessage(CommandError, "Refusing to delete privileged account"):
+            call_command("remove_employee_account", staff_user.email)
+
+        self.assertTrue(User.objects.filter(email=staff_user.email).exists())
