@@ -22,6 +22,8 @@ services:
         value: "false"
       - key: APP_BUILD_NUMBER
         value: "1.0000001"
+      - key: APP_BUILD_BASE_COMMIT_COUNT
+        value: "3"
       - key: APP_BUILD_CREDIT
         value: Created with care by Sankar Chakraborti
       - key: DATABASE_URL

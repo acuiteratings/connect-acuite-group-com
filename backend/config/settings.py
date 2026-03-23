@@ -17,6 +17,13 @@ PROJECT_ROOT = BASE_DIR.parent
 
 load_dotenv(PROJECT_ROOT / ".env")
 
+def _load_build_number():
+    build_number_file = PROJECT_ROOT / ".build-number"
+    if build_number_file.exists():
+        return build_number_file.read_text(encoding="utf-8").strip()
+    return ""
+
+
 render_external_host = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 database_url = os.getenv("DATABASE_URL", "").strip()
 RUNNING_LOCALLY = not (render_external_host or database_url or os.getenv("RENDER", "").strip())
@@ -55,7 +62,11 @@ SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
 SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "development").strip() or "development"
 SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0"))
 SENTRY_ENABLED = bool(SENTRY_DSN and sentry_sdk)
-APP_BUILD_NUMBER = os.getenv("APP_BUILD_NUMBER", "1.0000001").strip() or "1.0000001"
+APP_BUILD_NUMBER = (
+    _load_build_number()
+    or os.getenv("APP_BUILD_NUMBER", "1.0000001").strip()
+    or "1.0000001"
+)
 APP_BUILD_CREDIT = os.getenv(
     "APP_BUILD_CREDIT",
     "Created with care by Sankar Chakraborti",
