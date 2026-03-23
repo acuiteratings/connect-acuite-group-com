@@ -15,6 +15,7 @@ class UserAdmin(DjangoUserAdmin):
     list_display = (
         "email",
         "full_name",
+        "employee_code",
         "department",
         "title",
         "employment_status",
@@ -23,7 +24,7 @@ class UserAdmin(DjangoUserAdmin):
         "must_change_password",
         "password_due_display",
     )
-    list_filter = ("employment_status", "access_level", "department", "is_staff")
+    list_filter = ("employment_status", "access_level", "department", "location", "is_staff")
     search_fields = ("email", "first_name", "last_name", "display_name", "employee_code")
     readonly_fields = (
         "date_joined",

@@ -1,11 +1,13 @@
 import csv
 import xml.etree.ElementTree as ET
 import zipfile
+from datetime import date, timedelta
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import User
+from directory.models import DirectoryProfile
 
 
 def parse_bool(value, default=False):
@@ -21,6 +23,43 @@ def split_name(full_name):
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], " ".join(parts[1:])
+
+
+def normalize_header(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def excel_column_index(cell_reference):
+    letters = "".join(character for character in str(cell_reference or "") if character.isalpha())
+    value = 0
+    for character in letters:
+        value = (value * 26) + (ord(character.upper()) - 64)
+    return max(value - 1, 0)
+
+
+def excel_serial_to_date(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        serial = int(float(text))
+    except ValueError:
+        return None
+    if serial <= 0:
+        return None
+    return date(1899, 12, 30) + timedelta(days=serial)
+
+
+def clean_text(value):
+    return str(value or "").strip()
+
+
+def first_present(row, *keys):
+    for key in keys:
+        value = clean_text(row.get(key, ""))
+        if value:
+            return value
+    return ""
 
 
 def _xlsx_rows(file_path):
@@ -64,7 +103,10 @@ def _xlsx_rows(file_path):
 
         rows = []
         for row in sheet_root.findall(".//main:sheetData/main:row", ns):
-            rows.append([cell_value(cell).strip() for cell in row.findall("main:c", ns)])
+            row_map = {}
+            for cell in row.findall("main:c", ns):
+                row_map[excel_column_index(cell.attrib.get("r", "A1"))] = cell_value(cell).strip()
+            rows.append(row_map)
         return rows
 
 
@@ -83,17 +125,30 @@ def load_rows(file_path):
         rows = _xlsx_rows(path)
         if not rows:
             return []
-        header = [value.strip().lower() for value in rows[0]]
-        if header[:3] != ["company name", "user name", "email id"]:
+        header_map = rows[0]
+        max_column = max(header_map) if header_map else -1
+        headers = [normalize_header(header_map.get(index, "")) for index in range(max_column + 1)]
+        if headers[:3] != ["company name", "emp code", "user name"] and headers[:3] != [
+            "company name",
+            "user name",
+            "email id",
+        ]:
             raise CommandError(
-                "XLSX must begin with the columns: Company Name, User Name, Email Id."
+                "XLSX must include the expected employee headers beginning with Company Name."
             )
 
         results = []
         for row in rows[1:]:
-            if len(row) < 3:
+            normalized_row = {
+                headers[index]: row.get(index, "")
+                for index in range(max_column + 1)
+                if headers[index]
+            }
+            if not any(clean_text(value) for value in normalized_row.values()):
                 continue
-            company_name, user_name, email = row[:3]
+            company_name = first_present(normalized_row, "company name")
+            user_name = first_present(normalized_row, "user name")
+            email = first_present(normalized_row, "email id", "email")
             first_name, last_name = split_name(user_name)
             results.append(
                 {
@@ -101,7 +156,37 @@ def load_rows(file_path):
                     "display_name": user_name,
                     "first_name": first_name,
                     "last_name": last_name,
-                    "department": company_name,
+                    "company_name": company_name,
+                    "employee_code": first_present(normalized_row, "emp code", "employee code"),
+                    "gender": first_present(normalized_row, "gender"),
+                    "date_of_birth": excel_serial_to_date(
+                        first_present(normalized_row, "date of birth")
+                    ),
+                    "phone_number": first_present(
+                        normalized_row,
+                        "mobile no",
+                        "mobile number",
+                        "phone number",
+                    ),
+                    "mobile_number": first_present(
+                        normalized_row,
+                        "mobile no",
+                        "mobile number",
+                        "phone number",
+                    ),
+                    "title": first_present(normalized_row, "designation", "title"),
+                    "function_name": first_present(normalized_row, "function"),
+                    "department": first_present(normalized_row, "department") or company_name,
+                    "location": first_present(normalized_row, "office", "location"),
+                    "office_location": first_present(normalized_row, "office", "location"),
+                    "joined_on": excel_serial_to_date(
+                        first_present(normalized_row, "date of joining", "joined on")
+                    ),
+                    "emergency_contact_number": first_present(
+                        normalized_row,
+                        "emergency contact no",
+                        "emergency contact number",
+                    ),
                 }
             )
         return results
@@ -199,6 +284,23 @@ class Command(BaseCommand):
             user.must_change_password = True
             user.password_changed_at = None
             user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
+            DirectoryProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    "company_name": str(row.get("company_name", "")).strip(),
+                    "gender": str(row.get("gender", "")).strip(),
+                    "date_of_birth": row.get("date_of_birth"),
+                    "function_name": str(row.get("function_name", "")).strip(),
+                    "city": str(row.get("location", "")).strip(),
+                    "office_location": str(row.get("office_location", row.get("location", ""))).strip(),
+                    "mobile_number": str(row.get("mobile_number", row.get("phone_number", ""))).strip(),
+                    "emergency_contact_number": str(
+                        row.get("emergency_contact_number", "")
+                    ).strip(),
+                    "joined_on": row.get("joined_on"),
+                    "is_visible": True,
+                },
+            )
 
         deactivated = 0
         if options["deactivate_missing"]:

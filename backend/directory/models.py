@@ -20,6 +20,10 @@ class DirectoryProfile(models.Model):
         blank=True,
         null=True,
     )
+    company_name = models.CharField(max_length=120, blank=True)
+    gender = models.CharField(max_length=32, blank=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    function_name = models.CharField(max_length=150, blank=True)
     city = models.CharField(max_length=120, blank=True)
     office_location = models.CharField(max_length=120, blank=True)
     work_mode = models.CharField(
@@ -29,6 +33,7 @@ class DirectoryProfile(models.Model):
     )
     phone_extension = models.CharField(max_length=16, blank=True)
     mobile_number = models.CharField(max_length=32, blank=True)
+    emergency_contact_number = models.CharField(max_length=32, blank=True)
     bio = models.TextField(blank=True)
     expertise = models.CharField(max_length=255, blank=True)
     skills = models.JSONField(default=list, blank=True)

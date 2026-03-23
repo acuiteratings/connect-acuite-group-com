@@ -1,4 +1,4 @@
-const STORAGE_KEY = "acuite-connect-state-v1";
+const STORAGE_KEY = "acuite-connect-state-v2-live";
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -10,6 +10,8 @@ const gradients = {
   ember: "linear-gradient(135deg,var(--orange),var(--maroon))",
   mixed: "linear-gradient(135deg,var(--lime),var(--yellow),var(--amber))",
 };
+
+const DIRECTORY_FILTER_GROUPS = ["company", "department", "function", "location"];
 
 const appData = {
   currentUser: {
@@ -769,6 +771,29 @@ const appData = {
   ],
 };
 
+Object.assign(appData, {
+  agenda: [],
+  tasks: [],
+  pulse: [],
+  homePosts: [],
+  bulletinPosts: [],
+  wallPosts: [],
+  leaderboard: [],
+  clubs: [],
+  spotlights: [],
+  pitches: [],
+  moments: [],
+  alumni: [],
+  directory: [],
+  knowledgeItems: [],
+  birthdays: [],
+  anniversaries: [],
+  upcoming: [],
+  pollOptions: [],
+});
+
+let directoryFilterOptions = createDirectoryFilterOptions();
+
 const kudosTags = [
   { id: "analysis", label: "Sharp Analysis", className: "tag tag-analysis" },
   { id: "teamwork", label: "Team Player", className: "tag tag-teamwork" },
@@ -784,7 +809,7 @@ const defaultState = {
   pitchFilter: "trending",
   momentsFilter: "all",
   knowledgeFilter: "all",
-  directoryFilter: "all",
+  directoryFilters: createDirectoryFiltersState(),
   directoryQuery: "",
   selectedKudosTagId: "analysis",
   likedPostIds: [],
@@ -801,6 +826,7 @@ let state = hydrateState();
 let elements = {};
 let latestSearchResults = [];
 let toastTimeoutId = null;
+let directoryLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -817,6 +843,8 @@ async function init() {
     appData.currentUser = {
       ...appData.currentUser,
       ...authenticatedUser,
+      role: authenticatedUser.title || appData.currentUser.role,
+      city: authenticatedUser.location || appData.currentUser.city,
     };
   }
 
@@ -838,8 +866,35 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
+  await loadDirectoryData();
   bindEvents();
   renderAll();
+}
+
+async function loadDirectoryData() {
+  directoryLoadError = "";
+  directoryFilterOptions = createDirectoryFilterOptions();
+  appData.directory = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    directoryLoadError = "Directory services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/");
+    appData.directory = Array.isArray(payload.results)
+      ? payload.results.map(mapDirectoryProfileToCard)
+      : [];
+    directoryFilterOptions = {
+      company: Array.isArray(payload.filters?.company) ? payload.filters.company : [],
+      department: Array.isArray(payload.filters?.department) ? payload.filters.department : [],
+      function: Array.isArray(payload.filters?.function) ? payload.filters.function : [],
+      location: Array.isArray(payload.filters?.location) ? payload.filters.location : [],
+    };
+  } catch (error) {
+    directoryLoadError = error.message || "Could not load the people directory.";
+  }
 }
 
 function bindEvents() {
@@ -1009,9 +1064,9 @@ async function handleDocumentClick(event) {
     return;
   }
 
-  const directoryChip = event.target.closest("[data-directory-filter]");
+  const directoryChip = event.target.closest("[data-directory-filter-group]");
   if (directoryChip) {
-    state.directoryFilter = directoryChip.dataset.directoryFilter;
+    state.directoryFilters[directoryChip.dataset.directoryFilterGroup] = directoryChip.dataset.directoryFilterValue;
     saveState();
     renderDirectory();
     renderDirectoryChips();
@@ -1097,7 +1152,7 @@ function renderPanels() {
 }
 
 function renderProfile() {
-  const receivedKudos = 12 + state.customKudos.filter((item) => item.recipient.toLowerCase() === appData.currentUser.name.toLowerCase()).length;
+  const receivedKudos = state.customKudos.filter((item) => item.recipient.toLowerCase() === appData.currentUser.name.toLowerCase()).length;
   const joinedClubs = state.joinedClubIds.length;
   const pitchesByRahul = appData.pitches.filter((item) => item.author === appData.currentUser.name).length + state.customPitches.length;
 
@@ -1146,17 +1201,19 @@ function renderTodayPanel() {
     <p class="widget-kicker">Today</p>
     <h3>My day</h3>
     <p class="muted-copy">A lightweight look at the day without leaving the feed.</p>
-    <ul class="mini-list">
-      ${appData.agenda.map((item) => `
-        <li>
-          <div>
-            <div class="mini-item-title">${escapeHtml(item.title)}</div>
-            <div class="mini-item-meta">${escapeHtml(item.meta)}</div>
-          </div>
-          <div class="mini-item-time">${escapeHtml(item.time)}</div>
-        </li>
-      `).join("")}
-    </ul>
+    ${appData.agenda.length ? `
+      <ul class="mini-list">
+        ${appData.agenda.map((item) => `
+          <li>
+            <div>
+              <div class="mini-item-title">${escapeHtml(item.title)}</div>
+              <div class="mini-item-meta">${escapeHtml(item.meta)}</div>
+            </div>
+            <div class="mini-item-time">${escapeHtml(item.time)}</div>
+          </li>
+        `).join("")}
+      </ul>
+    ` : `<div class="empty-state">Your live schedule has not been connected yet.</div>`}
   `;
 }
 
@@ -1165,17 +1222,19 @@ function renderTasksPanel() {
     <p class="widget-kicker">Action queue</p>
     <h3>What needs attention</h3>
     <p class="muted-copy">A simple bridge between culture and work actions.</p>
-    <ul class="mini-list">
-      ${appData.tasks.map((item) => `
-        <li>
-          <div>
-            <div class="mini-item-title">${escapeHtml(item.title)}</div>
-            <div class="mini-item-meta">${escapeHtml(item.due)}</div>
-          </div>
-          <span class="task-badge ${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span>
-        </li>
-      `).join("")}
-    </ul>
+    ${appData.tasks.length ? `
+      <ul class="mini-list">
+        ${appData.tasks.map((item) => `
+          <li>
+            <div>
+              <div class="mini-item-title">${escapeHtml(item.title)}</div>
+              <div class="mini-item-meta">${escapeHtml(item.due)}</div>
+            </div>
+            <span class="task-badge ${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span>
+          </li>
+        `).join("")}
+      </ul>
+    ` : `<div class="empty-state">No live task feed is connected yet.</div>`}
   `;
 }
 
@@ -1184,14 +1243,16 @@ function renderPulsePanel() {
     <p class="widget-kicker">Pulse</p>
     <h3>Connect snapshot</h3>
     <p class="muted-copy">Useful signs that the platform is becoming more than a social feed.</p>
-    <div class="pulse-grid">
-      ${appData.pulse.map((item) => `
-        <article class="pulse-card">
-          <strong>${escapeHtml(item.value)}</strong>
-          <span>${escapeHtml(item.label)}</span>
-        </article>
-      `).join("")}
-    </div>
+    ${appData.pulse.length ? `
+      <div class="pulse-grid">
+        ${appData.pulse.map((item) => `
+          <article class="pulse-card">
+            <strong>${escapeHtml(item.value)}</strong>
+            <span>${escapeHtml(item.label)}</span>
+          </article>
+        `).join("")}
+      </div>
+    ` : `<div class="empty-state">Live usage metrics will appear here once activity begins.</div>`}
   `;
 }
 
@@ -1205,7 +1266,9 @@ function renderHomeFeed() {
     ...state.customKudos.slice(0, 1).map(mapCustomKudosToPost),
     ...appData.homePosts,
   ];
-  document.getElementById("home-feed").innerHTML = homeFeed.map(renderPost).join("");
+  document.getElementById("home-feed").innerHTML = homeFeed.length
+    ? homeFeed.map(renderPost).join("")
+    : `<div class="empty-state">No live feed posts yet. The first internal updates will appear here.</div>`;
 }
 
 function renderBulletinFeed() {
@@ -1231,10 +1294,20 @@ function renderKudosTags() {
 
 function renderWallFeed() {
   const posts = [...state.customKudos.map(mapCustomKudosToPost), ...appData.wallPosts];
-  document.getElementById("wall-feed").innerHTML = posts.map(renderKudosPost).join("");
+  document.getElementById("wall-feed").innerHTML = posts.length
+    ? posts.map(renderKudosPost).join("")
+    : `<div class="empty-state">Recognition posts will appear here once employees start sharing kudos.</div>`;
 }
 
 function renderLeaderboard() {
+  if (!appData.leaderboard.length) {
+    document.getElementById("leaderboard-card").innerHTML = `
+      <p class="widget-kicker">Recognition</p>
+      <h3>Most appreciated this month</h3>
+      <div class="empty-state">Recognition rankings will appear after live usage begins.</div>
+    `;
+    return;
+  }
   document.getElementById("leaderboard-card").innerHTML = `
     <p class="widget-kicker">Recognition</p>
     <h3>Most appreciated this month</h3>
@@ -1253,7 +1326,7 @@ function renderLeaderboard() {
 }
 
 function renderClubs() {
-  document.getElementById("clubs-grid").innerHTML = appData.clubs.map((club) => {
+  document.getElementById("clubs-grid").innerHTML = appData.clubs.length ? appData.clubs.map((club) => {
     const joined = state.joinedClubIds.includes(club.id);
     const members = club.members + (joined && !club.defaultJoined ? 1 : 0) - (!joined && club.defaultJoined ? 1 : 0);
     return `
@@ -1284,10 +1357,15 @@ function renderClubs() {
         </div>
       </article>
     `;
-  }).join("");
+  }).join("") : `<div class="empty-state">Clubs will appear here when the first live communities are created.</div>`;
 }
 
 function renderSpotlight() {
+  if (!appData.spotlights.length) {
+    document.getElementById("spotlight-feature").innerHTML = `<div class="empty-state">No live spotlight stories have been published yet.</div>`;
+    document.getElementById("previous-spotlights").innerHTML = "";
+    return;
+  }
   const current = appData.spotlights[0];
   document.getElementById("spotlight-feature").innerHTML = `
     <article class="spotlight-feature" id="${current.id}">
@@ -1340,7 +1418,7 @@ function renderPitches() {
 
 function renderMoments() {
   const items = appData.moments.filter((moment) => state.momentsFilter === "all" || moment.category === state.momentsFilter);
-  document.getElementById("moments-grid").innerHTML = items.map((moment) => `
+  document.getElementById("moments-grid").innerHTML = items.length ? items.map((moment) => `
     <article class="moment-item" id="${moment.id}" style="background:${moment.background}">
       <div class="moment-placeholder">${moment.emoji}</div>
       <div class="overlay">
@@ -1348,11 +1426,11 @@ function renderMoments() {
         <span>${escapeHtml(String(moment.photos))} photos</span>
       </div>
     </article>
-  `).join("");
+  `).join("") : `<div class="empty-state">No live moments have been shared yet.</div>`;
 }
 
 function renderAlumni() {
-  document.getElementById("alumni-grid").innerHTML = appData.alumni.map((person) => `
+  document.getElementById("alumni-grid").innerHTML = appData.alumni.length ? appData.alumni.map((person) => `
     <article class="alumni-card" id="${person.id}">
       <div class="alumni-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
       <h4>${escapeHtml(person.name)}</h4>
@@ -1361,53 +1439,76 @@ function renderAlumni() {
       <div class="alumni-tenure">${escapeHtml(person.tenure)}</div>
       <button type="button" class="connect-btn" data-action="connect-alumni" data-name="${escapeHtml(person.name)}">Connect</button>
     </article>
-  `).join("");
+  `).join("") : `<div class="empty-state">Alumni records will appear when that directory is activated.</div>`;
 }
 
 function renderDirectoryChips() {
-  const chips = [
-    { id: "all", label: "All" },
-    { id: "ratings", label: "Ratings" },
-    { id: "research", label: "Research" },
-    { id: "ops", label: "Operations" },
-    { id: "people", label: "People" },
+  const groups = [
+    { id: "company", label: "Company" },
+    { id: "department", label: "Department" },
+    { id: "function", label: "Function" },
+    { id: "location", label: "Location" },
   ];
 
-  document.getElementById("directory-chips").innerHTML = chips.map((chip) => `
-    <button
-      type="button"
-      class="${state.directoryFilter === chip.id ? "active" : ""}"
-      data-directory-filter="${chip.id}"
-    >
-      ${escapeHtml(chip.label)}
-    </button>
-  `).join("");
+  document.getElementById("directory-filter-groups").innerHTML = groups.map((group) => {
+    const options = directoryFilterOptions[group.id] || [];
+    const buttons = [{ value: "all", label: "All" }, ...options.map((value) => ({ value, label: value }))];
+    return `
+      <div class="directory-filter-group">
+        <div class="directory-filter-title">${escapeHtml(group.label)}</div>
+        <div class="directory-filter-buttons">
+          ${buttons.map((option) => `
+            <button
+              type="button"
+              class="${state.directoryFilters[group.id] === option.value ? "active" : ""}"
+              data-directory-filter-group="${group.id}"
+              data-directory-filter-value="${escapeHtml(option.value)}"
+            >
+              ${escapeHtml(option.label)}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function renderDirectory() {
   elements.directorySearchInput.value = state.directoryQuery;
   const query = state.directoryQuery.trim().toLowerCase();
   const filtered = appData.directory.filter((person) => {
-    const matchesCategory = state.directoryFilter === "all" || person.category === state.directoryFilter;
-    if (!matchesCategory) {
+    if (state.directoryFilters.company !== "all" && person.company !== state.directoryFilters.company) {
       return false;
     }
-
+    if (state.directoryFilters.department !== "all" && person.department !== state.directoryFilters.department) {
+      return false;
+    }
+    if (state.directoryFilters.function !== "all" && person.functionName !== state.directoryFilters.function) {
+      return false;
+    }
+    if (state.directoryFilters.location !== "all" && person.office !== state.directoryFilters.location) {
+      return false;
+    }
     if (!query) {
       return true;
     }
-
-    const haystack = [
-      person.name,
-      person.role,
-      person.city,
-      person.blurb,
-      person.teams.join(" "),
-      person.skills.join(" "),
-    ].join(" ").toLowerCase();
-
-    return haystack.includes(query);
+    return person.searchText.includes(query);
   });
+
+  if (directoryLoadError) {
+    document.getElementById("directory-results-meta").textContent = "Directory load issue";
+    document.getElementById("directory-grid").innerHTML = `<div class="empty-state">${escapeHtml(directoryLoadError)}</div>`;
+    return;
+  }
+
+  document.getElementById("directory-results-meta").textContent = appData.directory.length
+    ? `${filtered.length} of ${appData.directory.length} employees shown`
+    : "Live employee directory";
+
+  if (!appData.directory.length) {
+    document.getElementById("directory-grid").innerHTML = `<div class="empty-state">The people directory will appear here once the live employee import completes.</div>`;
+    return;
+  }
 
   document.getElementById("directory-grid").innerHTML = filtered.length
     ? filtered.map((person) => `
@@ -1417,23 +1518,27 @@ function renderDirectory() {
           <div class="person-meta">
             <h3>${escapeHtml(person.name)}</h3>
             <div class="person-role">${escapeHtml(person.role)}</div>
-            <div class="person-location">${escapeHtml(person.city)}</div>
+            <div class="person-location">${escapeHtml(person.officeLine)}</div>
           </div>
         </div>
-        <p>${escapeHtml(person.blurb)}</p>
+        <div class="person-detail-grid">
+          ${directoryCardDetail("Employee Code", person.employeeCode)}
+          ${directoryCardDetail("Company", person.company)}
+          ${directoryCardDetail("Department", person.department)}
+          ${directoryCardDetail("Function", person.functionName)}
+          ${directoryCardDetail("Office", person.office)}
+          ${directoryCardDetail("Joined", person.joinedOn)}
+        </div>
         <div class="team-row">
           ${person.teams.map((team) => `<span class="team-chip">${escapeHtml(team)}</span>`).join("")}
         </div>
-        <div class="skill-row">
-          ${person.skills.map((skill) => `<span class="skill-chip">${escapeHtml(skill)}</span>`).join("")}
-        </div>
         <div class="person-footer">
-          <span class="availability">${escapeHtml(person.availability)}</span>
-          <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View expertise</button>
+          <span class="availability">${escapeHtml(person.contactLine)}</span>
+          <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View details</button>
         </div>
       </article>
     `).join("")
-    : `<div class="empty-state">No people matched that filter. Try a broader team or skill search.</div>`;
+    : `<div class="empty-state">No people matched that filter. Try a broader company, department, or office search.</div>`;
 }
 
 function renderToolSummary() {
@@ -1518,7 +1623,7 @@ function renderKnowledge() {
 }
 
 function renderBirthdays() {
-  document.getElementById("birthdays-list").innerHTML = appData.birthdays.map((person) => `
+  document.getElementById("birthdays-list").innerHTML = appData.birthdays.length ? appData.birthdays.map((person) => `
     <div class="bday-item">
       <div class="bday-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
@@ -1526,11 +1631,11 @@ function renderBirthdays() {
         <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date)}</div>
       </div>
     </div>
-  `).join("");
+  `).join("") : `<div class="empty-state">Birthday highlights will appear once live employee celebrations are configured.</div>`;
 }
 
 function renderAnniversaries() {
-  document.getElementById("anniversaries-list").innerHTML = appData.anniversaries.map((person) => `
+  document.getElementById("anniversaries-list").innerHTML = appData.anniversaries.length ? appData.anniversaries.map((person) => `
     <div class="bday-item">
       <div class="bday-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
@@ -1538,19 +1643,23 @@ function renderAnniversaries() {
         <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date)}</div>
       </div>
     </div>
-  `).join("");
+  `).join("") : `<div class="empty-state">Work anniversary highlights will appear here later.</div>`;
 }
 
 function renderUpcoming() {
-  document.getElementById("upcoming-events").innerHTML = appData.upcoming.map((item) => `
+  document.getElementById("upcoming-events").innerHTML = appData.upcoming.length ? appData.upcoming.map((item) => `
     <div class="event-item">
       <div class="event-date">${escapeHtml(item.date)}</div>
       <div class="event-name">${escapeHtml(item.name)}</div>
     </div>
-  `).join("");
+  `).join("") : `<div class="empty-state">No live internal events have been published yet.</div>`;
 }
 
 function renderPoll() {
+  if (!appData.pollOptions.length) {
+    document.getElementById("poll-list").innerHTML = `<div class="empty-state">No live poll is running right now.</div>`;
+    return;
+  }
   const totals = appData.pollOptions.reduce((sum, option) => sum + option.votes, 0) + (state.pollVote ? 1 : 0);
   document.getElementById("poll-list").innerHTML = appData.pollOptions.map((option) => {
     const votes = option.votes + (state.pollVote === option.id ? 1 : 0);
@@ -2063,6 +2172,10 @@ function hydrateState() {
   return {
     ...defaultState,
     ...saved,
+    directoryFilters: {
+      ...createDirectoryFiltersState(),
+      ...(saved.directoryFilters && typeof saved.directoryFilters === "object" ? saved.directoryFilters : {}),
+    },
     likedPostIds: Array.isArray(saved.likedPostIds) ? saved.likedPostIds : defaultState.likedPostIds.slice(),
     joinedClubIds: Array.isArray(saved.joinedClubIds) ? saved.joinedClubIds : defaultState.joinedClubIds.slice(),
     upvotedPitchIds: Array.isArray(saved.upvotedPitchIds) ? saved.upvotedPitchIds : defaultState.upvotedPitchIds.slice(),
@@ -2094,12 +2207,108 @@ function toggleArrayValue(items, value) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 }
 
+function createDirectoryFilterOptions() {
+  return {
+    company: [],
+    department: [],
+    function: [],
+    location: [],
+  };
+}
+
+function createDirectoryFiltersState() {
+  return {
+    company: "all",
+    department: "all",
+    function: "all",
+    location: "all",
+  };
+}
+
 function gradientValue(key) {
   return gradients[key] || gradients.warm;
 }
 
+function gradientKeyFromText(text) {
+  const source = String(text || "acuite");
+  const keys = Object.keys(gradients);
+  const hash = [...source].reduce((total, character) => total + character.charCodeAt(0), 0);
+  return keys[hash % keys.length];
+}
+
 function capitalize(value) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+}
+
+function formatDisplayDate(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function directoryCardDetail(label, value) {
+  if (!value) {
+    return "";
+  }
+  return `
+    <div class="person-detail-item">
+      <span class="person-detail-label">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function mapDirectoryProfileToCard(profile) {
+  const company = profile.company_name || "";
+  const department = profile.department || "";
+  const functionName = profile.function_name || "";
+  const office = profile.office_location || profile.location || profile.city || "";
+  const joinedOn = formatDisplayDate(profile.joined_on);
+  const contactLine = [profile.email, profile.mobile_number || profile.phone_number].filter(Boolean).join(" | ");
+  const teams = [company, department, functionName].filter(Boolean);
+
+  return {
+    id: `person-${profile.id}`,
+    name: profile.name,
+    initials: profile.initials || initialsFromName(profile.name),
+    role: profile.title || "Employee",
+    city: profile.city || office,
+    company,
+    department,
+    functionName,
+    office,
+    officeLine: [office, company].filter(Boolean).join(" | "),
+    employeeCode: profile.employee_code || "",
+    joinedOn,
+    contactLine,
+    teams,
+    skills: [],
+    searchText: [
+      profile.name,
+      profile.email,
+      profile.title,
+      company,
+      department,
+      functionName,
+      office,
+      profile.location,
+      profile.mobile_number,
+      profile.employee_code,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase(),
+    gradient: gradientKeyFromText(`${company}-${department}-${profile.name}`),
+  };
 }
 
 function initialsFromName(name) {

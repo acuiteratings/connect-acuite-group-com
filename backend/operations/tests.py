@@ -130,3 +130,46 @@ class BuildNumberTests(TestCase):
         self.assertEqual(state.counter, 7)
         self.assertEqual(state.display_number, "1.0000007")
         self.assertEqual(state.commit_sha, "abc123")
+
+
+class ClearLiveDemoDataCommandTests(TestCase):
+    def test_clear_live_demo_data_removes_operational_demo_records(self):
+        user = User.objects.create_user(
+            email="tester@acuite.in",
+            password="testpass123",
+            first_name="Test",
+            last_name="User",
+        )
+        post = Post.objects.create(
+            author=user,
+            title="Seeded demo post",
+            body="Demo body",
+        )
+        Comment.objects.create(
+            post=post,
+            author=user,
+            body="Demo comment",
+        )
+        AuditLog.objects.create(
+            actor=user,
+            action="demo.seed",
+            summary="Seeded audit",
+        )
+        AnalyticsEvent.objects.create(
+            actor=user,
+            category="demo",
+            event_name="seeded",
+        )
+        ErrorEvent.objects.create(
+            actor=user,
+            exception_type="RuntimeError",
+            message="Seeded error",
+        )
+
+        call_command("clear_live_demo_data")
+
+        self.assertEqual(Post.objects.count(), 0)
+        self.assertEqual(Comment.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(AnalyticsEvent.objects.count(), 0)
+        self.assertEqual(ErrorEvent.objects.count(), 0)

@@ -7,6 +7,8 @@ from .models import DirectoryProfile
 class DirectoryProfileAdmin(admin.ModelAdmin):
     list_display = (
         "user",
+        "company_name",
+        "function_name",
         "manager",
         "office_location",
         "city",
@@ -14,12 +16,14 @@ class DirectoryProfileAdmin(admin.ModelAdmin):
         "is_visible",
         "updated_at",
     )
-    list_filter = ("work_mode", "is_visible", "office_location", "city")
+    list_filter = ("company_name", "function_name", "work_mode", "is_visible", "office_location", "city")
     search_fields = (
         "user__email",
         "user__first_name",
         "user__last_name",
         "user__display_name",
+        "company_name",
+        "function_name",
         "expertise",
         "skills",
     )

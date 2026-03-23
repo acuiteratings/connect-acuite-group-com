@@ -6,6 +6,9 @@ def serialize_directory_profile(profile):
     payload.update(
         {
             "manager": profile.manager.full_name if profile.manager else None,
+            "company_name": profile.company_name,
+            "gender": profile.gender,
+            "function_name": profile.function_name,
             "city": profile.city,
             "office_location": profile.office_location,
             "work_mode": profile.work_mode,
