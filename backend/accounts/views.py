@@ -1,9 +1,12 @@
 import json
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.http import HttpResponseNotAllowed, JsonResponse
+from django.shortcuts import redirect
+from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
@@ -13,8 +16,12 @@ from .services import (
     SESSION_AUTH_BACKEND,
     change_password_after_challenge,
     complete_login,
+    exchange_trusted_sso_grant,
+    get_trusted_sso_client,
+    issue_trusted_sso_grant,
     normalize_email,
     start_login_challenge,
+    validate_trusted_redirect_uri,
     validate_password_step,
     verify_login_otp,
 )
@@ -269,3 +276,53 @@ def logout_view(request):
 
     auth_logout(request)
     return JsonResponse({"authenticated": False, "detail": "Logged out successfully."})
+
+
+def sso_authorize(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    try:
+        client_id, client = get_trusted_sso_client(request.GET.get("client_id"))
+        redirect_uri = validate_trusted_redirect_uri(client, request.GET.get("redirect_uri"))
+    except AuthFlowError as exc:
+        return _error_response(exc)
+
+    state = str(request.GET.get("state", "")).strip()
+    if not request.user.is_authenticated:
+        login_target = f"{settings.LOGIN_URL}?{urlencode({'next': request.get_full_path()})}"
+        return redirect(login_target)
+
+    if not request.user.login_allowed:
+        return JsonResponse(
+            {
+                "detail": "This account is not currently active for Acuité Connect.",
+                "code": "user_inactive",
+            },
+            status=403,
+        )
+
+    grant = issue_trusted_sso_grant(request.user, client_id, redirect_uri)
+    redirect_params = {"code": str(grant.public_id)}
+    if state:
+        redirect_params["state"] = state
+    return redirect(f"{redirect_uri}?{urlencode(redirect_params)}")
+
+
+@csrf_exempt
+def sso_token(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        payload = _parse_json_body(request)
+        identity_payload = exchange_trusted_sso_grant(
+            payload.get("client_id"),
+            payload.get("client_secret"),
+            payload.get("code"),
+            payload.get("redirect_uri"),
+        )
+    except AuthFlowError as exc:
+        return _error_response(exc)
+
+    return JsonResponse(identity_payload)

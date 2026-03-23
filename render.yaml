@@ -76,3 +76,9 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      - key: TRUSTED_SSO_CODE_TTL_SECONDS
+        value: "120"
+      - key: TRUSTED_SSO_KARMA_CLIENT_SECRET
+        sync: false
+      - key: TRUSTED_SSO_KARMA_REDIRECT_URIS
+        value: https://karma.acuite-group.com/accounts/connect/callback/

@@ -1,5 +1,6 @@
 import random
 from datetime import timedelta
+from secrets import compare_digest
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
@@ -9,7 +10,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from .models import LoginChallenge, User
+from .models import LoginChallenge, TrustedAppLoginGrant, User
 
 
 SESSION_AUTH_BACKEND = "django.contrib.auth.backends.ModelBackend"
@@ -268,3 +269,93 @@ def complete_login(public_id):
     challenge.consumed_at = timezone.now()
     challenge.save(update_fields=["consumed_at", "updated_at"])
     return challenge.user
+
+
+def get_trusted_sso_client(client_id):
+    normalized_client_id = str(client_id or "").strip()
+    if not normalized_client_id:
+        raise AuthFlowError("Client ID is required.", status=400, code="client_required")
+
+    clients = getattr(settings, "TRUSTED_SSO_CLIENTS", {})
+    client = clients.get(normalized_client_id)
+    if not client:
+        raise AuthFlowError("This SSO client is not allowed.", status=403, code="client_not_allowed")
+    return normalized_client_id, client
+
+
+def validate_trusted_redirect_uri(client, redirect_uri):
+    normalized_redirect_uri = str(redirect_uri or "").strip()
+    if not normalized_redirect_uri:
+        raise AuthFlowError("Redirect URI is required.", status=400, code="redirect_uri_required")
+    if normalized_redirect_uri not in client.get("redirect_uris", []):
+        raise AuthFlowError(
+            "This redirect URI is not allowed for the client.",
+            status=403,
+            code="redirect_uri_not_allowed",
+        )
+    return normalized_redirect_uri
+
+
+def issue_trusted_sso_grant(user, client_id, redirect_uri):
+    TrustedAppLoginGrant.objects.filter(
+        user=user,
+        client_id=client_id,
+        redirect_uri=redirect_uri,
+        consumed_at__isnull=True,
+    ).update(consumed_at=timezone.now())
+    return TrustedAppLoginGrant.objects.create(
+        user=user,
+        client_id=client_id,
+        redirect_uri=redirect_uri,
+        expires_at=timezone.now()
+        + timedelta(seconds=getattr(settings, "TRUSTED_SSO_CODE_TTL_SECONDS", 120)),
+    )
+
+
+def exchange_trusted_sso_grant(client_id, client_secret, code, redirect_uri):
+    normalized_client_id, client = get_trusted_sso_client(client_id)
+    normalized_redirect_uri = validate_trusted_redirect_uri(client, redirect_uri)
+    expected_secret = str(client.get("client_secret", "")).strip()
+    if not expected_secret or not compare_digest(expected_secret, str(client_secret or "").strip()):
+        raise AuthFlowError("Client authentication failed.", status=403, code="client_auth_failed")
+
+    token = str(code or "").strip()
+    if not token:
+        raise AuthFlowError("Code is required.", status=400, code="code_required")
+
+    try:
+        grant = TrustedAppLoginGrant.objects.select_related("user").get(public_id=token)
+    except (ValueError, TrustedAppLoginGrant.DoesNotExist) as exc:
+        raise AuthFlowError("This login handoff code is not valid.", status=404, code="grant_not_found") from exc
+
+    if grant.consumed_at:
+        raise AuthFlowError("This login handoff code has already been used.", status=409, code="grant_used")
+    if grant.is_expired:
+        raise AuthFlowError("This login handoff code has expired.", status=410, code="grant_expired")
+    if grant.client_id != normalized_client_id:
+        raise AuthFlowError("This login handoff code does not belong to the client.", status=403, code="grant_client_mismatch")
+    if grant.redirect_uri != normalized_redirect_uri:
+        raise AuthFlowError(
+            "This login handoff code does not match the redirect URI.",
+            status=403,
+            code="grant_redirect_mismatch",
+        )
+    if not grant.user.login_allowed:
+        grant.consumed_at = timezone.now()
+        grant.save(update_fields=["consumed_at"])
+        raise AuthFlowError(
+            "This account is not currently active for Acuité Connect.",
+            status=403,
+            code="user_inactive",
+        )
+
+    grant.consumed_at = timezone.now()
+    grant.save(update_fields=["consumed_at"])
+    return {
+        "email": grant.user.email,
+        "first_name": grant.user.first_name,
+        "last_name": grant.user.last_name,
+        "display_name": grant.user.display_name or grant.user.full_name,
+        "department": grant.user.department,
+        "title": grant.user.title,
+    }

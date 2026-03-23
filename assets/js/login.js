@@ -8,6 +8,20 @@ document.addEventListener("DOMContentLoaded", () => {
   void initLoginPage();
 });
 
+function getPostLoginTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || "/";
+  try {
+    const target = new URL(next, window.location.origin);
+    if (target.origin !== window.location.origin) {
+      return "/";
+    }
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch (error) {
+    return "/";
+  }
+}
+
 async function initLoginPage() {
   const auth = window.AcuiteConnectAuth;
   if (!auth) {
@@ -16,7 +30,7 @@ async function initLoginPage() {
 
   const session = await auth.fetchCurrentSession({ forceRefresh: true });
   if (session.authenticated) {
-    window.location.href = "/";
+    window.location.href = getPostLoginTarget();
     return;
   }
 
@@ -163,7 +177,7 @@ async function handlePasswordForm(event) {
 
     showStatus("Login successful. Redirecting to Acuité Connect...", "success");
     window.setTimeout(() => {
-      window.location.href = "/";
+      window.location.href = getPostLoginTarget();
     }, 350);
   }, "password-error");
 }
@@ -189,7 +203,7 @@ async function handlePasswordChangeForm(event) {
     showStatus("Password updated. Redirecting to Acuité Connect...", "success");
     updateStep("Access granted", "Your password has been updated and your session is now active.");
     window.setTimeout(() => {
-      window.location.href = "/";
+      window.location.href = getPostLoginTarget();
     }, 450);
   }, "new-password-error", "confirm-password-error");
 }

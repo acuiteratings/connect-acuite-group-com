@@ -17,6 +17,10 @@ PROJECT_ROOT = BASE_DIR.parent
 
 load_dotenv(PROJECT_ROOT / ".env")
 
+
+def env_list(name, default=""):
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
 def _load_build_number():
     build_number_file = PROJECT_ROOT / ".build-number"
     if build_number_file.exists():
@@ -82,6 +86,16 @@ AUTH_PASSWORD_MAX_ATTEMPTS = int(os.getenv("AUTH_PASSWORD_MAX_ATTEMPTS", "5"))
 AUTH_DEBUG_OTP_PREVIEW = (
     os.getenv("AUTH_DEBUG_OTP_PREVIEW", "true" if DEBUG else "false").lower() == "true"
 )
+TRUSTED_SSO_CODE_TTL_SECONDS = int(os.getenv("TRUSTED_SSO_CODE_TTL_SECONDS", "120"))
+TRUSTED_SSO_CLIENTS = {}
+trusted_sso_karma_secret = os.getenv("TRUSTED_SSO_KARMA_CLIENT_SECRET", "").strip()
+trusted_sso_karma_redirect_uris = env_list("TRUSTED_SSO_KARMA_REDIRECT_URIS", "")
+if trusted_sso_karma_secret and trusted_sso_karma_redirect_uris:
+    TRUSTED_SSO_CLIENTS["karma"] = {
+        "client_secret": trusted_sso_karma_secret,
+        "redirect_uris": trusted_sso_karma_redirect_uris,
+        "name": "Acuité Karma",
+    }
 
 if SENTRY_ENABLED:
     sentry_sdk.init(

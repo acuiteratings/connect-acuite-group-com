@@ -1,11 +1,12 @@
 import re
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import LoginChallenge, User
+from .models import LoginChallenge, TrustedAppLoginGrant, User
 
 
 @override_settings(
@@ -174,6 +175,74 @@ class AuthApiTests(TestCase):
 
         me_response = self.client.get("/api/accounts/me/")
         self.assertFalse(me_response.json()["authenticated"])
+
+    @override_settings(
+        TRUSTED_SSO_CLIENTS={
+            "karma": {
+                "client_secret": "shared-secret",
+                "redirect_uris": ["https://karma.example.com/accounts/connect/callback/"],
+            }
+        }
+    )
+    def test_sso_authorize_redirects_anonymous_user_to_login_page_with_next(self):
+        response = self.client.get(
+            "/api/accounts/auth/sso/authorize/",
+            {
+                "client_id": "karma",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "state": "state-123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login.html?next=", response["Location"])
+
+    @override_settings(
+        TRUSTED_SSO_CLIENTS={
+            "karma": {
+                "client_secret": "shared-secret",
+                "redirect_uris": ["https://karma.example.com/accounts/connect/callback/"],
+            }
+        }
+    )
+    def test_sso_authorize_and_token_exchange_return_identity_payload(self):
+        self.client.force_login(self.user)
+
+        authorize_response = self.client.get(
+            "/api/accounts/auth/sso/authorize/",
+            {
+                "client_id": "karma",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "state": "state-123",
+            },
+        )
+
+        self.assertEqual(authorize_response.status_code, 302)
+        redirect_url = urlparse(authorize_response["Location"])
+        self.assertEqual(
+            f"{redirect_url.scheme}://{redirect_url.netloc}{redirect_url.path}",
+            "https://karma.example.com/accounts/connect/callback/",
+        )
+        redirect_params = parse_qs(redirect_url.query)
+        self.assertEqual(redirect_params["state"], ["state-123"])
+        grant_code = redirect_params["code"][0]
+        self.assertTrue(TrustedAppLoginGrant.objects.filter(public_id=grant_code).exists())
+
+        token_response = self.client.post(
+            "/api/accounts/auth/sso/token/",
+            data={
+                "client_id": "karma",
+                "client_secret": "shared-secret",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "code": grant_code,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(token_response.status_code, 200)
+        self.assertEqual(token_response.json()["email"], self.user.email)
+        grant = TrustedAppLoginGrant.objects.get(public_id=grant_code)
+        self.assertIsNotNone(grant.consumed_at)
 
     def _otp_from_mail(self):
         body = mail.outbox[-1].body
