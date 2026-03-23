@@ -1,0 +1,474 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acuité Connect</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-left">
+      <img src="{% static 'img/acuite-logo.png' %}" alt="Acuité" class="topnav-logo">
+      <div class="topnav-brand">Connect</div>
+    </div>
+
+    <div class="topnav-search">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+      <input id="global-search" type="text" placeholder="Search people, posts, tools, resources..." autocomplete="off">
+      <div class="search-results" id="search-results" hidden></div>
+    </div>
+
+    <div class="topnav-right">
+      <button type="button" class="icon-btn" data-action="open-launcher" title="Quick launcher">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 3h6"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" data-action="toggle-theme" title="Toggle theme">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" title="Notifications">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        <span class="notif-dot"></span>
+      </button>
+      <button type="button" class="icon-btn" data-action="logout" title="Sign out">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H9m8 5v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+        </svg>
+      </button>
+      <div class="avatar" id="nav-avatar">RM</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar-left">
+      <button type="button" class="tab active" data-switch-tab="home">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path>
+        </svg>
+        Home
+      </button>
+      <button type="button" class="tab" data-switch-tab="bulletin">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+        </svg>
+        Bulletin
+      </button>
+      <button type="button" class="tab" data-switch-tab="wall">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+        </svg>
+        The Wall
+      </button>
+      <button type="button" class="tab" data-switch-tab="clubs">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        Clubs
+      </button>
+      <button type="button" class="tab" data-switch-tab="spotlight">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Spotlight
+      </button>
+      <button type="button" class="tab" data-switch-tab="pitch">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+        </svg>
+        The Pitch
+      </button>
+      <button type="button" class="tab" data-switch-tab="moments">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        Moments
+      </button>
+      <button type="button" class="tab" data-switch-tab="alumni">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        Alumni
+      </button>
+
+      <div class="sep"></div>
+
+      <button type="button" class="tab" data-switch-tab="directory">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a3 3 0 00-3-3h-2m-4 4H4a3 3 0 01-3-3v-1a3 3 0 013-3h9m4 4v1a3 3 0 003 3M9 7a4 4 0 118 0 4 4 0 01-8 0z"></path>
+        </svg>
+        Directory
+      </button>
+      <button type="button" class="tab" data-switch-tab="tools">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3a2.25 2.25 0 00-2.25 2.25v1.086a8.958 8.958 0 00-1.692.977l-.769-.769a2.25 2.25 0 10-3.182 3.182l.769.769a8.958 8.958 0 00-.977 1.692H2.25a2.25 2.25 0 000 4.5h1.086a8.958 8.958 0 00.977 1.692l-.769.769a2.25 2.25 0 103.182 3.182l.769-.769a8.958 8.958 0 001.692.977V21.75a2.25 2.25 0 004.5 0v-1.086a8.958 8.958 0 001.692-.977l.769.769a2.25 2.25 0 103.182-3.182l-.769-.769a8.958 8.958 0 00.977-1.692H21.75a2.25 2.25 0 000-4.5h-1.086a8.958 8.958 0 00-.977-1.692l.769-.769a2.25 2.25 0 10-3.182-3.182l-.769.769A8.958 8.958 0 0014.664 6.336V5.25A2.25 2.25 0 0012.414 3h-2.664zM12 15.75A3.75 3.75 0 1112 8.25a3.75 3.75 0 010 7.5z"></path>
+        </svg>
+        Tool Hub
+      </button>
+      <button type="button" class="tab" data-switch-tab="knowledge">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5 5.754 5 4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18c1.746 0 3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+        Knowledge
+      </button>
+    </aside>
+
+    <main class="main">
+      <section class="panel active" id="panel-home">
+        <section class="hero-banner">
+          <div class="hero-copy">
+            <p class="eyebrow">Employee social workspace</p>
+            <h1>Acuité Connect is evolving into the shared front door for people, culture, and internal tools.</h1>
+            <p>We kept the logo and familiar feed-based layout, then started layering in practical workplace tools that employees can use every day.</p>
+            <div class="hero-actions">
+              <button type="button" class="btn-warm" data-switch-tab="tools">Open Tool Hub</button>
+              <button type="button" class="btn-ghost" data-switch-tab="directory">Find an expert</button>
+            </div>
+          </div>
+          <div class="hero-stats" id="hero-stats"></div>
+        </section>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel" id="today-panel"></article>
+          <article class="mini-panel" id="tasks-panel"></article>
+          <article class="mini-panel" id="pulse-panel"></article>
+        </div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Quick Launch</p>
+              <h2>Popular tools this week</h2>
+            </div>
+            <button type="button" class="btn-link" data-switch-tab="tools">View all tools</button>
+          </div>
+          <div class="tool-grid compact" id="home-tools-grid"></div>
+        </section>
+
+        <div class="compose" data-switch-tab="bulletin">
+          <div class="avatar avatar-small" id="compose-avatar">RM</div>
+          <div class="compose-placeholder">Share an update, celebrate a teammate, or push an idea forward.</div>
+          <div class="compose-actions">
+            <button type="button" class="btn-kudos" data-switch-tab="wall">Kudos</button>
+            <button type="button" class="btn-idea" data-switch-tab="pitch">Idea</button>
+          </div>
+        </div>
+
+        <div id="home-feed"></div>
+      </section>
+
+      <section class="panel" id="panel-bulletin">
+        <div class="section-head">
+          <div>
+            <h2>Bulletin Board</h2>
+            <p>Announcements, updates, notices and internal launches</p>
+          </div>
+          <div class="filter-tabs" data-filter-group="bulletin">
+            <button type="button" class="active" data-filter="all">All</button>
+            <button type="button" data-filter="announcements">Announcements</button>
+            <button type="button" data-filter="hr">HR</button>
+            <button type="button" data-filter="events">Events</button>
+          </div>
+        </div>
+
+        <form class="story-form" id="bulletin-form">
+          <div class="story-form-grid split">
+            <label class="field">
+              <span>Announcement title</span>
+              <input type="text" name="title" maxlength="90" placeholder="Share an update with the company" required>
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <select name="category">
+                <option value="announcements">Announcements</option>
+                <option value="hr">HR</option>
+                <option value="events">Events</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>Message</span>
+            <textarea name="message" rows="4" maxlength="400" placeholder="What should everyone know?" required></textarea>
+          </label>
+          <div class="form-actions">
+            <p>Your post will appear here immediately in this MVP.</p>
+            <button type="submit" class="btn-warm">Post update</button>
+          </div>
+        </form>
+
+        <div id="bulletin-feed"></div>
+      </section>
+
+      <section class="panel" id="panel-wall">
+        <div class="section-head">
+          <div>
+            <h2>The Wall</h2>
+            <p>Recognise great work and make appreciation visible</p>
+          </div>
+        </div>
+
+        <div class="two-column-layout">
+          <div>
+            <form class="kudos-form" id="kudos-form">
+              <h3>Give someone a shoutout</h3>
+              <div class="kudos-tags" id="kudos-tags"></div>
+              <label class="field">
+                <span>Who are you recognising?</span>
+                <input type="text" name="recipient" maxlength="60" placeholder="Colleague name" required>
+              </label>
+              <label class="field">
+                <span>What did they do that was awesome?</span>
+                <textarea name="message" rows="4" maxlength="320" placeholder="Make it specific so the recognition feels meaningful." required></textarea>
+              </label>
+              <div class="form-actions">
+                <p>Recognition posts are also reflected back onto Home.</p>
+                <button type="submit" class="btn-warm">Post kudos</button>
+              </div>
+            </form>
+
+            <div id="wall-feed"></div>
+          </div>
+
+          <aside class="stack-side">
+            <div class="widget-card" id="leaderboard-card"></div>
+            <div class="widget-card">
+              <h3>Prompts that work well</h3>
+              <ul class="simple-list">
+                <li>Call out the situation, not just the person.</li>
+                <li>Explain the impact on the team or client.</li>
+                <li>Link the recognition to an Acuité value or behavior.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-clubs">
+        <div class="section-head">
+          <div>
+            <h2>Clubs</h2>
+            <p>Find your people beyond the desk</p>
+          </div>
+        </div>
+        <div class="clubs-grid" id="clubs-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-spotlight">
+        <div class="section-head">
+          <div>
+            <h2>Spotlight</h2>
+            <p>Getting to know Acuité's people a little better</p>
+          </div>
+          <button type="button" class="btn-ghost" data-action="nominate-spotlight">Nominate a colleague</button>
+        </div>
+        <div id="spotlight-feature"></div>
+        <div class="prev-spotlights" id="previous-spotlights"></div>
+      </section>
+
+      <section class="panel" id="panel-pitch">
+        <div class="section-head">
+          <div>
+            <h2>The Pitch</h2>
+            <p>Your ideas, voted on by everyone</p>
+          </div>
+          <div class="filter-tabs" data-filter-group="pitch">
+            <button type="button" class="active" data-filter="trending">Trending</button>
+            <button type="button" data-filter="new">New</button>
+            <button type="button" data-filter="done">Done</button>
+          </div>
+        </div>
+
+        <form class="story-form" id="pitch-form">
+          <div class="story-form-grid split">
+            <label class="field">
+              <span>Idea title</span>
+              <input type="text" name="title" maxlength="80" placeholder="What should we build or improve?" required>
+            </label>
+            <label class="field">
+              <span>Impact area</span>
+              <select name="impact">
+                <option value="people">People</option>
+                <option value="productivity">Productivity</option>
+                <option value="learning">Learning</option>
+                <option value="culture">Culture</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>What problem does it solve?</span>
+            <textarea name="description" rows="4" maxlength="320" placeholder="A short description helps people vote with context." required></textarea>
+          </label>
+          <div class="form-actions">
+            <p>Ideas start as submitted and can move through review and implementation.</p>
+            <button type="submit" class="btn-warm">Submit idea</button>
+          </div>
+        </form>
+
+        <div id="pitch-list"></div>
+      </section>
+
+      <section class="panel" id="panel-moments">
+        <div class="section-head">
+          <div>
+            <h2>Moments</h2>
+            <p>Life at Acuité, from events to everyday snapshots</p>
+          </div>
+          <div class="filter-tabs" data-filter-group="moments">
+            <button type="button" class="active" data-filter="all">All</button>
+            <button type="button" data-filter="events">Events</button>
+            <button type="button" data-filter="office">Office</button>
+            <button type="button" data-filter="outings">Outings</button>
+          </div>
+        </div>
+        <div class="moments-grid" id="moments-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-alumni">
+        <div class="section-head">
+          <div>
+            <h2>Alumni Network</h2>
+            <p>Once Acuité, always Acuité</p>
+          </div>
+        </div>
+        <div class="alumni-hero">
+          <div class="alumni-hero-copy">
+            <h3>Stay connected with former colleagues</h3>
+            <p>Reconnect, explore career journeys, and keep the Acuité network active long after the last working day.</p>
+          </div>
+          <button type="button" class="btn-inv" data-action="invite-alumni">Invite alumni</button>
+        </div>
+        <div class="alumni-grid" id="alumni-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-directory">
+        <div class="section-head">
+          <div>
+            <h2>People Directory</h2>
+            <p>Search by team, location, skills and expertise</p>
+          </div>
+          <div class="directory-search-shell">
+            <input type="text" id="directory-search" placeholder="Find people by name, skill, sector or city">
+          </div>
+        </div>
+
+        <div class="chip-row" id="directory-chips"></div>
+        <div class="directory-grid" id="directory-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-tools">
+        <div class="section-head">
+          <div>
+            <h2>Tool Hub</h2>
+            <p>Internal apps, launch status and workflow runway</p>
+          </div>
+        </div>
+
+        <div class="tool-summary-grid" id="tool-summary-grid"></div>
+        <div class="tool-grid" id="tool-grid"></div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Workflow runway</p>
+              <h2>What Connect can bring together next</h2>
+            </div>
+          </div>
+          <div class="workflow-list" id="workflow-list"></div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-knowledge">
+        <div class="section-head">
+          <div>
+            <h2>Knowledge Hub</h2>
+            <p>Templates, policies, decks and playbooks in one place</p>
+          </div>
+          <div class="filter-tabs" data-filter-group="knowledge">
+            <button type="button" class="active" data-filter="all">All</button>
+            <button type="button" data-filter="policy">Policy</button>
+            <button type="button" data-filter="template">Template</button>
+            <button type="button" data-filter="learning">Learning</button>
+            <button type="button" data-filter="research">Research</button>
+          </div>
+        </div>
+
+        <div class="knowledge-layout">
+          <div class="knowledge-list" id="knowledge-list"></div>
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>Why this matters</h3>
+              <p>Knowledge becomes more useful when it is searchable, current, and close to the conversations and people who use it.</p>
+            </div>
+            <div class="widget-card">
+              <h3>Saved resources</h3>
+              <div id="knowledge-saved-list"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <aside class="sidebar-right">
+      <div class="widget profile-widget">
+        <div class="avatar profile-avatar" id="profile-avatar">RM</div>
+        <div class="profile-name" id="profile-name">Rahul Mehta</div>
+        <div class="profile-role" id="profile-role">Senior Analyst - Ratings</div>
+        <div class="profile-stats">
+          <div>
+            <div class="num" id="profile-kudos">12</div>
+            <div class="label">Kudos</div>
+          </div>
+          <div>
+            <div class="num" id="profile-clubs">4</div>
+            <div class="label">Clubs</div>
+          </div>
+          <div>
+            <div class="num" id="profile-pitches">3</div>
+            <div class="label">Pitches</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">Birthdays</div>
+        <div id="birthdays-list"></div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">Anniversaries</div>
+        <div id="anniversaries-list"></div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">Upcoming</div>
+        <div id="upcoming-events"></div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">Quick Poll</div>
+        <p class="poll-question">What should Acuité Connect prioritize next?</p>
+        <div id="poll-list"></div>
+        <div class="widget-footnote">Votes are stored locally in this prototype.</div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">Saved Resources</div>
+        <div id="saved-resources"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <script src="{% static 'js/auth.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</body>
+</html>

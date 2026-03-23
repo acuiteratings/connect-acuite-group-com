@@ -1,0 +1,50 @@
+databases:
+  - name: acuite-connect-db
+    plan: basic-256mb
+    databaseName: acuite_connect
+    user: acuite_connect
+
+services:
+  - type: web
+    name: acuite-connect
+    runtime: python
+    plan: starter
+    buildCommand: ./build.sh
+    preDeployCommand: cd backend && python manage.py migrate
+    startCommand: cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker
+    healthCheckPath: /api/ops/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acuite-connect-db
+          property: connectionString
+      - key: DJANGO_ALLOWED_HOSTS
+        value: connect.acuite-group.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://connect.acuite-group.com
+      - key: DJANGO_TIME_ZONE
+        value: Asia/Kolkata
+      - key: USE_X_FORWARDED_HOST
+        value: "true"
+      - key: SECURE_SSL_REDIRECT
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: CSRF_COOKIE_SECURE
+        value: "true"
+      - key: SECURE_HSTS_SECONDS
+        value: "31536000"
+      - key: SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: "true"
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.1"
