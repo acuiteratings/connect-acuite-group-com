@@ -5,6 +5,14 @@ from .models import DirectoryProfile
 from .serializers import serialize_directory_profile
 
 
+def _distinct_values(queryset, field_name):
+    return sorted(
+        value
+        for value in queryset.order_by().values_list(field_name, flat=True).distinct()
+        if value
+    )
+
+
 def directory_list(request):
     base_queryset = DirectoryProfile.objects.select_related("user", "manager").filter(
         user__is_active=True,
@@ -48,21 +56,9 @@ def directory_list(request):
 
     results = [serialize_directory_profile(profile) for profile in queryset.order_by("user__display_name", "user__email")[:500]]
     filters = {
-        "company": sorted(
-            value
-            for value in base_queryset.values_list("company_name", flat=True).distinct()
-            if value
-        ),
-        "department": sorted(
-            value
-            for value in base_queryset.values_list("user__department", flat=True).distinct()
-            if value
-        ),
-        "function": sorted(
-            value
-            for value in base_queryset.values_list("function_name", flat=True).distinct()
-            if value
-        ),
+        "company": _distinct_values(base_queryset, "company_name"),
+        "department": _distinct_values(base_queryset, "user__department"),
+        "function": _distinct_values(base_queryset, "function_name"),
         "location": sorted(
             {
                 value
