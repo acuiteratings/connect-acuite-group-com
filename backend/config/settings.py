@@ -55,6 +55,11 @@ SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
 SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "development").strip() or "development"
 SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0"))
 SENTRY_ENABLED = bool(SENTRY_DSN and sentry_sdk)
+APP_BUILD_NUMBER = os.getenv("APP_BUILD_NUMBER", "1.0000001").strip() or "1.0000001"
+APP_BUILD_CREDIT = os.getenv(
+    "APP_BUILD_CREDIT",
+    "Created with care by Sankar Chakraborti",
+).strip() or "Created with care by Sankar Chakraborti"
 AUTH_PASSWORD_MAX_AGE_DAYS = int(os.getenv("AUTH_PASSWORD_MAX_AGE_DAYS", "90"))
 AUTH_OTP_TTL_MINUTES = int(os.getenv("AUTH_OTP_TTL_MINUTES", "10"))
 AUTH_OTP_CODE_LENGTH = int(os.getenv("AUTH_OTP_CODE_LENGTH", "6"))
