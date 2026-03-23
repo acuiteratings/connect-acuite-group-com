@@ -11,7 +11,15 @@ const gradients = {
   mixed: "linear-gradient(135deg,var(--lime),var(--yellow),var(--amber))",
 };
 
-const DIRECTORY_FILTER_GROUPS = ["company", "department", "function", "location"];
+const DIRECTORY_FILTER_GROUPS = ["company", "location", "department"];
+const DIRECTORY_FILTER_GROUP_LABELS = {
+  company: "Company",
+  location: "Location",
+  department: "Department",
+};
+const COMPANY_DISPLAY_LABELS = {
+  Acuite: "Acuité",
+};
 
 const appData = {
   currentUser: {
@@ -888,9 +896,8 @@ async function loadDirectoryData() {
       : [];
     directoryFilterOptions = {
       company: Array.isArray(payload.filters?.company) ? payload.filters.company : [],
-      department: Array.isArray(payload.filters?.department) ? payload.filters.department : [],
-      function: Array.isArray(payload.filters?.function) ? payload.filters.function : [],
       location: Array.isArray(payload.filters?.location) ? payload.filters.location : [],
+      department: Array.isArray(payload.filters?.department) ? payload.filters.department : [],
     };
   } catch (error) {
     directoryLoadError = error.message || "Could not load the people directory.";
@@ -1066,7 +1073,9 @@ async function handleDocumentClick(event) {
 
   const directoryChip = event.target.closest("[data-directory-filter-group]");
   if (directoryChip) {
-    state.directoryFilters[directoryChip.dataset.directoryFilterGroup] = directoryChip.dataset.directoryFilterValue;
+    const group = directoryChip.dataset.directoryFilterGroup;
+    const value = directoryChip.dataset.directoryFilterValue;
+    state.directoryFilters[group] = toggleDirectoryFilterSelection(state.directoryFilters[group], value);
     saveState();
     renderDirectory();
     renderDirectoryChips();
@@ -1443,25 +1452,22 @@ function renderAlumni() {
 }
 
 function renderDirectoryChips() {
-  const groups = [
-    { id: "company", label: "Company" },
-    { id: "department", label: "Department" },
-    { id: "function", label: "Function" },
-    { id: "location", label: "Location" },
-  ];
-
-  document.getElementById("directory-filter-groups").innerHTML = groups.map((group) => {
-    const options = directoryFilterOptions[group.id] || [];
-    const buttons = [{ value: "all", label: "All" }, ...options.map((value) => ({ value, label: value }))];
+  document.getElementById("directory-filter-groups").innerHTML = DIRECTORY_FILTER_GROUPS.map((groupId) => {
+    const options = directoryFilterOptions[groupId] || [];
+    const selectedValues = state.directoryFilters[groupId] || [];
+    const buttons = [{ value: "all", label: "All" }, ...options.map((value) => ({
+      value,
+      label: displayDirectoryFilterLabel(groupId, value),
+    }))];
     return `
       <div class="directory-filter-group">
-        <div class="directory-filter-title">${escapeHtml(group.label)}</div>
+        <div class="directory-filter-title">${escapeHtml(DIRECTORY_FILTER_GROUP_LABELS[groupId])}</div>
         <div class="directory-filter-buttons">
           ${buttons.map((option) => `
             <button
               type="button"
-              class="${state.directoryFilters[group.id] === option.value ? "active" : ""}"
-              data-directory-filter-group="${group.id}"
+              class="${isDirectoryFilterOptionActive(selectedValues, option.value) ? "active" : ""}"
+              data-directory-filter-group="${groupId}"
               data-directory-filter-value="${escapeHtml(option.value)}"
             >
               ${escapeHtml(option.label)}
@@ -1476,17 +1482,17 @@ function renderDirectoryChips() {
 function renderDirectory() {
   elements.directorySearchInput.value = state.directoryQuery;
   const query = state.directoryQuery.trim().toLowerCase();
+  const selectedCompanies = state.directoryFilters.company || [];
+  const selectedLocations = state.directoryFilters.location || [];
+  const selectedDepartments = state.directoryFilters.department || [];
   const filtered = appData.directory.filter((person) => {
-    if (state.directoryFilters.company !== "all" && person.company !== state.directoryFilters.company) {
+    if (selectedCompanies.length && !selectedCompanies.includes(person.company)) {
       return false;
     }
-    if (state.directoryFilters.department !== "all" && person.department !== state.directoryFilters.department) {
+    if (selectedLocations.length && !selectedLocations.includes(person.office)) {
       return false;
     }
-    if (state.directoryFilters.function !== "all" && person.functionName !== state.directoryFilters.function) {
-      return false;
-    }
-    if (state.directoryFilters.location !== "all" && person.office !== state.directoryFilters.location) {
+    if (selectedDepartments.length && !selectedDepartments.includes(person.department)) {
       return false;
     }
     if (!query) {
@@ -1523,7 +1529,7 @@ function renderDirectory() {
         </div>
         <div class="person-detail-grid">
           ${directoryCardDetail("Employee Code", person.employeeCode)}
-          ${directoryCardDetail("Company", person.company)}
+          ${directoryCardDetail("Company", person.companyLabel || person.company)}
           ${directoryCardDetail("Department", person.department)}
           ${directoryCardDetail("Function", person.functionName)}
           ${directoryCardDetail("Office", person.office)}
@@ -1538,7 +1544,7 @@ function renderDirectory() {
         </div>
       </article>
     `).join("")
-    : `<div class="empty-state">No people matched that filter. Try a broader company, department, or office search.</div>`;
+    : `<div class="empty-state">No people matched that filter. Try a broader company, location, or department selection.</div>`;
 }
 
 function renderToolSummary() {
@@ -2174,7 +2180,14 @@ function hydrateState() {
     ...saved,
     directoryFilters: {
       ...createDirectoryFiltersState(),
-      ...(saved.directoryFilters && typeof saved.directoryFilters === "object" ? saved.directoryFilters : {}),
+      ...(saved.directoryFilters && typeof saved.directoryFilters === "object"
+        ? Object.fromEntries(
+          DIRECTORY_FILTER_GROUPS.map((groupId) => [
+            groupId,
+            normalizeDirectoryFilterSelections(saved.directoryFilters[groupId]),
+          ]),
+        )
+        : {}),
     },
     likedPostIds: Array.isArray(saved.likedPostIds) ? saved.likedPostIds : defaultState.likedPostIds.slice(),
     joinedClubIds: Array.isArray(saved.joinedClubIds) ? saved.joinedClubIds : defaultState.joinedClubIds.slice(),
@@ -2210,19 +2223,52 @@ function toggleArrayValue(items, value) {
 function createDirectoryFilterOptions() {
   return {
     company: [],
-    department: [],
-    function: [],
     location: [],
+    department: [],
   };
 }
 
 function createDirectoryFiltersState() {
   return {
-    company: "all",
-    department: "all",
-    function: "all",
-    location: "all",
+    company: [],
+    location: [],
+    department: [],
   };
+}
+
+function normalizeDirectoryFilterSelections(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string" && item.trim());
+  }
+  if (typeof value === "string" && value.trim() && value !== "all") {
+    return [value];
+  }
+  return [];
+}
+
+function toggleDirectoryFilterSelection(selectedValues, value) {
+  if (value === "all") {
+    return [];
+  }
+  return toggleArrayValue(normalizeDirectoryFilterSelections(selectedValues), value);
+}
+
+function isDirectoryFilterOptionActive(selectedValues, value) {
+  if (value === "all") {
+    return !selectedValues.length;
+  }
+  return selectedValues.includes(value);
+}
+
+function displayCompanyName(value) {
+  return COMPANY_DISPLAY_LABELS[value] || value;
+}
+
+function displayDirectoryFilterLabel(groupId, value) {
+  if (groupId === "company") {
+    return displayCompanyName(value);
+  }
+  return value;
 }
 
 function gradientValue(key) {
@@ -2269,12 +2315,13 @@ function directoryCardDetail(label, value) {
 
 function mapDirectoryProfileToCard(profile) {
   const company = profile.company_name || "";
+  const companyLabel = displayCompanyName(company);
   const department = profile.department || "";
   const functionName = profile.function_name || "";
   const office = profile.office_location || profile.location || profile.city || "";
   const joinedOn = formatDisplayDate(profile.joined_on);
   const contactLine = [profile.email, profile.mobile_number || profile.phone_number].filter(Boolean).join(" | ");
-  const teams = [company, department, functionName].filter(Boolean);
+  const teams = [companyLabel, department, functionName].filter(Boolean);
 
   return {
     id: `person-${profile.id}`,
@@ -2283,10 +2330,11 @@ function mapDirectoryProfileToCard(profile) {
     role: profile.title || "Employee",
     city: profile.city || office,
     company,
+    companyLabel,
     department,
     functionName,
     office,
-    officeLine: [office, company].filter(Boolean).join(" | "),
+    officeLine: [office, companyLabel].filter(Boolean).join(" | "),
     employeeCode: profile.employee_code || "",
     joinedOn,
     contactLine,
@@ -2297,6 +2345,7 @@ function mapDirectoryProfileToCard(profile) {
       profile.email,
       profile.title,
       company,
+      companyLabel,
       department,
       functionName,
       office,
