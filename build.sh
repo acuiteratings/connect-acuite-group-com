@@ -30,6 +30,11 @@ if [[ -z "$BUILD_NUMBER" ]]; then
 fi
 
 printf '%s\n' "$BUILD_NUMBER" > "$ROOT_DIR/.build-number"
+cat > "$ROOT_DIR/assets/js/build-meta.js" <<EOF
+window.ACUITE_CONNECT_BUILD = {
+  number: "$BUILD_NUMBER"
+};
+EOF
 
 "$PYTHON_BIN" -m pip install -r backend/requirements.txt
 cd "$ROOT_DIR/backend"

@@ -154,9 +154,10 @@
 
   <footer class="connect-site-footer auth-footer">
     <span>{{ build_credit }}</span>
-    <span>BUILD no {{ build_number }}</span>
+    <span id="build-number-display">BUILD no {{ build_number }}</span>
   </footer>
 
+  <script src="{% static 'js/build-meta.js' %}" defer></script>
   <script src="{% static 'js/auth.js' %}" defer></script>
   <script src="{% static 'js/login.js' %}" defer></script>
 </body>

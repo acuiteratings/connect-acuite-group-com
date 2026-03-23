@@ -4,6 +4,15 @@
   let cachedSession = null;
   let sessionRequest = null;
 
+  function applyBuildNumber() {
+    const buildNode = document.getElementById("build-number-display");
+    const buildData = window.ACUITE_CONNECT_BUILD;
+    if (!buildNode || !buildData || !buildData.number) {
+      return;
+    }
+    buildNode.textContent = `BUILD no ${buildData.number}`;
+  }
+
   function readCookie(name) {
     const prefix = `${name}=`;
     const cookies = document.cookie ? document.cookie.split(";") : [];
@@ -147,4 +156,10 @@
     redirectIfAuthenticated,
     requireAuth,
   };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyBuildNumber);
+  } else {
+    applyBuildNumber();
+  }
 })();

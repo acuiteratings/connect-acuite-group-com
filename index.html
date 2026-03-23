@@ -469,11 +469,12 @@
 
   <footer class="connect-site-footer">
     <span>{{ build_credit }}</span>
-    <span>BUILD no {{ build_number }}</span>
+    <span id="build-number-display">BUILD no {{ build_number }}</span>
   </footer>
 
   <div class="toast" id="toast" aria-live="polite"></div>
 
+  <script src="{% static 'js/build-meta.js' %}" defer></script>
   <script src="{% static 'js/auth.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </body>
