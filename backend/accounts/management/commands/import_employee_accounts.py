@@ -120,6 +120,12 @@ class Command(BaseCommand):
             help="Optional temporary password to assign to imported users without one in the CSV.",
         )
         parser.add_argument(
+            "--exclude-email",
+            action="append",
+            default=[],
+            help="Email address to skip during import. Can be passed more than once.",
+        )
+        parser.add_argument(
             "--deactivate-missing",
             action="store_true",
             help="Deactivate imported-app users that are missing from this CSV.",
@@ -128,9 +134,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         file_path = options["file_path"]
         temporary_password = str(options["temporary_password"] or "")
+        excluded_emails = {
+            str(email or "").strip().lower()
+            for email in options["exclude_email"]
+            if str(email or "").strip()
+        }
         imported_emails = set()
         created = 0
         updated = 0
+        skipped = 0
 
         try:
             rows = load_rows(file_path)
@@ -141,6 +153,9 @@ class Command(BaseCommand):
             email = str(row.get("email", "")).strip().lower()
             if not email:
                 raise CommandError(f"Row {row_number}: email is required.")
+            if email in excluded_emails:
+                skipped += 1
+                continue
 
             imported_emails.add(email)
             defaults = {
@@ -196,6 +211,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Imported employees complete. Created: {created}, updated: {updated}, deactivated: {deactivated}."
+                f"Imported employees complete. Created: {created}, updated: {updated}, skipped: {skipped}, deactivated: {deactivated}."
             )
         )

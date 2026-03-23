@@ -11,8 +11,8 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   PYTHON_BIN="$(command -v python || command -v python3)"
 fi
 
-BUILD_NUMBER="${APP_BUILD_NUMBER:-}"
-if [[ -z "$BUILD_NUMBER" ]] && command -v git >/dev/null 2>&1; then
+BUILD_NUMBER=""
+if command -v git >/dev/null 2>&1; then
   COMMIT_COUNT="$(git -C "$ROOT_DIR" rev-list --count HEAD 2>/dev/null || true)"
   if [[ "$COMMIT_COUNT" =~ ^[0-9]+$ ]]; then
     BUILD_SUFFIX=$(( COMMIT_COUNT - BUILD_BASE_COMMIT_COUNT ))
@@ -21,6 +21,9 @@ if [[ -z "$BUILD_NUMBER" ]] && command -v git >/dev/null 2>&1; then
     fi
     BUILD_NUMBER="1.000000${BUILD_SUFFIX}"
   fi
+fi
+if [[ -z "$BUILD_NUMBER" ]]; then
+  BUILD_NUMBER="${APP_BUILD_NUMBER:-}"
 fi
 if [[ -z "$BUILD_NUMBER" ]]; then
   BUILD_NUMBER="1.0000001"
