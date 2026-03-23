@@ -69,8 +69,8 @@ APP_BUILD_NUMBER = (
 )
 APP_BUILD_CREDIT = os.getenv(
     "APP_BUILD_CREDIT",
-    "Created with care by Sankar Chakraborti",
-).strip() or "Created with care by Sankar Chakraborti"
+    "Built with care by Sankar Chakraborti",
+).strip() or "Built with care by Sankar Chakraborti"
 AUTH_PASSWORD_MAX_AGE_DAYS = int(os.getenv("AUTH_PASSWORD_MAX_AGE_DAYS", "90"))
 AUTH_OTP_TTL_MINUTES = int(os.getenv("AUTH_OTP_TTL_MINUTES", "10"))
 AUTH_OTP_CODE_LENGTH = int(os.getenv("AUTH_OTP_CODE_LENGTH", "6"))

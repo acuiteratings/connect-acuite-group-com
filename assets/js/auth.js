@@ -10,7 +10,7 @@
     if (!buildNode || !buildData || !buildData.number) {
       return;
     }
-    buildNode.textContent = `BUILD no ${buildData.number}`;
+    buildNode.textContent = `Built with care by Sankar Chakraborti | BUILD ${buildData.number}`;
   }
 
   function readCookie(name) {
