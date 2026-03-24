@@ -281,6 +281,10 @@ select {
   z-index: 140;
 }
 
+.profile-menu[hidden] {
+  display: none;
+}
+
 .profile-menu button {
   text-align: left;
   padding: 10px 12px;
@@ -2576,6 +2580,10 @@ select {
   justify-content: center;
   padding: 24px;
   z-index: 220;
+}
+
+.profile-modal-backdrop[hidden] {
+  display: none;
 }
 
 .profile-modal {
