@@ -11,6 +11,14 @@ class Post(models.Model):
         POLL = "poll", "Poll"
         RESOURCE = "resource", "Resource"
 
+    class Module(models.TextChoices):
+        GENERAL = "general", "General"
+        COMMUNITY = "community", "Community Exchange"
+        CLUBS_LEARNING = "clubs_learning", "Clubs & Learning"
+        IDEAS_VOICE = "ideas_voice", "Ideas & Voice"
+        RECOGNITION = "recognition", "Recognition"
+        BUSINESS = "business", "Business Desk"
+
     class Visibility(models.TextChoices):
         COMPANY = "company", "Company-wide"
         DEPARTMENT = "department", "Department"
@@ -31,6 +39,13 @@ class Post(models.Model):
     title = models.CharField(max_length=180)
     body = models.TextField()
     kind = models.CharField(max_length=24, choices=PostType.choices, default=PostType.UPDATE)
+    module = models.CharField(
+        max_length=32,
+        choices=Module.choices,
+        default=Module.GENERAL,
+    )
+    topic = models.CharField(max_length=64, blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
     visibility = models.CharField(
         max_length=24,
         choices=Visibility.choices,

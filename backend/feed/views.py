@@ -49,6 +49,14 @@ def posts_collection(request):
         if kind:
             queryset = queryset.filter(kind=kind)
 
+        module = request.GET.get("module")
+        if module:
+            queryset = queryset.filter(module=module)
+
+        topic = request.GET.get("topic")
+        if topic:
+            queryset = queryset.filter(topic=topic)
+
         author_id = request.GET.get("author_id")
         if author_id:
             queryset = queryset.filter(author_id=author_id)
@@ -73,35 +81,61 @@ def posts_collection(request):
         return JsonResponse({"detail": "Both title and body are required."}, status=400)
 
     kind = payload.get("kind") or Post.PostType.UPDATE
+    module = payload.get("module") or Post.Module.GENERAL
+    if module not in Post.Module.values:
+        return JsonResponse({"detail": "Invalid module supplied."}, status=400)
+
+    topic = str(payload.get("topic", "")).strip().lower().replace(" ", "_")
+    if len(topic) > 64:
+        return JsonResponse({"detail": "Topic must be 64 characters or fewer."}, status=400)
+
+    metadata = payload.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return JsonResponse({"detail": "Metadata must be a JSON object."}, status=400)
+
     visibility = payload.get("visibility") or Post.Visibility.COMPANY
     can_publish = _can_publish(request.user)
+    auto_publish = can_publish or module == Post.Module.COMMUNITY
     post = Post.objects.create(
         author=request.user,
         title=title,
         body=body,
         kind=kind,
+        module=module,
+        topic=topic,
+        metadata=metadata,
         visibility=visibility,
         allow_comments=bool(payload.get("allow_comments", True)),
         moderation_status=(
             Post.ModerationStatus.PUBLISHED
-            if can_publish
+            if auto_publish
             else Post.ModerationStatus.PENDING_REVIEW
         ),
-        published_at=timezone.now() if can_publish else None,
+        published_at=timezone.now() if auto_publish else None,
     )
     record_audit_event(
         action="post.created",
         actor=request.user,
         target=post,
         summary=f"Created post '{post.title}'",
-        metadata={"kind": post.kind, "visibility": post.visibility},
+        metadata={
+            "kind": post.kind,
+            "module": post.module,
+            "topic": post.topic,
+            "visibility": post.visibility,
+        },
         request=request,
     )
     record_analytics_event(
         "feed",
         "post_created",
         actor=request.user,
-        metadata={"post_id": post.id, "moderation_status": post.moderation_status},
+        metadata={
+            "post_id": post.id,
+            "module": post.module,
+            "topic": post.topic,
+            "moderation_status": post.moderation_status,
+        },
         request=request,
     )
     return JsonResponse({"post": serialize_post(post)}, status=201)

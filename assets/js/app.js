@@ -20,6 +20,55 @@ const DIRECTORY_FILTER_GROUP_LABELS = {
 const COMPANY_DISPLAY_LABELS = {
   Acuite: "Acuité",
 };
+const COMMUNITY_BOARD_CONFIG = {
+  marketplace: {
+    label: "Marketplace",
+    kicker: "Exchange",
+    title: "Give away, barter or sell",
+    summary: "Employees can exchange books, gadgets, furniture and useful home items without clutter.",
+    metaLabel: "Price or exchange note",
+    metaPlaceholder: "Free pickup | Rs 2,000 | Open to barter",
+    emptyTitle: "No marketplace posts yet",
+    emptyCopy: "The first employee listing for books, gadgets, furniture or other items will appear here.",
+    types: [
+      { value: "giveaway", label: "Give away" },
+      { value: "barter", label: "Barter" },
+      { value: "sell", label: "Sell" },
+    ],
+  },
+  housing: {
+    label: "Housing",
+    kicker: "Stay board",
+    title: "Roommate and stay help",
+    summary: "A clean internal board for room searches, flatmate requests, paying guest leads and relocation support.",
+    metaLabel: "Budget or timing",
+    metaPlaceholder: "Budget up to Rs 22,000 | Available from April",
+    emptyTitle: "No housing requests yet",
+    emptyCopy: "Roommate searches, flat requests and temporary stay leads will appear here.",
+    types: [
+      { value: "looking_for_roommate", label: "Looking for roommate" },
+      { value: "looking_for_place", label: "Looking for a place" },
+      { value: "offering_place", label: "Offering a place" },
+    ],
+  },
+  life_moments: {
+    label: "Life moments",
+    kicker: "Milestones",
+    title: "Share important personal news",
+    summary: "Marriage, childbirth, a new home or a new car deserve a warmer home than a generic company announcement stream.",
+    metaLabel: "When or where",
+    metaPlaceholder: "Celebrating this weekend | Ahmedabad | Joined by family",
+    emptyTitle: "No life moments have been shared yet",
+    emptyCopy: "When someone shares a milestone here, the Community board will carry it with the right amount of warmth.",
+    types: [
+      { value: "marriage", label: "Marriage" },
+      { value: "child_birth", label: "Birth of a child" },
+      { value: "new_home", label: "New house" },
+      { value: "new_car", label: "New car" },
+      { value: "celebration", label: "Other celebration" },
+    ],
+  },
+};
 
 const HOME_PILLARS = [
   {
@@ -256,6 +305,7 @@ const appData = {
       message: "Help Desk is shown as a planned module in this MVP foundation.",
     },
   ],
+  communityPosts: [],
   homePosts: [
     {
       id: "post-townhall",
@@ -903,6 +953,7 @@ Object.assign(appData, {
   agenda: [],
   tasks: [],
   pulse: [],
+  communityPosts: [],
   homePosts: [],
   bulletinPosts: [],
   wallPosts: [],
@@ -933,6 +984,7 @@ const kudosTags = [
 const defaultState = {
   theme: "",
   activeTab: "home",
+  communityFilter: "all",
   bulletinFilter: "all",
   pitchFilter: "trending",
   momentsFilter: "all",
@@ -955,6 +1007,7 @@ let elements = {};
 let latestSearchResults = [];
 let toastTimeoutId = null;
 let directoryLoadError = "";
+let communityLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -980,6 +1033,11 @@ async function init() {
     searchInput: document.getElementById("global-search"),
     searchResults: document.getElementById("search-results"),
     directorySearchInput: document.getElementById("directory-search"),
+    communityForm: document.getElementById("community-form"),
+    communityBoardSelect: document.getElementById("community-board-select"),
+    communityTypeSelect: document.getElementById("community-type-select"),
+    communityMetaLabel: document.getElementById("community-meta-label"),
+    communityMetaInput: document.getElementById("community-meta-input"),
     bulletinForm: document.getElementById("bulletin-form"),
     kudosForm: document.getElementById("kudos-form"),
     pitchForm: document.getElementById("pitch-form"),
@@ -994,7 +1052,7 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await loadDirectoryData();
+  await Promise.all([loadDirectoryData(), loadCommunityPosts()]);
   bindEvents();
   renderAll();
 }
@@ -1024,6 +1082,25 @@ async function loadDirectoryData() {
   }
 }
 
+async function loadCommunityPosts() {
+  communityLoadError = "";
+  appData.communityPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    communityLoadError = "Community services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=community");
+    appData.communityPosts = Array.isArray(payload.results)
+      ? payload.results.map(mapCommunityPost)
+      : [];
+  } catch (error) {
+    communityLoadError = error.message || "Could not load community posts.";
+  }
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
@@ -1037,6 +1114,12 @@ function bindEvents() {
       updateSearchResults(elements.searchInput.value.trim());
     }
   });
+
+  if (elements.communityBoardSelect) {
+    elements.communityBoardSelect.addEventListener("change", () => {
+      syncCommunityComposer();
+    });
+  }
 
   elements.directorySearchInput.addEventListener("input", (event) => {
     state.directoryQuery = event.target.value;
@@ -1208,6 +1291,12 @@ async function handleDocumentClick(event) {
 }
 
 function handleSubmit(event) {
+  if (event.target === elements.communityForm) {
+    event.preventDefault();
+    void submitCommunity();
+    return;
+  }
+
   if (event.target === elements.bulletinForm) {
     event.preventDefault();
     submitBulletin();
@@ -1247,6 +1336,7 @@ function renderAll() {
   renderPulsePanel();
   renderHomeTools();
   renderHomeFeed();
+  renderCommunityPanel();
   renderBulletinFeed();
   renderKudosTags();
   renderWallFeed();
@@ -1350,6 +1440,120 @@ function renderHomeFeed() {
       <button type="button" class="btn-link" data-switch-tab="${layer.tab}">Open</button>
     </article>
   `).join("");
+}
+
+function renderCommunityPanel() {
+  syncCommunityComposer();
+  renderCommunitySummary();
+  renderCommunityGuideCards();
+  renderCommunityFeed();
+}
+
+function renderCommunitySummary() {
+  const posts = getFilteredCommunityPosts();
+  const allPosts = appData.communityPosts;
+  const activeCities = new Set(
+    allPosts.map((post) => post.city).filter(Boolean).map((city) => city.toLowerCase()),
+  ).size;
+  const latestPost = allPosts[0];
+  const boardLabel = state.communityFilter === "all"
+    ? "All boards"
+    : getCommunityBoardLabel(state.communityFilter);
+
+  document.getElementById("community-summary-grid").innerHTML = [
+    {
+      kicker: "Live now",
+      title: `${allPosts.length} shared posts`,
+      copy: "Real employee posts published inside Community Exchange.",
+    },
+    {
+      kicker: "Coverage",
+      title: `${activeCities} active cities`,
+      copy: activeCities ? "City tags make it easier to scan the right local board." : "City-based activity will begin to show once posts start coming in.",
+    },
+    {
+      kicker: "Board filter",
+      title: boardLabel,
+      copy: latestPost
+        ? `Latest post: ${latestPost.title}`
+        : "No posts yet. The first live listing will set the pace for this module.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+
+  document.getElementById("community-results-meta").textContent = allPosts.length
+    ? `${posts.length} of ${allPosts.length} live community posts shown`
+    : "Live employee community board";
+}
+
+function renderCommunityGuideCards() {
+  const activeBoard = state.communityFilter === "all" ? "marketplace" : state.communityFilter;
+  const board = COMMUNITY_BOARD_CONFIG[activeBoard] || COMMUNITY_BOARD_CONFIG.marketplace;
+  const hotCities = summarizeCommunityCities();
+
+  document.getElementById("community-guide-card").innerHTML = `
+    <p class="widget-kicker">${escapeHtml(board.kicker)}</p>
+    <h3>${escapeHtml(board.title)}</h3>
+    <p>${escapeHtml(board.summary)}</p>
+    <ul class="simple-list">
+      ${board.types.map((type) => `<li>${escapeHtml(type.label)}</li>`).join("")}
+    </ul>
+  `;
+
+  document.getElementById("community-city-card").innerHTML = `
+    <p class="widget-kicker">City pulse</p>
+    <h3>Where community activity is surfacing</h3>
+    ${
+      hotCities.length
+        ? `<ul class="mini-list community-city-list">
+            ${hotCities.map((item) => `
+              <li>
+                <div>
+                  <div class="mini-item-title">${escapeHtml(item.city)}</div>
+                  <div class="mini-item-meta">${escapeHtml(item.note)}</div>
+                </div>
+                <div class="mini-item-time">${escapeHtml(String(item.count))}</div>
+              </li>
+            `).join("")}
+          </ul>`
+        : `<div class="empty-state">Once employees begin posting, the most active cities will surface here automatically.</div>`
+    }
+  `;
+}
+
+function renderCommunityFeed() {
+  const container = document.getElementById("community-feed");
+  if (communityLoadError) {
+    container.innerHTML = `<div class="empty-state">${escapeHtml(communityLoadError)}</div>`;
+    return;
+  }
+
+  const posts = getFilteredCommunityPosts();
+  if (!appData.communityPosts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No live Community Exchange posts have been shared yet. The first employee listing or announcement will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!posts.length) {
+    const board = COMMUNITY_BOARD_CONFIG[state.communityFilter];
+    container.innerHTML = `
+      <div class="empty-state">
+        ${escapeHtml(board ? board.emptyCopy : "No posts match the selected board right now.")}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = posts.map(renderCommunityPostCard).join("");
 }
 
 function renderBulletinFeed() {
@@ -1958,6 +2162,102 @@ function renderPitchCard(pitch) {
   `;
 }
 
+function renderCommunityPostCard(post) {
+  return `
+    <article class="card community-card community-board-${escapeHtml(post.board)}" id="${post.id}">
+      <div class="community-card-top">
+        <div class="community-card-tags">
+          <span class="mini-chip">${escapeHtml(post.boardLabel)}</span>
+          <span class="mini-chip success">${escapeHtml(post.typeLabel)}</span>
+          ${post.city ? `<span class="mini-chip">${escapeHtml(post.city)}</span>` : ""}
+        </div>
+        <div class="community-time">${escapeHtml(post.postedAtLabel)}</div>
+      </div>
+      <div class="card-header">
+        <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
+        <div class="card-meta">
+          <div class="card-name">${escapeHtml(post.authorName)}</div>
+          <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(post.title)}</div>
+        <p>${escapeHtml(post.body)}</p>
+      </div>
+      ${
+        post.metaLine
+          ? `<div class="community-detail-row">
+              <span class="community-detail-label">${escapeHtml(post.metaLabel)}</span>
+              <strong>${escapeHtml(post.metaLine)}</strong>
+            </div>`
+          : ""
+      }
+      <div class="card-actions">
+        <button type="button" class="action-btn" data-action="placeholder-comment">
+          ${commentIcon()}${escapeHtml(String(post.commentCount))}
+        </button>
+        <div class="spacer"></div>
+        <button
+          type="button"
+          class="btn-outline"
+          data-action="post-cta"
+          data-message="${escapeHtml(`Reach out to ${post.authorName} directly for this ${post.boardLabel.toLowerCase()} post.`)}"
+        >
+          Connect
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+async function submitCommunity() {
+  const formData = new FormData(elements.communityForm);
+  const board = String(formData.get("board") || "marketplace");
+  const communityType = String(formData.get("community_type") || "").trim();
+  const city = String(formData.get("city") || "").trim();
+  const metaLine = String(formData.get("meta_line") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  const details = String(formData.get("details") || "").trim();
+
+  if (!title || !details || !city || !communityType) {
+    showToast("Add board, type, city, title and details before posting.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body: details,
+        module: "community",
+        topic: board,
+        metadata: {
+          community_type: communityType,
+          city,
+          meta_line: metaLine,
+        },
+      },
+    });
+
+    if (payload.post) {
+      appData.communityPosts.unshift(mapCommunityPost(payload.post));
+      elements.communityForm.reset();
+      if (elements.communityBoardSelect) {
+        elements.communityBoardSelect.value = board;
+      }
+      syncCommunityComposer();
+      renderCommunityPanel();
+      showToast("Community post shared live inside Connect.");
+      return;
+    }
+
+    showToast("Community post created.");
+  } catch (error) {
+    showToast(error.message || "Could not share the community post.");
+  }
+}
+
 function submitBulletin() {
   const formData = new FormData(elements.bulletinForm);
   const title = String(formData.get("title") || "").trim();
@@ -2088,6 +2388,26 @@ function jumpToItem(tab, targetId) {
 }
 
 function buildSearchIndex() {
+  const community = appData.communityPosts.map((post) => ({
+    title: post.title,
+    subtitle: `${post.boardLabel} - ${post.city || "Community Exchange"}`,
+    type: "community",
+    tab: "community",
+    targetId: post.id,
+    searchText: [
+      post.title,
+      post.body,
+      post.boardLabel,
+      post.typeLabel,
+      post.city,
+      post.authorName,
+      post.metaLine,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase(),
+  }));
+
   const bulletin = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts].map((post) => ({
     title: post.title,
     subtitle: `${post.authorName} - Bulletin`,
@@ -2124,7 +2444,7 @@ function buildSearchIndex() {
     searchText: [item.title, item.summary, item.owner, item.category].join(" ").toLowerCase(),
   }));
 
-  return [...bulletin, ...directory, ...tools, ...resources];
+  return [...community, ...bulletin, ...directory, ...tools, ...resources];
 }
 
 function scoreSearchItem(item, query) {
@@ -2171,6 +2491,14 @@ function switchTab(tabId) {
 }
 
 function setFilter(group, value) {
+  if (group === "community") {
+    state.communityFilter = value;
+    saveState();
+    renderCommunityPanel();
+    syncFilterButtons();
+    return;
+  }
+
   if (group === "bulletin") {
     state.bulletinFilter = value;
     saveState();
@@ -2205,6 +2533,7 @@ function setFilter(group, value) {
 
 function syncFilterButtons() {
   const filterMap = {
+    community: state.communityFilter,
     bulletin: state.bulletinFilter,
     pitch: state.pitchFilter,
     moments: state.momentsFilter,
@@ -2276,6 +2605,90 @@ function mapCustomPitchToPost(item) {
   };
 }
 
+function mapCommunityPost(post) {
+  const metadata = post.metadata || {};
+  const board = post.topic || "marketplace";
+  const boardConfig = COMMUNITY_BOARD_CONFIG[board] || COMMUNITY_BOARD_CONFIG.marketplace;
+  const communityType = metadata.community_type || boardConfig.types[0].value;
+  const typeLabel = getCommunityTypeLabel(board, communityType);
+  const author = post.author || {};
+
+  return {
+    id: `community-post-${post.id}`,
+    sourceId: post.id,
+    title: post.title,
+    body: post.body,
+    board,
+    boardLabel: boardConfig.label,
+    type: communityType,
+    typeLabel,
+    city: metadata.city || "",
+    metaLine: metadata.meta_line || "",
+    metaLabel: boardConfig.metaLabel,
+    commentCount: post.comment_count || 0,
+    authorName: author.name || "Acuité employee",
+    authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || author.email || "Employee",
+    initials: author.initials || initialsFromName(author.name || "Acuité"),
+    avatar: gradientKeyFromText(`${author.name || ""}-${board}-${communityType}`),
+    postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
+    createdAt: post.created_at || "",
+  };
+}
+
+function getFilteredCommunityPosts() {
+  const posts = appData.communityPosts.slice().sort((left, right) => {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+  if (state.communityFilter === "all") {
+    return posts;
+  }
+  return posts.filter((post) => post.board === state.communityFilter);
+}
+
+function summarizeCommunityCities() {
+  const counts = new Map();
+  appData.communityPosts.forEach((post) => {
+    if (!post.city) {
+      return;
+    }
+    const key = post.city.trim();
+    if (!key) {
+      return;
+    }
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 4)
+    .map(([city, count]) => ({
+      city,
+      count,
+      note: count === 1 ? "1 live post" : `${count} live posts`,
+    }));
+}
+
+function syncCommunityComposer() {
+  if (!elements.communityBoardSelect || !elements.communityTypeSelect || !elements.communityMetaLabel || !elements.communityMetaInput) {
+    return;
+  }
+
+  const board = elements.communityBoardSelect.value || "marketplace";
+  const boardConfig = COMMUNITY_BOARD_CONFIG[board] || COMMUNITY_BOARD_CONFIG.marketplace;
+  const previousType = elements.communityTypeSelect.value;
+
+  elements.communityTypeSelect.innerHTML = boardConfig.types.map((type) => `
+    <option value="${escapeHtml(type.value)}">${escapeHtml(type.label)}</option>
+  `).join("");
+
+  if (boardConfig.types.some((type) => type.value === previousType)) {
+    elements.communityTypeSelect.value = previousType;
+  }
+
+  elements.communityMetaLabel.textContent = boardConfig.metaLabel;
+  elements.communityMetaInput.placeholder = boardConfig.metaPlaceholder;
+}
+
 function hydrateState() {
   const saved = readState();
   if (!saved) {
@@ -2285,6 +2698,12 @@ function hydrateState() {
   return {
     ...defaultState,
     ...saved,
+    communityFilter: (
+      typeof saved.communityFilter === "string"
+      && ["all", ...Object.keys(COMMUNITY_BOARD_CONFIG)].includes(saved.communityFilter)
+    )
+      ? saved.communityFilter
+      : defaultState.communityFilter,
     directoryFilters: {
       ...createDirectoryFiltersState(),
       ...(saved.directoryFilters && typeof saved.directoryFilters === "object"
@@ -2393,6 +2812,16 @@ function capitalize(value) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 }
 
+function getCommunityBoardLabel(board) {
+  return (COMMUNITY_BOARD_CONFIG[board] && COMMUNITY_BOARD_CONFIG[board].label) || "Community";
+}
+
+function getCommunityTypeLabel(board, type) {
+  const boardConfig = COMMUNITY_BOARD_CONFIG[board];
+  const match = boardConfig ? boardConfig.types.find((item) => item.value === type) : null;
+  return match ? match.label : capitalize(String(type || "").replaceAll("_", " "));
+}
+
 function formatDisplayDate(value) {
   if (!value) {
     return "";
@@ -2406,6 +2835,34 @@ function formatDisplayDate(value) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatRelativeTime(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+
+  const diffMs = Date.now() - parsed.getTime();
+  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) {
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  }
+
+  return formatDisplayDate(value);
 }
 
 function directoryCardDetail(label, value) {

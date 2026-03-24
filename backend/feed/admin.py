@@ -96,6 +96,8 @@ class PostAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "author",
+        "module",
+        "topic",
         "kind",
         "visibility",
         "moderation_status",
@@ -103,8 +105,15 @@ class PostAdmin(admin.ModelAdmin):
         "published_at",
         "created_at",
     )
-    list_filter = ("kind", "visibility", "moderation_status", "pinned")
-    search_fields = ("title", "body", "author__email", "author__first_name", "author__last_name")
+    list_filter = ("module", "kind", "visibility", "moderation_status", "pinned")
+    search_fields = (
+        "title",
+        "body",
+        "topic",
+        "author__email",
+        "author__first_name",
+        "author__last_name",
+    )
     autocomplete_fields = ("author",)
     actions = (publish_posts, reject_posts)
 

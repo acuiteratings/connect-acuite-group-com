@@ -167,78 +167,74 @@
         <div class="section-head">
           <div>
             <h2>Community Exchange</h2>
-            <p>Marketplace, housing help and everyday life updates for employees.</p>
+            <p>Marketplace, housing help and life updates shared across the employee network.</p>
+          </div>
+          <div class="filter-tabs" data-filter-group="community">
+            <button type="button" class="active" data-filter="all">All boards</button>
+            <button type="button" data-filter="marketplace">Marketplace</button>
+            <button type="button" data-filter="housing">Housing</button>
+            <button type="button" data-filter="life_moments">Life moments</button>
           </div>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">Exchange</p>
-            <h3>Give away, barter or sell</h3>
-            <p class="muted-copy">A clean internal board for books, gadgets, furniture and daily-use items.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Housing</p>
-            <h3>Stay and roommate requests</h3>
-            <p class="muted-copy">A place to ask for flatmates, paying guest options or short-term stay help.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Life Updates</p>
-            <h3>Share milestones that matter</h3>
-            <p class="muted-copy">Car, house, marriage, childbirth and other important moments belong here.</p>
-          </article>
-        </div>
+        <div class="dashboard-grid" id="community-summary-grid"></div>
 
-        <div class="two-column-layout">
+        <div class="two-column-layout community-layout">
           <section class="section-card">
             <div class="section-card-head">
               <div>
-                <p class="widget-kicker">What will live here</p>
-                <h2>Community boards</h2>
+                <p class="widget-kicker">Live board</p>
+                <h2>Community posts</h2>
+                <div class="mini-item-meta" id="community-results-meta">Loading the live community board...</div>
               </div>
             </div>
-            <div class="tool-grid compact">
-              <article class="tool-card landing-card">
-                <h3>Employee marketplace</h3>
-                <p>Posts for giveaway, barter and resale with simple moderation and clean categories.</p>
-                <ul class="landing-list">
-                  <li>Books, devices, furniture and home items</li>
-                  <li>Simple price, city and condition fields</li>
-                  <li>Useful for fast peer-to-peer exchange</li>
-                </ul>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Stay board</h3>
-                <p>A practical board for room, roommate, paying guest and relocation requests.</p>
-                <ul class="landing-list">
-                  <li>City-first view for faster matching</li>
-                  <li>Post availability, budget and timing</li>
-                  <li>Good fit for new joiners and transfers</li>
-                </ul>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Life moments</h3>
-                <p>Personal milestones deserve a warmer, more intentional home than a generic announcement stream.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="moments">Open current Moments prototype</button>
-                </div>
-              </article>
-            </div>
+            <div class="community-feed" id="community-feed"></div>
           </section>
 
           <aside class="stack-side">
-            <div class="widget-card">
-              <h3>Build focus</h3>
-              <ul class="simple-list">
-                <li>Marketplace posts</li>
-                <li>Housing and roommate notices</li>
-                <li>Life-event announcements</li>
-              </ul>
-            </div>
-            <div class="widget-card">
-              <h3>Bridge from today</h3>
-              <p>Until this module is fully wired, Moments can continue to carry photo-led culture posts.</p>
-            </div>
+            <form class="story-form" id="community-form">
+              <p class="widget-kicker">New post</p>
+              <h3>Share with the community</h3>
+              <div class="story-form-grid split">
+                <label class="field">
+                  <span>Board</span>
+                  <select name="board" id="community-board-select">
+                    <option value="marketplace">Marketplace</option>
+                    <option value="housing">Housing</option>
+                    <option value="life_moments">Life moments</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Type</span>
+                  <select name="community_type" id="community-type-select"></select>
+                </label>
+              </div>
+              <div class="story-form-grid split">
+                <label class="field">
+                  <span>City</span>
+                  <input type="text" name="city" maxlength="80" placeholder="Mumbai, Kolkata, Ahmedabad..." required>
+                </label>
+                <label class="field">
+                  <span id="community-meta-label">Price or exchange note</span>
+                  <input type="text" name="meta_line" id="community-meta-input" maxlength="120" placeholder="Free pickup | Rs 2,000 | Swap for books">
+                </label>
+              </div>
+              <label class="field">
+                <span>Title</span>
+                <input type="text" name="title" maxlength="120" placeholder="What are you sharing or looking for?" required>
+              </label>
+              <label class="field">
+                <span>Details</span>
+                <textarea name="details" rows="5" maxlength="500" placeholder="Add the context someone would need before responding." required></textarea>
+              </label>
+              <div class="form-actions">
+                <p>Posts are shared live with employees inside Connect.</p>
+                <button type="submit" class="btn-warm">Post to Community</button>
+              </div>
+            </form>
+
+            <div class="widget-card" id="community-guide-card"></div>
+            <div class="widget-card" id="community-city-card"></div>
           </aside>
         </div>
       </section>
