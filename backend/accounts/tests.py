@@ -418,3 +418,24 @@ class RemoveEmployeeAccountCommandTests(TestCase):
             call_command("remove_employee_account", staff_user.email)
 
         self.assertTrue(User.objects.filter(email=staff_user.email).exists())
+
+
+class SetConnectAccessCommandTests(TestCase):
+    def test_set_connect_access_promotes_user_and_enables_posting(self):
+        user = User.objects.create_user(
+            email="promote.me@acuite.in",
+            password="314159",
+            can_post_in_connect=False,
+        )
+
+        call_command(
+            "set_connect_access",
+            user.email,
+            "--access-level",
+            User.AccessLevel.ADMIN,
+            "--enable-posting",
+        )
+
+        user.refresh_from_db()
+        self.assertEqual(user.access_level, User.AccessLevel.ADMIN)
+        self.assertTrue(user.can_post_in_connect)
