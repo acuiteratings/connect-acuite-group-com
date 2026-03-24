@@ -290,6 +290,9 @@ function updateStep(label, copy) {
 
 function showOtpPreview(code) {
   const node = document.getElementById("otp-preview-line");
+  if (!node) {
+    return;
+  }
   if (!code) {
     node.hidden = true;
     node.textContent = "";
@@ -303,10 +306,14 @@ function showOtpPreview(code) {
 function updatePolicyCopy() {
   const maxAgeDays =
     (authFlow.authPolicy && authFlow.authPolicy.password_max_age_days) || 90;
-  document.getElementById("password-policy-days").textContent = String(maxAgeDays);
-  document.getElementById(
-    "password-policy-copy"
-  ).textContent = `Passwords must be changed on first login and every ${maxAgeDays} days after that.`;
+  const daysNode = document.getElementById("password-policy-days");
+  const policyNode = document.getElementById("password-policy-copy");
+  if (daysNode) {
+    daysNode.textContent = String(maxAgeDays);
+  }
+  if (policyNode) {
+    policyNode.textContent = `Passwords must be changed on first login and every ${maxAgeDays} days after that.`;
+  }
 }
 
 async function withButtonBusy(button, action, ...errorIds) {
