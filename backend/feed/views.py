@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
-from .models import Comment, Post
+from .models import Comment, Post, PostReaction
 from .serializers import serialize_comment, serialize_post
 
 
@@ -40,7 +40,12 @@ def posts_collection(request):
             published_comment_count=Count(
                 "comments",
                 filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
-            )
+            ),
+            like_reaction_count=Count(
+                "reactions",
+                filter=Q(reactions__reaction_type=PostReaction.ReactionType.LIKE),
+                distinct=True,
+            ),
         )
         if not _can_moderate(request.user):
             queryset = queryset.filter(moderation_status=Post.ModerationStatus.PUBLISHED)
@@ -61,7 +66,7 @@ def posts_collection(request):
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
-        posts = [serialize_post(post) for post in queryset[:50]]
+        posts = [serialize_post(post, viewer=request.user) for post in queryset[:50]]
         return JsonResponse({"count": len(posts), "results": posts})
 
     if request.method != "POST":
@@ -99,7 +104,7 @@ def posts_collection(request):
         return JsonResponse({"detail": "Only staff can publish to the CEO corner."}, status=403)
 
     auto_publish = can_publish or (
-        module in {Post.Module.COMMUNITY, Post.Module.IDEAS_VOICE}
+        module in {Post.Module.COMMUNITY, Post.Module.IDEAS_VOICE, Post.Module.RECOGNITION}
         and topic != "ceo_corner"
     )
     post = Post.objects.create(
@@ -144,7 +149,7 @@ def posts_collection(request):
         },
         request=request,
     )
-    return JsonResponse({"post": serialize_post(post)}, status=201)
+    return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
 @csrf_exempt
@@ -202,3 +207,64 @@ def post_comments(request, post_id):
         request=request,
     )
     return JsonResponse({"comment": serialize_comment(comment)}, status=201)
+
+
+@csrf_exempt
+def toggle_post_reaction(request, post_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    post = get_object_or_404(Post.objects.select_related("author"), pk=post_id)
+    if (
+        post.moderation_status != Post.ModerationStatus.PUBLISHED
+        and not _can_moderate(request.user)
+    ):
+        return JsonResponse({"detail": "Post not available."}, status=404)
+
+    reaction, created = PostReaction.objects.get_or_create(
+        post=post,
+        user=request.user,
+        reaction_type=PostReaction.ReactionType.LIKE,
+    )
+    reacted = created
+    if not created:
+        reaction.delete()
+        reacted = False
+
+    action_name = "post.liked" if reacted else "post.unliked"
+    record_audit_event(
+        action=action_name,
+        actor=request.user,
+        target=post,
+        summary=f"{'Liked' if reacted else 'Removed like from'} '{post.title}'",
+        metadata={"post_id": post.id, "reaction_type": PostReaction.ReactionType.LIKE},
+        request=request,
+    )
+    record_analytics_event(
+        "feed",
+        "post_reaction_toggled",
+        actor=request.user,
+        metadata={"post_id": post.id, "reacted": reacted},
+        request=request,
+    )
+
+    refreshed_post = (
+        Post.objects.select_related("author")
+        .annotate(
+            published_comment_count=Count(
+                "comments",
+                filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+            ),
+            like_reaction_count=Count(
+                "reactions",
+                filter=Q(reactions__reaction_type=PostReaction.ReactionType.LIKE),
+                distinct=True,
+            ),
+        )
+        .get(pk=post.pk)
+    )
+    return JsonResponse(
+        {"post": serialize_post(refreshed_post, viewer=request.user), "reacted": reacted}
+    )

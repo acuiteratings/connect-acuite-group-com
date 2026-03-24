@@ -109,4 +109,33 @@ class Comment(models.Model):
     def __str__(self):
         return f"Comment by {self.author.full_name} on {self.post.title}"
 
-# Create your models here.
+
+class PostReaction(models.Model):
+    class ReactionType(models.TextChoices):
+        LIKE = "like", "Like"
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="reactions")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="post_reactions",
+    )
+    reaction_type = models.CharField(
+        max_length=16,
+        choices=ReactionType.choices,
+        default=ReactionType.LIKE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-updated_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("post", "user", "reaction_type"),
+                name="feed_unique_reaction_per_post_user_type",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.full_name} reacted to {self.post.title}"

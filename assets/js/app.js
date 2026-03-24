@@ -102,6 +102,43 @@ const VOICE_POLL_OPTION_BACKGROUNDS = [
   "rgba(141,198,63,0.10)",
   "rgba(123,36,28,0.12)",
 ];
+const RECOGNITION_TOPIC_CONFIG = {
+  kudos: {
+    label: "Kudos",
+    kicker: "Recognition",
+    title: "Public appreciation for great work",
+    summary: "Kudos posts should call out the work, the behavior and the impact so appreciation feels earned and useful.",
+    tagLabel: "Recognition tag",
+    emptyCopy: "The first live kudos post will appear here and begin shaping the tone of recognition inside Connect.",
+    tags: [
+      { value: "sharp_analysis", label: "Sharp analysis" },
+      { value: "team_player", label: "Team player" },
+      { value: "client_hero", label: "Client hero" },
+      { value: "mentor", label: "Mentored me" },
+      { value: "innovation", label: "Innovation" },
+    ],
+  },
+  milestone: {
+    label: "Milestones",
+    kicker: "Celebration",
+    title: "Work achievements and important moments",
+    summary: "Milestones give important achievements, work anniversaries and notable employee moments a durable place inside the company story.",
+    tagLabel: "Milestone type",
+    emptyCopy: "Milestone posts will appear here once employees begin celebrating key achievements and work moments.",
+    tags: [
+      { value: "achievement", label: "Achievement" },
+      { value: "work_anniversary", label: "Work anniversary" },
+      { value: "birthday", label: "Birthday" },
+      { value: "celebration", label: "Celebration" },
+    ],
+  },
+};
+const REWARD_RULE_LABELS = {
+  published_post: "Post published",
+  published_comment: "Comment posted",
+  reaction_given: "Like given",
+  reaction_received: "Like received",
+};
 
 const HOME_PILLARS = [
   {
@@ -341,7 +378,11 @@ const appData = {
   ],
   communityPosts: [],
   voicePosts: [],
+  recognitionPosts: [],
   activePoll: null,
+  currentUserPoints: 0,
+  rewardRules: [],
+  recognitionTotals: {},
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [
@@ -993,7 +1034,11 @@ Object.assign(appData, {
   pulse: [],
   communityPosts: [],
   voicePosts: [],
+  recognitionPosts: [],
   activePoll: null,
+  currentUserPoints: 0,
+  rewardRules: [],
+  recognitionTotals: {},
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [],
@@ -1028,6 +1073,7 @@ const defaultState = {
   activeTab: "home",
   communityFilter: "all",
   voiceFilter: "all",
+  recognitionFilter: "all",
   learningBookFilter: "all",
   learningBookQuery: "",
   bulletinFilter: "all",
@@ -1054,6 +1100,7 @@ let toastTimeoutId = null;
 let directoryLoadError = "";
 let communityLoadError = "";
 let voiceLoadError = "";
+let recognitionLoadError = "";
 let learningLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1089,6 +1136,11 @@ async function init() {
     communityMetaInput: document.getElementById("community-meta-input"),
     voiceForm: document.getElementById("voice-form"),
     voiceTopicSelect: document.getElementById("voice-topic-select"),
+    recognitionForm: document.getElementById("recognition-form"),
+    recognitionTopicSelect: document.getElementById("recognition-topic-select"),
+    recognitionTagSelect: document.getElementById("recognition-tag-select"),
+    recognitionTagLabel: document.getElementById("recognition-tag-label"),
+    recognitionRecipientSelect: document.getElementById("recognition-recipient-select"),
     bulletinForm: document.getElementById("bulletin-form"),
     kudosForm: document.getElementById("kudos-form"),
     pitchForm: document.getElementById("pitch-form"),
@@ -1103,7 +1155,7 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadLearningData()]);
+  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadRecognitionData(), loadLearningData()]);
   bindEvents();
   renderAll();
 }
@@ -1198,6 +1250,48 @@ async function loadVoiceData() {
   }
 }
 
+async function loadRecognitionData() {
+  recognitionLoadError = "";
+  appData.recognitionPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    recognitionLoadError = "Recognition services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const [postsPayload, overviewPayload] = await Promise.all([
+      window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=recognition"),
+      window.AcuiteConnectAuth.apiRequest("/api/recognition/overview/"),
+    ]);
+    appData.recognitionPosts = Array.isArray(postsPayload.results)
+      ? postsPayload.results.map(mapRecognitionPost)
+      : [];
+    appData.leaderboard = Array.isArray(overviewPayload.leaderboard)
+      ? overviewPayload.leaderboard
+      : [];
+    appData.birthdays = Array.isArray(overviewPayload.birthdays)
+      ? overviewPayload.birthdays
+      : [];
+    appData.anniversaries = Array.isArray(overviewPayload.anniversaries)
+      ? overviewPayload.anniversaries
+      : [];
+    appData.currentUserPoints = Number(overviewPayload.current_user_points || 0);
+    appData.rewardRules = Array.isArray(overviewPayload.point_rules)
+      ? overviewPayload.point_rules
+      : [];
+    appData.recognitionTotals = overviewPayload.totals || {};
+  } catch (error) {
+    recognitionLoadError = error.message || "Could not load Recognition & Rewards.";
+    appData.leaderboard = [];
+    appData.birthdays = [];
+    appData.anniversaries = [];
+    appData.currentUserPoints = 0;
+    appData.rewardRules = [];
+    appData.recognitionTotals = {};
+  }
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
@@ -1221,6 +1315,12 @@ function bindEvents() {
   if (elements.voiceTopicSelect) {
     elements.voiceTopicSelect.addEventListener("change", () => {
       syncVoiceComposer();
+    });
+  }
+
+  if (elements.recognitionTopicSelect) {
+    elements.recognitionTopicSelect.addEventListener("change", () => {
+      syncRecognitionComposer();
     });
   }
 
@@ -1277,6 +1377,11 @@ async function handleDocumentClick(event) {
       state.likedPostIds = toggleArrayValue(state.likedPostIds, action.dataset.id);
       saveState();
       renderAll();
+      return;
+    }
+
+    if (actionName === "toggle-live-reaction") {
+      await toggleLiveReaction(action.dataset.id);
       return;
     }
 
@@ -1417,6 +1522,12 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target === elements.recognitionForm) {
+    event.preventDefault();
+    void submitRecognitionPost();
+    return;
+  }
+
   if (event.target === elements.bulletinForm) {
     event.preventDefault();
     submitBulletin();
@@ -1458,6 +1569,7 @@ function renderAll() {
   renderHomeFeed();
   renderCommunityPanel();
   renderVoicePanel();
+  renderRecognitionPanel();
   renderLearningPanel();
   renderBulletinFeed();
   renderKudosTags();
@@ -1493,7 +1605,8 @@ function renderPanels() {
 }
 
 function renderProfile() {
-  const receivedKudos = state.customKudos.filter((item) => item.recipient.toLowerCase() === appData.currentUser.name.toLowerCase()).length;
+  const receivedKudos = state.customKudos.filter((item) => item.recipient.toLowerCase() === appData.currentUser.name.toLowerCase()).length
+    + appData.recognitionPosts.filter((item) => item.topic === "kudos" && item.recipientUserId === appData.currentUser.id).length;
   const joinedClubs = state.joinedClubIds.length;
   const pitchesByRahul = appData.pitches.filter((item) => item.author === appData.currentUser.name).length + state.customPitches.length;
 
@@ -1584,6 +1697,15 @@ function renderVoicePanel() {
   renderVoiceFeed();
   renderVoicePollCard();
   renderVoiceGuidanceCard();
+}
+
+function renderRecognitionPanel() {
+  syncRecognitionComposer();
+  renderRecognitionSummary();
+  renderRecognitionFeed();
+  renderRecognitionLeaderboardCard();
+  renderRecognitionCelebrationsCard();
+  renderRecognitionRewardsCard();
 }
 
 function renderCommunitySummary() {
@@ -1939,6 +2061,167 @@ function renderVoiceGuidanceCard() {
   `;
 }
 
+function renderRecognitionSummary() {
+  const filteredPosts = getFilteredRecognitionPosts();
+  const totals = appData.recognitionTotals || {};
+  const kudosCount = totals.kudos_posts || 0;
+  const milestoneCount = totals.milestone_posts || 0;
+  const topLeader = appData.leaderboard[0];
+
+  document.getElementById("recognition-summary-grid").innerHTML = [
+    {
+      kicker: "Recognition",
+      title: `${totals.recognition_posts || 0} live posts`,
+      copy: "Appreciation and celebration posts that are now visible across the employee network.",
+    },
+    {
+      kicker: "Kudos",
+      title: `${kudosCount} kudos`,
+      copy: "Public recognition for effort, teamwork, client impact, mentoring and analytical excellence.",
+    },
+    {
+      kicker: "Milestones",
+      title: `${milestoneCount} celebrations`,
+      copy: "Work moments and achievements that deserve more than a passing mention.",
+    },
+    {
+      kicker: "Rewards",
+      title: topLeader && topLeader.points > 0 ? `${topLeader.points} pts` : `${appData.currentUserPoints} pts`,
+      copy: topLeader && topLeader.points > 0
+        ? `${topLeader.name} currently leads the engagement table.`
+        : "Reward points begin to accumulate through posts, comments and likes.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+
+  document.getElementById("recognition-results-meta").textContent = appData.recognitionPosts.length
+    ? `${filteredPosts.length} of ${appData.recognitionPosts.length} live recognition posts shown`
+    : "Live kudos, celebrations and reward momentum";
+}
+
+function renderRecognitionFeed() {
+  const container = document.getElementById("recognition-feed");
+  if (recognitionLoadError) {
+    container.innerHTML = `<div class="empty-state">${escapeHtml(recognitionLoadError)}</div>`;
+    return;
+  }
+
+  const posts = getFilteredRecognitionPosts();
+  if (!appData.recognitionPosts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No live recognition posts have been shared yet. The first kudos or milestone post will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!posts.length) {
+    const topicConfig = RECOGNITION_TOPIC_CONFIG[state.recognitionFilter];
+    container.innerHTML = `
+      <div class="empty-state">
+        ${escapeHtml(topicConfig ? topicConfig.emptyCopy : "No recognition posts match this filter right now.")}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = posts.map(renderRecognitionPostCard).join("");
+}
+
+function renderRecognitionLeaderboardCard() {
+  const container = document.getElementById("recognition-leaderboard-card");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = `
+    <p class="widget-kicker">Reward leaderboard</p>
+    <h3>Who is earning the most points</h3>
+    ${
+      appData.leaderboard.length
+        ? `<ul class="mini-list">
+            ${appData.leaderboard.map((person) => `
+              <li>
+                <div>
+                  <div class="mini-item-title">${escapeHtml(person.name)}</div>
+                  <div class="mini-item-meta">${escapeHtml(person.title || "Employee")}</div>
+                </div>
+                <div class="mini-item-time">${escapeHtml(String(person.points))} pts</div>
+              </li>
+            `).join("")}
+          </ul>`
+        : `<div class="empty-state">Point rankings will appear once live recognition and reactions begin to build up.</div>`
+    }
+  `;
+}
+
+function renderRecognitionCelebrationsCard() {
+  const container = document.getElementById("recognition-celebrations-card");
+  if (!container) {
+    return;
+  }
+
+  const birthdayItems = appData.birthdays.slice(0, 3).map((person) => `
+    <li>
+      <div>
+        <div class="mini-item-title">${escapeHtml(person.name)}</div>
+        <div class="mini-item-meta">${escapeHtml(person.title || "Birthday")}</div>
+      </div>
+      <div class="mini-item-time">${escapeHtml(person.date_label)}</div>
+    </li>
+  `).join("");
+  const anniversaryItems = appData.anniversaries.slice(0, 3).map((person) => `
+    <li>
+      <div>
+        <div class="mini-item-title">${escapeHtml(person.name)}</div>
+        <div class="mini-item-meta">${escapeHtml(`${person.years} year${person.years === 1 ? "" : "s"}`)}</div>
+      </div>
+      <div class="mini-item-time">${escapeHtml(person.date_label)}</div>
+    </li>
+  `).join("");
+
+  container.innerHTML = `
+    <p class="widget-kicker">Celebrations</p>
+    <h3>Birthdays and work anniversaries</h3>
+    ${
+      birthdayItems || anniversaryItems
+        ? `<div class="celebration-stack">
+            ${birthdayItems ? `<div><div class="mini-item-meta">Upcoming birthdays</div><ul class="mini-list">${birthdayItems}</ul></div>` : ""}
+            ${anniversaryItems ? `<div><div class="mini-item-meta">Upcoming anniversaries</div><ul class="mini-list">${anniversaryItems}</ul></div>` : ""}
+          </div>`
+        : `<div class="empty-state">Employee celebrations will surface here from the live directory data.</div>`
+    }
+  `;
+}
+
+function renderRecognitionRewardsCard() {
+  const container = document.getElementById("recognition-rewards-card");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = `
+    <p class="widget-kicker">My reward points</p>
+    <h3>${escapeHtml(String(appData.currentUserPoints))} points</h3>
+    <p>These points are now driven by live activity and can later become redeemable inside the Brand Store.</p>
+    ${
+      appData.rewardRules.length
+        ? `<ul class="simple-list">
+            ${appData.rewardRules.map((rule) => `
+              <li>${escapeHtml(REWARD_RULE_LABELS[rule.key] || capitalize(rule.key.replaceAll("_", " ")))}: ${escapeHtml(String(rule.points))} pt${rule.points === 1 ? "" : "s"}</li>
+            `).join("")}
+          </ul>`
+        : ""
+    }
+  `;
+}
+
 function renderBulletinFeed() {
   const allPosts = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts];
   const filtered = allPosts.filter((post) => state.bulletinFilter === "all" || post.category === state.bulletinFilter);
@@ -2290,10 +2573,10 @@ function renderKnowledge() {
 function renderBirthdays() {
   document.getElementById("birthdays-list").innerHTML = appData.birthdays.length ? appData.birthdays.map((person) => `
     <div class="bday-item">
-      <div class="bday-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
+      <div class="bday-avatar" style="background:${gradientValue(person.gradient || gradientKeyFromText(person.name))}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
         <div class="name">${escapeHtml(person.name)}</div>
-        <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date)}</div>
+        <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date_label || person.date)}</div>
       </div>
     </div>
   `).join("") : `<div class="empty-state">Birthday highlights will appear once live employee celebrations are configured.</div>`;
@@ -2302,10 +2585,10 @@ function renderBirthdays() {
 function renderAnniversaries() {
   document.getElementById("anniversaries-list").innerHTML = appData.anniversaries.length ? appData.anniversaries.map((person) => `
     <div class="bday-item">
-      <div class="bday-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
+      <div class="bday-avatar" style="background:${gradientValue(person.gradient || gradientKeyFromText(person.name))}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
         <div class="name">${escapeHtml(person.name)}</div>
-        <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date)}</div>
+        <div class="date ${person.highlight ? "today" : ""}">${escapeHtml(person.date_label || person.date)}${person.years ? ` - ${escapeHtml(String(person.years))} yr${person.years === 1 ? "" : "s"}` : ""}</div>
       </div>
     </div>
   `).join("") : `<div class="empty-state">Work anniversary highlights will appear here later.</div>`;
@@ -2572,6 +2855,14 @@ function renderCommunityPostCard(post) {
           : ""
       }
       <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn ${post.currentUserHasReacted ? "liked" : ""}"
+          data-action="toggle-live-reaction"
+          data-id="${post.sourceId}"
+        >
+          ${likeIcon()}${escapeHtml(String(post.reactionCount))}
+        </button>
         <button type="button" class="action-btn" data-action="placeholder-comment">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
@@ -2866,6 +3157,25 @@ function buildSearchIndex() {
       .toLowerCase(),
   }));
 
+  const recognition = appData.recognitionPosts.map((post) => ({
+    title: post.title,
+    subtitle: `${post.topicLabel} - ${post.recipientName || post.authorName}`,
+    type: "recognition",
+    tab: "recognition",
+    targetId: post.id,
+    searchText: [
+      post.title,
+      post.body,
+      post.topicLabel,
+      post.recipientName,
+      post.tagLabel,
+      post.authorName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase(),
+  }));
+
   const bulletin = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts].map((post) => ({
     title: post.title,
     subtitle: `${post.authorName} - Bulletin`,
@@ -2928,7 +3238,7 @@ function buildSearchIndex() {
     }]
     : [];
 
-  return [...community, ...voice, ...bulletin, ...directory, ...tools, ...resources, ...books, ...poll];
+  return [...community, ...voice, ...recognition, ...bulletin, ...directory, ...tools, ...resources, ...books, ...poll];
 }
 
 function scoreSearchItem(item, query) {
@@ -2991,6 +3301,14 @@ function setFilter(group, value) {
     return;
   }
 
+  if (group === "recognition") {
+    state.recognitionFilter = value;
+    saveState();
+    renderRecognitionPanel();
+    syncFilterButtons();
+    return;
+  }
+
   if (group === "learning-books") {
     state.learningBookFilter = value;
     saveState();
@@ -3035,6 +3353,7 @@ function syncFilterButtons() {
   const filterMap = {
     community: state.communityFilter,
     voice: state.voiceFilter,
+    recognition: state.recognitionFilter,
     "learning-books": state.learningBookFilter,
     bulletin: state.bulletinFilter,
     pitch: state.pitchFilter,
@@ -3134,6 +3453,8 @@ function mapCommunityPost(post) {
     avatar: gradientKeyFromText(`${author.name || ""}-${board}-${communityType}`),
     postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
     createdAt: post.created_at || "",
+    reactionCount: post.reaction_count || 0,
+    currentUserHasReacted: Boolean(post.current_user_has_reacted),
   };
 }
 
@@ -3160,6 +3481,40 @@ function mapVoicePost(post) {
     postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
     createdAt: post.created_at || "",
     pinned: Boolean(post.pinned),
+    reactionCount: post.reaction_count || 0,
+    currentUserHasReacted: Boolean(post.current_user_has_reacted),
+  };
+}
+
+function mapRecognitionPost(post) {
+  const topic = post.topic || "kudos";
+  const topicConfig = RECOGNITION_TOPIC_CONFIG[topic] || RECOGNITION_TOPIC_CONFIG.kudos;
+  const metadata = post.metadata || {};
+  const author = post.author || {};
+  const authorName = author.name || "Acuité employee";
+
+  return {
+    id: `recognition-post-${post.id}`,
+    sourceId: post.id,
+    title: post.title,
+    body: post.body,
+    topic,
+    topicLabel: topicConfig.label,
+    topicKicker: topicConfig.kicker,
+    tag: metadata.recognition_tag || "",
+    tagLabel: getRecognitionTagLabel(topic, metadata.recognition_tag || ""),
+    recipientUserId: metadata.recipient_user_id || null,
+    recipientName: metadata.recipient_name || "",
+    recipientInitials: metadata.recipient_initials || initialsFromName(metadata.recipient_name || "Acuité"),
+    authorName,
+    authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || author.email || "Employee",
+    initials: author.initials || initialsFromName(authorName),
+    avatar: gradientKeyFromText(`${authorName}-${topic}-${metadata.recipient_name || ""}`),
+    postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
+    createdAt: post.created_at || "",
+    commentCount: post.comment_count || 0,
+    reactionCount: post.reaction_count || 0,
+    currentUserHasReacted: Boolean(post.current_user_has_reacted),
   };
 }
 
@@ -3193,6 +3548,16 @@ function getFilteredVoicePosts() {
     return posts;
   }
   return posts.filter((post) => post.topic === state.voiceFilter);
+}
+
+function getFilteredRecognitionPosts() {
+  const posts = appData.recognitionPosts.slice().sort((left, right) => {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+  if (state.recognitionFilter === "all") {
+    return posts;
+  }
+  return posts.filter((post) => post.topic === state.recognitionFilter);
 }
 
 function getFilteredLearningBooks() {
@@ -3297,6 +3662,37 @@ function syncVoiceComposer() {
   }
 }
 
+function syncRecognitionComposer() {
+  if (!elements.recognitionTopicSelect || !elements.recognitionTagSelect || !elements.recognitionTagLabel || !elements.recognitionRecipientSelect) {
+    return;
+  }
+
+  const topic = elements.recognitionTopicSelect.value || "kudos";
+  const config = RECOGNITION_TOPIC_CONFIG[topic] || RECOGNITION_TOPIC_CONFIG.kudos;
+  const previousTag = elements.recognitionTagSelect.value;
+  const previousRecipient = elements.recognitionRecipientSelect.value;
+
+  elements.recognitionTagLabel.textContent = config.tagLabel;
+  elements.recognitionTagSelect.innerHTML = config.tags.map((tag) => `
+    <option value="${escapeHtml(tag.value)}">${escapeHtml(tag.label)}</option>
+  `).join("");
+
+  if (config.tags.some((tag) => tag.value === previousTag)) {
+    elements.recognitionTagSelect.value = previousTag;
+  }
+
+  elements.recognitionRecipientSelect.innerHTML = `
+    <option value="">Select employee</option>
+    ${appData.directory.map((person) => `
+      <option value="${escapeHtml(String(person.sourceUserId || ""))}">${escapeHtml(`${person.name} - ${person.role}`)}</option>
+    `).join("")}
+  `;
+
+  if (appData.directory.some((person) => String(person.sourceUserId) === previousRecipient)) {
+    elements.recognitionRecipientSelect.value = previousRecipient;
+  }
+}
+
 async function submitVoicePost() {
   const formData = new FormData(elements.voiceForm);
   const topic = String(formData.get("topic") || "").trim();
@@ -3339,6 +3735,55 @@ async function submitVoicePost() {
   }
 }
 
+async function submitRecognitionPost() {
+  const formData = new FormData(elements.recognitionForm);
+  const topic = String(formData.get("topic") || "").trim();
+  const tag = String(formData.get("tag") || "").trim();
+  const recipientUserId = Number(formData.get("recipient_user_id") || 0);
+  const title = String(formData.get("title") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+  const recipient = appData.directory.find((person) => person.sourceUserId === recipientUserId);
+
+  if (!topic || !tag || !recipientUserId || !title || !body || !recipient) {
+    showToast("Choose the type, tag, recipient, title and note before posting recognition.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body,
+        module: "recognition",
+        topic,
+        metadata: {
+          recognition_tag: tag,
+          recipient_user_id: recipient.sourceUserId,
+          recipient_name: recipient.name,
+          recipient_initials: recipient.initials,
+        },
+      },
+    });
+
+    if (payload.post) {
+      appData.recognitionPosts.unshift(mapRecognitionPost(payload.post));
+      await loadRecognitionData();
+      elements.recognitionForm.reset();
+      syncRecognitionComposer();
+      renderRecognitionPanel();
+      renderBirthdays();
+      renderAnniversaries();
+      showToast("Recognition shared live inside Connect.");
+      return;
+    }
+
+    showToast("Recognition post created.");
+  } catch (error) {
+    showToast(error.message || "Could not post recognition.");
+  }
+}
+
 async function voteOnPoll(optionId) {
   if (!appData.activePoll) {
     showToast("No active poll is running right now.");
@@ -3367,6 +3812,33 @@ async function voteOnPoll(optionId) {
   }
 }
 
+async function toggleLiveReaction(postId) {
+  if (!postId) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${postId}/reactions/toggle/`, {
+      method: "POST",
+    });
+    if (payload.post) {
+      updateLivePostFromPayload(payload.post);
+      await loadRecognitionData();
+      renderCommunityPanel();
+      renderVoicePanel();
+      renderRecognitionPanel();
+      renderBirthdays();
+      renderAnniversaries();
+      showToast(payload.reacted ? "Appreciation recorded." : "Appreciation removed.");
+      return;
+    }
+
+    showToast("Reaction updated.");
+  } catch (error) {
+    showToast(error.message || "Could not update appreciation.");
+  }
+}
+
 function hydrateState() {
   const saved = readState();
   if (!saved) {
@@ -3388,6 +3860,12 @@ function hydrateState() {
     )
       ? saved.voiceFilter
       : defaultState.voiceFilter,
+    recognitionFilter: (
+      typeof saved.recognitionFilter === "string"
+      && ["all", ...Object.keys(RECOGNITION_TOPIC_CONFIG)].includes(saved.recognitionFilter)
+    )
+      ? saved.recognitionFilter
+      : defaultState.recognitionFilter,
     learningBookFilter: (
       typeof saved.learningBookFilter === "string"
       && ["all", "available", "requested"].includes(saved.learningBookFilter)
@@ -3520,6 +3998,17 @@ function getVoiceTopicLabel(topic) {
     || capitalize(String(topic || "").replaceAll("_", " "));
 }
 
+function getRecognitionTopicLabel(topic) {
+  return (RECOGNITION_TOPIC_CONFIG[topic] && RECOGNITION_TOPIC_CONFIG[topic].label)
+    || capitalize(String(topic || "").replaceAll("_", " "));
+}
+
+function getRecognitionTagLabel(topic, tag) {
+  const config = RECOGNITION_TOPIC_CONFIG[topic];
+  const match = config ? config.tags.find((item) => item.value === tag) : null;
+  return match ? match.label : capitalize(String(tag || "").replaceAll("_", " "));
+}
+
 function formatDisplayDate(value) {
   if (!value) {
     return "";
@@ -3587,6 +4076,7 @@ function mapDirectoryProfileToCard(profile) {
 
   return {
     id: `person-${profile.id}`,
+    sourceUserId: profile.id,
     name: profile.name,
     initials: profile.initials || initialsFromName(profile.name),
     role: profile.title || "Employee",
@@ -3687,6 +4177,14 @@ function renderVoicePostCard(post) {
         <p>${escapeHtml(post.body)}</p>
       </div>
       <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn ${post.currentUserHasReacted ? "liked" : ""}"
+          data-action="toggle-live-reaction"
+          data-id="${post.sourceId}"
+        >
+          ${likeIcon()}${escapeHtml(String(post.reactionCount))}
+        </button>
         <button type="button" class="action-btn" data-action="placeholder-comment">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
@@ -3702,6 +4200,83 @@ function renderVoicePostCard(post) {
       </div>
     </article>
   `;
+}
+
+function renderRecognitionPostCard(post) {
+  return `
+    <article class="card voice-card recognition-card recognition-topic-${escapeHtml(post.topic)}" id="${post.id}">
+      <div class="voice-card-top">
+        <div class="voice-card-tags">
+          <span class="mini-chip">${escapeHtml(post.topicLabel)}</span>
+          ${post.tagLabel ? `<span class="mini-chip success">${escapeHtml(post.tagLabel)}</span>` : ""}
+        </div>
+        <div class="community-time">${escapeHtml(post.postedAtLabel)}</div>
+      </div>
+      <div class="card-header">
+        <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
+        <div class="card-meta">
+          <div class="card-name">${escapeHtml(post.authorName)}</div>
+          <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
+        </div>
+      </div>
+      <div class="recognition-recipient-row">
+        <div class="mini-av" style="background:${gradientValue(gradientKeyFromText(post.recipientName || post.title))}">${escapeHtml(post.recipientInitials)}</div>
+        <div>
+          <div class="mini-item-title">${escapeHtml(post.recipientName || "Acuité team member")}</div>
+          <div class="mini-item-meta">${escapeHtml(post.topic === "kudos" ? "Being recognised publicly" : "Being celebrated publicly")}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(post.title)}</div>
+        <p>${escapeHtml(post.body)}</p>
+      </div>
+      <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn ${post.currentUserHasReacted ? "liked" : ""}"
+          data-action="toggle-live-reaction"
+          data-id="${post.sourceId}"
+        >
+          ${likeIcon()}${escapeHtml(String(post.reactionCount))}
+        </button>
+        <button type="button" class="action-btn" data-action="placeholder-comment">
+          ${commentIcon()}${escapeHtml(String(post.commentCount))}
+        </button>
+        <div class="spacer"></div>
+        <button
+          type="button"
+          class="btn-outline"
+          data-action="post-cta"
+          data-message="${escapeHtml(`Recognition shared for ${post.recipientName || "a teammate"}.`)}"
+        >
+          Appreciate
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function updateLivePostFromPayload(postPayload) {
+  const replaceMappedPost = (items, mappedPost) => items.map((item) => (
+    item.sourceId === mappedPost.sourceId ? mappedPost : item
+  ));
+
+  if (postPayload.module === "community") {
+    const mapped = mapCommunityPost(postPayload);
+    appData.communityPosts = replaceMappedPost(appData.communityPosts, mapped);
+    return;
+  }
+
+  if (postPayload.module === "ideas_voice") {
+    const mapped = mapVoicePost(postPayload);
+    appData.voicePosts = replaceMappedPost(appData.voicePosts, mapped);
+    return;
+  }
+
+  if (postPayload.module === "recognition") {
+    const mapped = mapRecognitionPost(postPayload);
+    appData.recognitionPosts = replaceMappedPost(appData.recognitionPosts, mapped);
+  }
 }
 
 function renderPollOptions(poll) {

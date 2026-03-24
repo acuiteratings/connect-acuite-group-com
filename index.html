@@ -339,58 +339,65 @@
             <h2>Recognition &amp; Rewards</h2>
             <p>Appreciation, celebrations and the engagement economy of Connect.</p>
           </div>
+          <div class="filter-tabs" data-filter-group="recognition">
+            <button type="button" class="active" data-filter="all">All recognition</button>
+            <button type="button" data-filter="kudos">Kudos</button>
+            <button type="button" data-filter="milestone">Milestones</button>
+          </div>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">Recognition</p>
-            <h3>The Wall</h3>
-            <p class="muted-copy">Public appreciation remains the emotional core of employee engagement.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Celebrations</p>
-            <h3>Birthdays and anniversaries</h3>
-            <p class="muted-copy">These already exist in lightweight form and can now sit under a clearer destination.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Rewards</p>
-            <h3>Points and redemption</h3>
-            <p class="muted-copy">Likes, comments and posts can later translate into redeemable value inside the brand store.</p>
-          </article>
-        </div>
+        <div class="dashboard-grid" id="recognition-summary-grid"></div>
 
-        <div class="two-column-layout">
+        <div class="two-column-layout recognition-layout">
           <section class="section-card">
             <div class="section-card-head">
               <div>
-                <p class="widget-kicker">Recognition layers</p>
-                <h2>What this module will hold</h2>
+                <p class="widget-kicker">Live recognition</p>
+                <h2>Kudos, milestones and visible appreciation</h2>
+                <div class="mini-item-meta" id="recognition-results-meta">Loading live recognition...</div>
               </div>
             </div>
-            <div class="tool-grid compact">
-              <article class="tool-card landing-card">
-                <h3>Kudos and celebrations</h3>
-                <p>Public recognition, appreciation notes and social proof of good work.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="wall">Open current Wall prototype</button>
-                </div>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Milestone announcements</h3>
-                <p>Work anniversaries, birthdays and achievements in one recognisable place.</p>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Reward ledger</h3>
-                <p>A future layer that converts engagement into points and makes redemption visible.</p>
-              </article>
-            </div>
+            <div class="voice-feed" id="recognition-feed"></div>
           </section>
 
           <aside class="stack-side">
-            <div class="widget-card">
-              <h3>Later connection</h3>
-              <p>The rewards engine should come after Brand Store inventory and redemption rules are defined.</p>
-            </div>
+            <form class="story-form" id="recognition-form">
+              <p class="widget-kicker">New recognition</p>
+              <h3>Celebrate someone inside Connect</h3>
+              <div class="story-form-grid split">
+                <label class="field">
+                  <span>Type</span>
+                  <select name="topic" id="recognition-topic-select">
+                    <option value="kudos">Kudos</option>
+                    <option value="milestone">Milestone</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span id="recognition-tag-label">Recognition tag</span>
+                  <select name="tag" id="recognition-tag-select"></select>
+                </label>
+              </div>
+              <label class="field">
+                <span>Recipient</span>
+                <select name="recipient_user_id" id="recognition-recipient-select" required></select>
+              </label>
+              <label class="field">
+                <span>Title</span>
+                <input type="text" name="title" maxlength="140" placeholder="What should people celebrate?" required>
+              </label>
+              <label class="field">
+                <span>Note</span>
+                <textarea name="body" rows="5" maxlength="500" placeholder="Be specific about what happened and why it mattered." required></textarea>
+              </label>
+              <div class="form-actions">
+                <p>Recognition goes live immediately and starts feeding reward points.</p>
+                <button type="submit" class="btn-warm">Post recognition</button>
+              </div>
+            </form>
+
+            <div class="widget-card" id="recognition-leaderboard-card"></div>
+            <div class="widget-card" id="recognition-celebrations-card"></div>
+            <div class="widget-card" id="recognition-rewards-card"></div>
           </aside>
         </div>
       </section>

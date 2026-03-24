@@ -1227,11 +1227,16 @@ select {
 }
 
 .community-layout .story-form,
-.voice-layout .story-form {
+.voice-layout .story-form,
+.recognition-layout .story-form {
   margin-bottom: 0;
 }
 
 .voice-card {
+  border-left: 4px solid transparent;
+}
+
+.recognition-card {
   border-left: 4px solid transparent;
 }
 
@@ -1245,6 +1250,14 @@ select {
 
 .voice-topic-ceo_corner {
   border-left-color: var(--maroon);
+}
+
+.recognition-topic-kudos {
+  border-left-color: var(--amber);
+}
+
+.recognition-topic-milestone {
+  border-left-color: var(--green);
 }
 
 .voice-card-top,
@@ -1266,6 +1279,34 @@ select {
 .poll-stack {
   display: grid;
   gap: 8px;
+}
+
+.recognition-recipient-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg2);
+  margin-bottom: 14px;
+}
+
+.recognition-recipient-row .mini-av {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.celebration-stack {
+  display: grid;
+  gap: 18px;
 }
 
 .learning-search {

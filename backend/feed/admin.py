@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from operations.services import record_analytics_event, record_audit_event
 
-from .models import Comment, Post
+from .models import Comment, Post, PostReaction
 
 
 @admin.action(description="Publish selected posts")
@@ -126,4 +126,10 @@ class CommentAdmin(admin.ModelAdmin):
     autocomplete_fields = ("post", "author")
     actions = (publish_comments, remove_comments)
 
-# Register your models here.
+
+@admin.register(PostReaction)
+class PostReactionAdmin(admin.ModelAdmin):
+    list_display = ("post", "user", "reaction_type", "updated_at")
+    list_filter = ("reaction_type", "updated_at")
+    search_fields = ("post__title", "user__email", "user__first_name", "user__last_name")
+    autocomplete_fields = ("post", "user")

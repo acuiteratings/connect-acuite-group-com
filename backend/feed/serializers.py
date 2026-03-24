@@ -1,9 +1,9 @@
 from accounts.serializers import serialize_user
 
-from .models import Comment
+from .models import Comment, PostReaction
 
 
-def serialize_post(post):
+def serialize_post(post, *, viewer=None):
     comment_count = getattr(
         post,
         "published_comment_count",
@@ -11,6 +11,17 @@ def serialize_post(post):
             moderation_status=Comment.ModerationStatus.PUBLISHED
         ).count(),
     )
+    reaction_count = getattr(
+        post,
+        "like_reaction_count",
+        post.reactions.filter(reaction_type=PostReaction.ReactionType.LIKE).count(),
+    )
+    current_user_has_reacted = False
+    if viewer and getattr(viewer, "is_authenticated", False):
+        current_user_has_reacted = post.reactions.filter(
+            user=viewer,
+            reaction_type=PostReaction.ReactionType.LIKE,
+        ).exists()
     return {
         "id": post.id,
         "title": post.title,
@@ -28,6 +39,8 @@ def serialize_post(post):
         "updated_at": post.updated_at.isoformat(),
         "author": serialize_user(post.author),
         "comment_count": comment_count,
+        "reaction_count": reaction_count,
+        "current_user_has_reacted": current_user_has_reacted,
     }
 
 

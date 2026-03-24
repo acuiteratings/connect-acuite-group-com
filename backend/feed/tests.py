@@ -5,7 +5,7 @@ from django.test import TestCase
 from accounts.models import User
 from operations.models import AnalyticsEvent, AuditLog
 
-from .models import Post
+from .models import Post, PostReaction
 
 
 class FeedApiTests(TestCase):
@@ -154,3 +154,30 @@ class FeedApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Post.objects.count(), 0)
+
+    def test_authenticated_user_can_toggle_like_reaction(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Recognition post",
+            body="Visible post",
+            module=Post.Module.RECOGNITION,
+            topic="kudos",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.client.force_login(self.user)
+
+        first_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertTrue(first_response.json()["reacted"])
+        self.assertEqual(first_response.json()["post"]["reaction_count"], 1)
+        self.assertTrue(first_response.json()["post"]["current_user_has_reacted"])
+        self.assertEqual(PostReaction.objects.count(), 1)
+
+        second_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertFalse(second_response.json()["reacted"])
+        self.assertEqual(second_response.json()["post"]["reaction_count"], 0)
+        self.assertFalse(second_response.json()["post"]["current_user_has_reacted"])
+        self.assertEqual(PostReaction.objects.count(), 0)

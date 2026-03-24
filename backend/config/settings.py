@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     "directory",
     "feed",
     "learning",
+    "recognition",
     "operations",
     "voice",
 ]
