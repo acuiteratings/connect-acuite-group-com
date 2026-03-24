@@ -810,6 +810,12 @@ select {
   transform: scale(1.03);
 }
 
+.tool-open:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .compose {
   background: var(--bg2);
   border: 2px solid var(--border);
@@ -1213,6 +1219,88 @@ select {
 
 .community-layout .story-form {
   margin-bottom: 0;
+}
+
+.learning-search {
+  width: min(260px, 100%);
+}
+
+.learning-search input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 24px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.learning-search input:focus {
+  border-color: var(--amber);
+}
+
+.learning-book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.learning-book-card {
+  min-height: 230px;
+}
+
+.learning-book-author {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.learning-book-meta {
+  align-items: flex-end;
+}
+
+.learning-req-list .mini-item-time,
+.learning-req-status {
+  white-space: nowrap;
+}
+
+.learning-req-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--bg3);
+  color: var(--text3);
+}
+
+.learning-req-status.requested,
+.learning-req-status.approved {
+  background: rgba(247, 148, 29, 0.12);
+  color: var(--amber);
+}
+
+.learning-req-status.issued {
+  background: rgba(46, 173, 43, 0.12);
+  color: var(--green);
+}
+
+.learning-req-status.returned {
+  background: rgba(141, 198, 63, 0.16);
+  color: var(--lime);
+}
+
+.learning-req-status.declined,
+.learning-req-status.cancelled {
+  background: rgba(123, 36, 28, 0.1);
+  color: var(--maroon);
 }
 
 .filter-tabs {

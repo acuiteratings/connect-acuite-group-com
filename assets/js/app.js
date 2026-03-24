@@ -306,6 +306,8 @@ const appData = {
     },
   ],
   communityPosts: [],
+  learningBooks: [],
+  learningRequisitions: [],
   homePosts: [
     {
       id: "post-townhall",
@@ -954,6 +956,8 @@ Object.assign(appData, {
   tasks: [],
   pulse: [],
   communityPosts: [],
+  learningBooks: [],
+  learningRequisitions: [],
   homePosts: [],
   bulletinPosts: [],
   wallPosts: [],
@@ -985,6 +989,8 @@ const defaultState = {
   theme: "",
   activeTab: "home",
   communityFilter: "all",
+  learningBookFilter: "all",
+  learningBookQuery: "",
   bulletinFilter: "all",
   pitchFilter: "trending",
   momentsFilter: "all",
@@ -1008,6 +1014,7 @@ let latestSearchResults = [];
 let toastTimeoutId = null;
 let directoryLoadError = "";
 let communityLoadError = "";
+let learningLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -1033,6 +1040,7 @@ async function init() {
     searchInput: document.getElementById("global-search"),
     searchResults: document.getElementById("search-results"),
     directorySearchInput: document.getElementById("directory-search"),
+    learningBookSearchInput: document.getElementById("learning-book-search"),
     communityForm: document.getElementById("community-form"),
     communityBoardSelect: document.getElementById("community-board-select"),
     communityTypeSelect: document.getElementById("community-type-select"),
@@ -1052,7 +1060,7 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([loadDirectoryData(), loadCommunityPosts()]);
+  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadLearningData()]);
   bindEvents();
   renderAll();
 }
@@ -1101,6 +1109,28 @@ async function loadCommunityPosts() {
   }
 }
 
+async function loadLearningData() {
+  learningLoadError = "";
+  appData.learningBooks = [];
+  appData.learningRequisitions = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    learningLoadError = "Learning services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const [booksPayload, requisitionsPayload] = await Promise.all([
+      window.AcuiteConnectAuth.apiRequest("/api/learning/books/"),
+      window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/"),
+    ]);
+    appData.learningBooks = Array.isArray(booksPayload.results) ? booksPayload.results : [];
+    appData.learningRequisitions = Array.isArray(requisitionsPayload.results) ? requisitionsPayload.results : [];
+  } catch (error) {
+    learningLoadError = error.message || "Could not load book-club data.";
+  }
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
@@ -1118,6 +1148,14 @@ function bindEvents() {
   if (elements.communityBoardSelect) {
     elements.communityBoardSelect.addEventListener("change", () => {
       syncCommunityComposer();
+    });
+  }
+
+  if (elements.learningBookSearchInput) {
+    elements.learningBookSearchInput.addEventListener("input", (event) => {
+      state.learningBookQuery = event.target.value;
+      saveState();
+      renderLearningPanel();
     });
   }
 
@@ -1212,6 +1250,11 @@ async function handleDocumentClick(event) {
       saveState();
       renderKnowledge();
       renderSavedResources();
+      return;
+    }
+
+    if (actionName === "request-book") {
+      await requestBook(action.dataset.id);
       return;
     }
 
@@ -1337,6 +1380,7 @@ function renderAll() {
   renderHomeTools();
   renderHomeFeed();
   renderCommunityPanel();
+  renderLearningPanel();
   renderBulletinFeed();
   renderKudosTags();
   renderWallFeed();
@@ -1449,6 +1493,13 @@ function renderCommunityPanel() {
   renderCommunityFeed();
 }
 
+function renderLearningPanel() {
+  renderLearningSummary();
+  renderLearningBooks();
+  renderLearningRequisitions();
+  renderLearningGuideCards();
+}
+
 function renderCommunitySummary() {
   const posts = getFilteredCommunityPosts();
   const allPosts = appData.communityPosts;
@@ -1554,6 +1605,120 @@ function renderCommunityFeed() {
   }
 
   container.innerHTML = posts.map(renderCommunityPostCard).join("");
+}
+
+function renderLearningSummary() {
+  const filteredBooks = getFilteredLearningBooks();
+  const availableTitles = appData.learningBooks.filter((book) => book.available_copies > 0).length;
+  const myOpenRequests = appData.learningRequisitions.filter((item) => isOpenLearningStatus(item.status)).length;
+
+  document.getElementById("learning-summary-grid").innerHTML = [
+    {
+      kicker: "Book Club",
+      title: `${appData.learningBooks.length} titles`,
+      copy: "Admin-managed library titles ready for employee requisitions.",
+    },
+    {
+      kicker: "Availability",
+      title: `${availableTitles} ready now`,
+      copy: "Titles with at least one copy still open for requisition.",
+    },
+    {
+      kicker: "Your queue",
+      title: `${myOpenRequests} open request${myOpenRequests === 1 ? "" : "s"}`,
+      copy: filteredBooks.length
+        ? `${filteredBooks.length} titles match your current filter.`
+        : "Search and filter the catalog to find the right title faster.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+}
+
+function renderLearningBooks() {
+  const container = document.getElementById("learning-book-grid");
+  if (elements.learningBookSearchInput) {
+    elements.learningBookSearchInput.value = state.learningBookQuery;
+  }
+
+  if (learningLoadError) {
+    document.getElementById("learning-results-meta").textContent = "Learning services issue";
+    container.innerHTML = `<div class="empty-state">${escapeHtml(learningLoadError)}</div>`;
+    return;
+  }
+
+  const books = getFilteredLearningBooks();
+  document.getElementById("learning-results-meta").textContent = appData.learningBooks.length
+    ? `${books.length} of ${appData.learningBooks.length} titles shown`
+    : "Live Acuité book club catalog";
+
+  if (!appData.learningBooks.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        The book catalog is empty right now. Once admins upload titles in the backend, employees will be able to requisition them here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!books.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No titles match that search or filter. Try a broader title, author or availability view.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = books.map(renderLearningBookCard).join("");
+}
+
+function renderLearningRequisitions() {
+  const openItems = appData.learningRequisitions.filter((item) => isOpenLearningStatus(item.status));
+  const closedItems = appData.learningRequisitions.filter((item) => !isOpenLearningStatus(item.status));
+  const items = [...openItems, ...closedItems].slice(0, 6);
+
+  document.getElementById("learning-my-requisitions").innerHTML = `
+    <p class="widget-kicker">My requisitions</p>
+    <h3>Your reading queue</h3>
+    ${
+      items.length
+        ? `<ul class="mini-list learning-req-list">
+            ${items.map((item) => `
+              <li>
+                <div>
+                  <div class="mini-item-title">${escapeHtml(item.book.title)}</div>
+                  <div class="mini-item-meta">${escapeHtml(item.book.author)}</div>
+                </div>
+                <div class="learning-req-status ${escapeHtml(item.status)}">${escapeHtml(learningStatusLabel(item.status))}</div>
+              </li>
+            `).join("")}
+          </ul>`
+        : `<div class="empty-state">You have not requisitioned any books yet.</div>`
+    }
+  `;
+}
+
+function renderLearningGuideCards() {
+  document.getElementById("learning-guidance-card").innerHTML = `
+    <p class="widget-kicker">How it works</p>
+    <h3>Book requisitions made simple</h3>
+    <ul class="simple-list">
+      <li>Admins upload titles and authors into the catalog.</li>
+      <li>Employees request a title with one click.</li>
+      <li>Approvals, issue and return tracking stay visible in admin.</li>
+    </ul>
+  `;
+
+  document.getElementById("learning-next-card").innerHTML = `
+    <p class="widget-kicker">Coming next</p>
+    <h3>Mentoring and training exchange</h3>
+    <p>After the book workflow, this module is ready for skill requests, internal mentors and peer-led sessions.</p>
+  `;
 }
 
 function renderBulletinFeed() {
@@ -2210,6 +2375,45 @@ function renderCommunityPostCard(post) {
   `;
 }
 
+function renderLearningBookCard(book) {
+  const statusText = book.available_copies > 0
+    ? `${book.available_copies} of ${book.total_copies} available`
+    : "Fully requisitioned";
+  const requestLabel = book.requester_has_open_requisition
+    ? "Already requested"
+    : book.available_copies > 0
+      ? "Request book"
+      : "Unavailable";
+
+  return `
+    <article class="tool-card learning-book-card" id="book-${book.id}">
+      <div class="tool-card-head">
+        <div class="tool-icon" style="background:${gradientValue(gradientKeyFromText(`${book.title}-${book.author}`))}">
+          ${escapeHtml(initialsFromName(book.author))}
+        </div>
+        <div>
+          <h3>${escapeHtml(book.title)}</h3>
+          <span class="tool-status ${book.available_copies > 0 ? "live" : "planned"}">${escapeHtml(statusText)}</span>
+        </div>
+      </div>
+      <p class="learning-book-author">${escapeHtml(book.author)}</p>
+      <p>${escapeHtml(book.summary || "Ready for requisition by employees through the internal book club.")}</p>
+      <div class="tool-meta learning-book-meta">
+        <span class="mini-item-meta">${escapeHtml(`${book.open_requisition_count} active requisition${book.open_requisition_count === 1 ? "" : "s"}`)}</span>
+        <button
+          type="button"
+          class="tool-open ${book.can_request ? "live" : ""}"
+          data-action="request-book"
+          data-id="${book.id}"
+          ${book.can_request ? "" : "disabled"}
+        >
+          ${escapeHtml(requestLabel)}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 async function submitCommunity() {
   const formData = new FormData(elements.communityForm);
   const board = String(formData.get("board") || "marketplace");
@@ -2255,6 +2459,28 @@ async function submitCommunity() {
     showToast("Community post created.");
   } catch (error) {
     showToast(error.message || "Could not share the community post.");
+  }
+}
+
+async function requestBook(bookId) {
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/", {
+      method: "POST",
+      body: {
+        book_id: Number(bookId),
+      },
+    });
+
+    if (payload.requisition) {
+      await loadLearningData();
+      renderLearningPanel();
+      showToast(`Book requisition placed for ${payload.requisition.book.title}.`);
+      return;
+    }
+
+    showToast("Book requisition submitted.");
+  } catch (error) {
+    showToast(error.message || "Could not place the book requisition.");
   }
 }
 
@@ -2444,7 +2670,16 @@ function buildSearchIndex() {
     searchText: [item.title, item.summary, item.owner, item.category].join(" ").toLowerCase(),
   }));
 
-  return [...community, ...bulletin, ...directory, ...tools, ...resources];
+  const books = appData.learningBooks.map((book) => ({
+    title: book.title,
+    subtitle: `${book.author} - Book Club`,
+    type: "book",
+    tab: "clubs-learning",
+    targetId: `book-${book.id}`,
+    searchText: [book.title, book.author, book.summary].filter(Boolean).join(" ").toLowerCase(),
+  }));
+
+  return [...community, ...bulletin, ...directory, ...tools, ...resources, ...books];
 }
 
 function scoreSearchItem(item, query) {
@@ -2499,6 +2734,14 @@ function setFilter(group, value) {
     return;
   }
 
+  if (group === "learning-books") {
+    state.learningBookFilter = value;
+    saveState();
+    renderLearningPanel();
+    syncFilterButtons();
+    return;
+  }
+
   if (group === "bulletin") {
     state.bulletinFilter = value;
     saveState();
@@ -2534,6 +2777,7 @@ function setFilter(group, value) {
 function syncFilterButtons() {
   const filterMap = {
     community: state.communityFilter,
+    "learning-books": state.learningBookFilter,
     bulletin: state.bulletinFilter,
     pitch: state.pitchFilter,
     moments: state.momentsFilter,
@@ -2645,6 +2889,29 @@ function getFilteredCommunityPosts() {
   return posts.filter((post) => post.board === state.communityFilter);
 }
 
+function getFilteredLearningBooks() {
+  const query = state.learningBookQuery.trim().toLowerCase();
+  let books = appData.learningBooks.slice();
+
+  if (state.learningBookFilter === "available") {
+    books = books.filter((book) => book.available_copies > 0);
+  } else if (state.learningBookFilter === "requested") {
+    books = books.filter((book) => book.requester_has_open_requisition);
+  }
+
+  if (!query) {
+    return books;
+  }
+
+  return books.filter((book) => {
+    return [book.title, book.author, book.summary]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+}
+
 function summarizeCommunityCities() {
   const counts = new Map();
   appData.communityPosts.forEach((post) => {
@@ -2666,6 +2933,22 @@ function summarizeCommunityCities() {
       count,
       note: count === 1 ? "1 live post" : `${count} live posts`,
     }));
+}
+
+function isOpenLearningStatus(status) {
+  return ["requested", "approved", "issued"].includes(status);
+}
+
+function learningStatusLabel(status) {
+  const labels = {
+    requested: "Requested",
+    approved: "Approved",
+    issued: "Issued",
+    returned: "Returned",
+    declined: "Declined",
+    cancelled: "Cancelled",
+  };
+  return labels[status] || capitalize(status);
 }
 
 function syncCommunityComposer() {
@@ -2704,6 +2987,15 @@ function hydrateState() {
     )
       ? saved.communityFilter
       : defaultState.communityFilter,
+    learningBookFilter: (
+      typeof saved.learningBookFilter === "string"
+      && ["all", "available", "requested"].includes(saved.learningBookFilter)
+    )
+      ? saved.learningBookFilter
+      : defaultState.learningBookFilter,
+    learningBookQuery: typeof saved.learningBookQuery === "string"
+      ? saved.learningBookQuery
+      : defaultState.learningBookQuery,
     directoryFilters: {
       ...createDirectoryFiltersState(),
       ...(saved.directoryFilters && typeof saved.directoryFilters === "object"

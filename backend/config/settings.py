@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     "accounts",
     "directory",
     "feed",
+    "learning",
     "operations",
 ]
 

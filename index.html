@@ -245,62 +245,34 @@
             <h2>Clubs &amp; Learning</h2>
             <p>Interest communities, book requisitions, mentoring and training exchange.</p>
           </div>
+          <div class="filter-tabs" data-filter-group="learning-books">
+            <button type="button" class="active" data-filter="all">All titles</button>
+            <button type="button" data-filter="available">Available now</button>
+            <button type="button" data-filter="requested">My open requests</button>
+          </div>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">Book Club</p>
-            <h3>Request a book from the library</h3>
-            <p class="muted-copy">Admins manage the catalog; employees place simple requisitions against available titles.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Mentoring</p>
-            <h3>Ask for or offer guidance</h3>
-            <p class="muted-copy">A space for mentorship topics, office hours and peer support.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Training</p>
-            <h3>Post a learning need</h3>
-            <p class="muted-copy">Anyone can request a skill session, and another colleague can volunteer to run it.</p>
-          </article>
-        </div>
+        <div class="dashboard-grid" id="learning-summary-grid"></div>
 
-        <div class="two-column-layout">
+        <div class="two-column-layout learning-layout">
           <section class="section-card">
             <div class="section-card-head">
               <div>
-                <p class="widget-kicker">Spaces inside this module</p>
-                <h2>Learning journeys</h2>
+                <p class="widget-kicker">Book Club</p>
+                <h2>Live book catalog</h2>
+                <div class="mini-item-meta" id="learning-results-meta">Loading the library catalog...</div>
               </div>
+              <label class="learning-search">
+                <input id="learning-book-search" type="text" placeholder="Search by title or author">
+              </label>
             </div>
-            <div class="tool-grid compact">
-              <article class="tool-card landing-card">
-                <h3>Book requisitions</h3>
-                <p>Catalog managed by admins with simple request, issue and return tracking.</p>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Training requests</h3>
-                <p>Employees can ask for training on sectors, tools, writing or compliance topics.</p>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Mentor matching</h3>
-                <p>Internal experts can volunteer short sessions, recurring guidance or structured learning help.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="clubs">Open current Clubs prototype</button>
-                </div>
-              </article>
-            </div>
+            <div class="learning-book-grid" id="learning-book-grid"></div>
           </section>
 
           <aside class="stack-side">
-            <div class="widget-card">
-              <h3>What this solves</h3>
-              <ul class="simple-list">
-                <li>Book club becomes operational, not only social</li>
-                <li>Training needs become visible across the company</li>
-                <li>Peer-led learning gets a real home</li>
-              </ul>
-            </div>
+            <div class="widget-card" id="learning-my-requisitions"></div>
+            <div class="widget-card" id="learning-guidance-card"></div>
+            <div class="widget-card" id="learning-next-card"></div>
           </aside>
         </div>
       </section>
