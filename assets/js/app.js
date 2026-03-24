@@ -1188,6 +1188,10 @@ document.addEventListener("DOMContentLoaded", () => {
   void init();
 });
 
+function markAppReady() {
+  document.body.classList.remove("connect-app-loading");
+}
+
 async function init() {
   const authenticatedUser = window.AcuiteConnectAuth && window.AcuiteConnectAuth.requireAuth
     ? await window.AcuiteConnectAuth.requireAuth({ loginPath: "/login.html" })
@@ -1251,17 +1255,25 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([
-    loadCurrentProfile(),
-    loadDirectoryData(),
-    loadCommunityPosts(),
-    loadVoiceData(),
-    loadRecognitionData(),
-    loadStoreData(),
-    loadLearningData(),
-  ]);
-  bindEvents();
-  renderAll();
+  try {
+    await Promise.all([
+      loadCurrentProfile(),
+      loadDirectoryData(),
+      loadCommunityPosts(),
+      loadVoiceData(),
+      loadRecognitionData(),
+      loadStoreData(),
+      loadLearningData(),
+    ]);
+    bindEvents();
+    renderAll();
+  } catch (error) {
+    console.error("Could not complete the initial Connect render.", error);
+    bindEvents();
+    renderAll();
+  } finally {
+    markAppReady();
+  }
 }
 
 async function loadCurrentProfile() {

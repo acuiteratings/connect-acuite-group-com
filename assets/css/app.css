@@ -61,6 +61,11 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
+body.connect-app-loading .layout {
+  opacity: 0;
+  pointer-events: none;
+}
+
 body.modal-open {
   overflow: hidden;
 }
