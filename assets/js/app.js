@@ -2853,21 +2853,9 @@ function renderDirectory() {
         <div class="person-detail-grid">
           ${directoryCardDetail("Employee Code", person.employeeCode)}
           ${directoryCardDetail("Company", person.companyLabel || person.company)}
-          ${directoryCardDetail("Department", person.department)}
-          ${directoryCardDetail("Function", person.functionName)}
           ${directoryCardDetail("Office", person.office)}
           ${directoryCardDetail("Joined", person.joinedOn)}
         </div>
-        <div class="team-row">
-          ${person.teams.map((team) => `<span class="team-chip">${escapeHtml(team)}</span>`).join("")}
-        </div>
-        ${
-          person.skills.length
-            ? `<div class="skill-row">
-                ${person.skills.slice(0, 4).map((skill) => `<span class="skill-chip">${escapeHtml(skill)}</span>`).join("")}
-              </div>`
-            : ""
-        }
         <div class="person-footer">
           <span class="availability">${escapeHtml(person.contactLine)}</span>
           <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View details</button>
