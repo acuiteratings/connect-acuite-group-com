@@ -283,58 +283,52 @@
             <h2>Ideas &amp; Voice</h2>
             <p>Employee ideas, CEO corner, CSR recommendations and quick pulse-taking.</p>
           </div>
+          <div class="filter-tabs" data-filter-group="voice">
+            <button type="button" class="active" data-filter="all">All voices</button>
+            <button type="button" data-filter="idea">Ideas</button>
+            <button type="button" data-filter="ceo_corner">CEO corner</button>
+            <button type="button" data-filter="csr">CSR</button>
+          </div>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">The Pitch</p>
-            <h3>Employee ideas</h3>
-            <p class="muted-copy">This is the natural home for ideas that deserve comments, votes and follow-through.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Leadership</p>
-            <h3>MD &amp; CEO corner</h3>
-            <p class="muted-copy">A dedicated place for direct reflections, rants and sharp commentary from leadership.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">CSR</p>
-            <h3>Proposal recommendations</h3>
-            <p class="muted-copy">Employees can surface causes, partners and ideas worth considering.</p>
-          </article>
-        </div>
+        <div class="dashboard-grid" id="voice-summary-grid"></div>
 
-        <div class="two-column-layout">
+        <div class="two-column-layout voice-layout">
           <section class="section-card">
             <div class="section-card-head">
               <div>
-                <p class="widget-kicker">Inside the module</p>
-                <h2>Voice channels</h2>
+                <p class="widget-kicker">Live voices</p>
+                <h2>Ideas, leadership notes and CSR proposals</h2>
+                <div class="mini-item-meta" id="voice-results-meta">Loading Ideas &amp; Voice...</div>
               </div>
             </div>
-            <div class="tool-grid compact">
-              <article class="tool-card landing-card">
-                <h3>Ideas board</h3>
-                <p>Employees post ideas, others comment, and leadership can mark them for action.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="pitch">Open current Pitch prototype</button>
-                </div>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>CEO notes</h3>
-                <p>A dedicated stream for strong, personal leadership notes without mixing them into general updates.</p>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Polls and CSR</h3>
-                <p>Short pulse checks and CSR recommendations sit well together inside a discussion-led module.</p>
-              </article>
-            </div>
+            <div class="voice-feed" id="voice-feed"></div>
           </section>
 
           <aside class="stack-side">
-            <div class="widget-card">
-              <h3>Why this matters</h3>
-              <p>Employees should know exactly where to post an idea, where leadership speaks, and where company-purpose conversations belong.</p>
-            </div>
+            <form class="story-form" id="voice-form">
+              <p class="widget-kicker">New post</p>
+              <h3>Post to Ideas &amp; Voice</h3>
+              <label class="field">
+                <span>Channel</span>
+                <select name="topic" id="voice-topic-select"></select>
+              </label>
+              <label class="field">
+                <span>Title</span>
+                <input type="text" name="title" maxlength="140" placeholder="What should people notice, discuss or act on?" required>
+              </label>
+              <label class="field">
+                <span>Message</span>
+                <textarea name="body" rows="5" maxlength="600" placeholder="Share the idea, proposal or note clearly and directly." required></textarea>
+              </label>
+              <div class="form-actions">
+                <p>Ideas and CSR posts go live immediately. CEO corner remains staff-led.</p>
+                <button type="submit" class="btn-warm">Post to Voice</button>
+              </div>
+            </form>
+
+            <div class="widget-card" id="voice-poll-card"></div>
+            <div class="widget-card" id="voice-guidance-card"></div>
           </aside>
         </div>
       </section>
@@ -806,9 +800,9 @@
 
       <div class="widget">
         <div class="widget-title">Quick Poll</div>
-        <p class="poll-question">What should Acuité Connect prioritize next?</p>
+        <p class="poll-question" id="poll-question">What should Acuité Connect prioritize next?</p>
         <div id="poll-list"></div>
-        <div class="widget-footnote">Votes are stored locally in this prototype.</div>
+        <div class="widget-footnote">Votes update live for the active poll.</div>
       </div>
 
       <div class="widget">

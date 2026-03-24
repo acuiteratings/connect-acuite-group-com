@@ -95,7 +95,13 @@ def posts_collection(request):
 
     visibility = payload.get("visibility") or Post.Visibility.COMPANY
     can_publish = _can_publish(request.user)
-    auto_publish = can_publish or module == Post.Module.COMMUNITY
+    if module == Post.Module.IDEAS_VOICE and topic == "ceo_corner" and not can_publish:
+        return JsonResponse({"detail": "Only staff can publish to the CEO corner."}, status=403)
+
+    auto_publish = can_publish or (
+        module in {Post.Module.COMMUNITY, Post.Module.IDEAS_VOICE}
+        and topic != "ceo_corner"
+    )
     post = Post.objects.create(
         author=request.user,
         title=title,

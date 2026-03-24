@@ -69,6 +69,39 @@ const COMMUNITY_BOARD_CONFIG = {
     ],
   },
 };
+const VOICE_TOPIC_CONFIG = {
+  idea: {
+    label: "Ideas",
+    kicker: "Idea Space",
+    title: "Employee ideas worth building on",
+    summary: "This is the practical space for better workflows, better tools, better rituals and better ways of working.",
+    emptyTitle: "No ideas have been posted yet",
+    emptyCopy: "The first live employee idea will appear here and start shaping what Connect should improve next.",
+  },
+  csr: {
+    label: "CSR",
+    kicker: "Social Impact",
+    title: "CSR proposals and recommendations",
+    summary: "Employees can surface causes, partner organisations and thoughtful proposals that deserve formal consideration.",
+    emptyTitle: "No CSR proposals have been posted yet",
+    emptyCopy: "When someone recommends a CSR initiative or partner, it will appear here for broader employee visibility.",
+  },
+  ceo_corner: {
+    label: "CEO Corner",
+    kicker: "Leadership Voice",
+    title: "Notes from the MD & CEO",
+    summary: "A dedicated lane for high-signal leadership notes, strong opinions, directional commentary and the occasional rant.",
+    emptyTitle: "No CEO notes have been posted yet",
+    emptyCopy: "CEO corner remains leadership-led. The first published note will appear here.",
+  },
+};
+const VOICE_POLL_OPTION_BACKGROUNDS = [
+  "rgba(247,148,29,0.12)",
+  "rgba(46,173,43,0.10)",
+  "rgba(255,199,44,0.12)",
+  "rgba(141,198,63,0.10)",
+  "rgba(123,36,28,0.12)",
+];
 
 const HOME_PILLARS = [
   {
@@ -196,6 +229,7 @@ const appData = {
     initials: "RM",
     role: "Senior Analyst - Ratings",
     city: "Mumbai",
+    is_staff: false,
   },
   agenda: [
     {
@@ -306,6 +340,8 @@ const appData = {
     },
   ],
   communityPosts: [],
+  voicePosts: [],
+  activePoll: null,
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [
@@ -956,6 +992,8 @@ Object.assign(appData, {
   tasks: [],
   pulse: [],
   communityPosts: [],
+  voicePosts: [],
+  activePoll: null,
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [],
@@ -989,6 +1027,7 @@ const defaultState = {
   theme: "",
   activeTab: "home",
   communityFilter: "all",
+  voiceFilter: "all",
   learningBookFilter: "all",
   learningBookQuery: "",
   bulletinFilter: "all",
@@ -1014,6 +1053,7 @@ let latestSearchResults = [];
 let toastTimeoutId = null;
 let directoryLoadError = "";
 let communityLoadError = "";
+let voiceLoadError = "";
 let learningLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1033,6 +1073,7 @@ async function init() {
       ...authenticatedUser,
       role: authenticatedUser.title || appData.currentUser.role,
       city: authenticatedUser.location || appData.currentUser.city,
+      is_staff: Boolean(authenticatedUser.is_staff),
     };
   }
 
@@ -1046,6 +1087,8 @@ async function init() {
     communityTypeSelect: document.getElementById("community-type-select"),
     communityMetaLabel: document.getElementById("community-meta-label"),
     communityMetaInput: document.getElementById("community-meta-input"),
+    voiceForm: document.getElementById("voice-form"),
+    voiceTopicSelect: document.getElementById("voice-topic-select"),
     bulletinForm: document.getElementById("bulletin-form"),
     kudosForm: document.getElementById("kudos-form"),
     pitchForm: document.getElementById("pitch-form"),
@@ -1060,7 +1103,7 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadLearningData()]);
+  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadLearningData()]);
   bindEvents();
   renderAll();
 }
@@ -1131,6 +1174,30 @@ async function loadLearningData() {
   }
 }
 
+async function loadVoiceData() {
+  voiceLoadError = "";
+  appData.voicePosts = [];
+  appData.activePoll = null;
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    voiceLoadError = "Ideas & Voice services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const [postsPayload, pollPayload] = await Promise.all([
+      window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=ideas_voice"),
+      window.AcuiteConnectAuth.apiRequest("/api/voice/polls/active/"),
+    ]);
+    appData.voicePosts = Array.isArray(postsPayload.results)
+      ? postsPayload.results.map(mapVoicePost)
+      : [];
+    appData.activePoll = pollPayload.poll ? mapVoicePoll(pollPayload.poll) : null;
+  } catch (error) {
+    voiceLoadError = error.message || "Could not load Ideas & Voice.";
+  }
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
@@ -1148,6 +1215,12 @@ function bindEvents() {
   if (elements.communityBoardSelect) {
     elements.communityBoardSelect.addEventListener("change", () => {
       syncCommunityComposer();
+    });
+  }
+
+  if (elements.voiceTopicSelect) {
+    elements.voiceTopicSelect.addEventListener("change", () => {
+      syncVoiceComposer();
     });
   }
 
@@ -1227,9 +1300,7 @@ async function handleDocumentClick(event) {
     }
 
     if (actionName === "vote-poll") {
-      state.pollVote = action.dataset.id;
-      saveState();
-      renderPoll();
+      await voteOnPoll(action.dataset.id);
       return;
     }
 
@@ -1340,6 +1411,12 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target === elements.voiceForm) {
+    event.preventDefault();
+    void submitVoicePost();
+    return;
+  }
+
   if (event.target === elements.bulletinForm) {
     event.preventDefault();
     submitBulletin();
@@ -1380,6 +1457,7 @@ function renderAll() {
   renderHomeTools();
   renderHomeFeed();
   renderCommunityPanel();
+  renderVoicePanel();
   renderLearningPanel();
   renderBulletinFeed();
   renderKudosTags();
@@ -1498,6 +1576,14 @@ function renderLearningPanel() {
   renderLearningBooks();
   renderLearningRequisitions();
   renderLearningGuideCards();
+}
+
+function renderVoicePanel() {
+  syncVoiceComposer();
+  renderVoiceSummary();
+  renderVoiceFeed();
+  renderVoicePollCard();
+  renderVoiceGuidanceCard();
 }
 
 function renderCommunitySummary() {
@@ -1718,6 +1804,138 @@ function renderLearningGuideCards() {
     <p class="widget-kicker">Coming next</p>
     <h3>Mentoring and training exchange</h3>
     <p>After the book workflow, this module is ready for skill requests, internal mentors and peer-led sessions.</p>
+  `;
+}
+
+function renderVoiceSummary() {
+  const filteredPosts = getFilteredVoicePosts();
+  const ideaCount = appData.voicePosts.filter((post) => post.topic === "idea").length;
+  const ceoCount = appData.voicePosts.filter((post) => post.topic === "ceo_corner").length;
+  const csrCount = appData.voicePosts.filter((post) => post.topic === "csr").length;
+
+  document.getElementById("voice-summary-grid").innerHTML = [
+    {
+      kicker: "Ideas",
+      title: `${ideaCount} live`,
+      copy: "Employee suggestions that can shape operations, culture, product and workflow design.",
+    },
+    {
+      kicker: "CEO corner",
+      title: `${ceoCount} note${ceoCount === 1 ? "" : "s"}`,
+      copy: "Leadership-led commentary that deserves a durable lane inside Connect.",
+    },
+    {
+      kicker: "CSR",
+      title: `${csrCount} proposal${csrCount === 1 ? "" : "s"}`,
+      copy: "Social-impact recommendations that can mature into formal company initiatives.",
+    },
+    {
+      kicker: "Quick poll",
+      title: appData.activePoll ? `${appData.activePoll.total_votes} vote${appData.activePoll.total_votes === 1 ? "" : "s"}` : "No active poll",
+      copy: appData.activePoll
+        ? appData.activePoll.question
+        : "Admins can publish a live pulse question from the backend when needed.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+
+  document.getElementById("voice-results-meta").textContent = appData.voicePosts.length
+    ? `${filteredPosts.length} of ${appData.voicePosts.length} live voice posts shown`
+    : "Live employee ideas, leadership notes and CSR proposals";
+}
+
+function renderVoiceFeed() {
+  const container = document.getElementById("voice-feed");
+  if (voiceLoadError) {
+    container.innerHTML = `<div class="empty-state">${escapeHtml(voiceLoadError)}</div>`;
+    return;
+  }
+
+  const posts = getFilteredVoicePosts();
+  if (!appData.voicePosts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No live Ideas &amp; Voice posts have been shared yet. This space is ready for ideas, CSR recommendations and leadership notes.
+      </div>
+    `;
+    return;
+  }
+
+  if (!posts.length) {
+    const topic = VOICE_TOPIC_CONFIG[state.voiceFilter];
+    container.innerHTML = `
+      <div class="empty-state">
+        ${escapeHtml(topic ? topic.emptyCopy : "No posts match this filter right now.")}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = posts.map(renderVoicePostCard).join("");
+}
+
+function renderVoicePollCard() {
+  const container = document.getElementById("voice-poll-card");
+  if (!container) {
+    return;
+  }
+
+  if (voiceLoadError && !appData.activePoll) {
+    container.innerHTML = `
+      <p class="widget-kicker">Quick poll</p>
+      <h3>Live poll unavailable</h3>
+      <div class="empty-state">${escapeHtml(voiceLoadError)}</div>
+    `;
+    return;
+  }
+
+  if (!appData.activePoll) {
+    container.innerHTML = `
+      <p class="widget-kicker">Quick poll</p>
+      <h3>No active poll right now</h3>
+      <div class="empty-state">When leadership publishes a pulse question, employees will be able to vote here live.</div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <p class="widget-kicker">Quick poll</p>
+    <h3>${escapeHtml(appData.activePoll.question)}</h3>
+    ${appData.activePoll.description ? `<p class="poll-question">${escapeHtml(appData.activePoll.description)}</p>` : ""}
+    <div class="poll-stack">
+      ${renderPollOptions(appData.activePoll)}
+    </div>
+    <div class="widget-footnote">
+      ${appData.activePoll.is_open ? "Votes update live for the active poll." : "This poll is closed. Results stay visible for reference."}
+    </div>
+  `;
+}
+
+function renderVoiceGuidanceCard() {
+  const container = document.getElementById("voice-guidance-card");
+  if (!container) {
+    return;
+  }
+
+  const activeTopic = state.voiceFilter === "all" ? null : VOICE_TOPIC_CONFIG[state.voiceFilter];
+  const topicSummary = activeTopic
+    ? activeTopic.summary
+    : "Ideas & Voice combines employee ideas, CSR proposals, leadership notes and live pulse checks in one clearer destination.";
+
+  container.innerHTML = `
+    <p class="widget-kicker">${escapeHtml(activeTopic ? activeTopic.kicker : "Posting guide")}</p>
+    <h3>${escapeHtml(activeTopic ? activeTopic.title : "How this space is split")}</h3>
+    <p>${escapeHtml(topicSummary)}</p>
+    <ul class="simple-list">
+      <li>Ideas are for workflow, product, process and culture improvements.</li>
+      <li>CSR is for thoughtful causes, partnerships and impact proposals.</li>
+      <li>CEO corner stays leadership-led and appears only to staff in the composer.</li>
+    </ul>
   `;
 }
 
@@ -2103,28 +2321,24 @@ function renderUpcoming() {
 }
 
 function renderPoll() {
-  if (!appData.pollOptions.length) {
-    document.getElementById("poll-list").innerHTML = `<div class="empty-state">No live poll is running right now.</div>`;
+  const questionElement = document.getElementById("poll-question");
+  const listElement = document.getElementById("poll-list");
+  if (!listElement) {
     return;
   }
-  const totals = appData.pollOptions.reduce((sum, option) => sum + option.votes, 0) + (state.pollVote ? 1 : 0);
-  document.getElementById("poll-list").innerHTML = appData.pollOptions.map((option) => {
-    const votes = option.votes + (state.pollVote === option.id ? 1 : 0);
-    const pct = Math.round((votes / totals) * 100);
-    const voted = state.pollVote === option.id;
-    return `
-      <button
-        type="button"
-        class="poll-option ${voted ? "voted" : ""}"
-        data-action="vote-poll"
-        data-id="${option.id}"
-      >
-        <div class="poll-bar" style="width:${pct}%;background:${option.color}"></div>
-        <span class="poll-text">${escapeHtml(option.label)}</span>
-        <span class="poll-pct">${escapeHtml(String(pct))}%</span>
-      </button>
-    `;
-  }).join("");
+
+  if (!appData.activePoll) {
+    if (questionElement) {
+      questionElement.textContent = "No live poll is running right now.";
+    }
+    listElement.innerHTML = `<div class="empty-state">The next company pulse question will appear here when it is published.</div>`;
+    return;
+  }
+
+  if (questionElement) {
+    questionElement.textContent = appData.activePoll.question;
+  }
+  listElement.innerHTML = renderPollOptions(appData.activePoll);
 }
 
 function renderSavedResources() {
@@ -2634,6 +2848,24 @@ function buildSearchIndex() {
       .toLowerCase(),
   }));
 
+  const voice = appData.voicePosts.map((post) => ({
+    title: post.title,
+    subtitle: `${post.topicLabel} - ${post.authorName}`,
+    type: "voice",
+    tab: "ideas-voice",
+    targetId: post.id,
+    searchText: [
+      post.title,
+      post.body,
+      post.topicLabel,
+      post.authorName,
+      post.authorMeta,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase(),
+  }));
+
   const bulletin = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts].map((post) => ({
     title: post.title,
     subtitle: `${post.authorName} - Bulletin`,
@@ -2678,8 +2910,25 @@ function buildSearchIndex() {
     targetId: `book-${book.id}`,
     searchText: [book.title, book.author, book.summary].filter(Boolean).join(" ").toLowerCase(),
   }));
+  const poll = appData.activePoll
+    ? [{
+      title: appData.activePoll.question,
+      subtitle: "Quick Poll - Ideas & Voice",
+      type: "poll",
+      tab: "ideas-voice",
+      targetId: "voice-poll-card",
+      searchText: [
+        appData.activePoll.question,
+        appData.activePoll.description,
+        ...appData.activePoll.options.map((option) => option.label),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+    }]
+    : [];
 
-  return [...community, ...bulletin, ...directory, ...tools, ...resources, ...books];
+  return [...community, ...voice, ...bulletin, ...directory, ...tools, ...resources, ...books, ...poll];
 }
 
 function scoreSearchItem(item, query) {
@@ -2734,6 +2983,14 @@ function setFilter(group, value) {
     return;
   }
 
+  if (group === "voice") {
+    state.voiceFilter = value;
+    saveState();
+    renderVoicePanel();
+    syncFilterButtons();
+    return;
+  }
+
   if (group === "learning-books") {
     state.learningBookFilter = value;
     saveState();
@@ -2777,6 +3034,7 @@ function setFilter(group, value) {
 function syncFilterButtons() {
   const filterMap = {
     community: state.communityFilter,
+    voice: state.voiceFilter,
     "learning-books": state.learningBookFilter,
     bulletin: state.bulletinFilter,
     pitch: state.pitchFilter,
@@ -2879,6 +3137,44 @@ function mapCommunityPost(post) {
   };
 }
 
+function mapVoicePost(post) {
+  const topic = post.topic || "idea";
+  const topicConfig = VOICE_TOPIC_CONFIG[topic] || VOICE_TOPIC_CONFIG.idea;
+  const author = post.author || {};
+  const authorName = author.name || "Acuité employee";
+
+  return {
+    id: `voice-post-${post.id}`,
+    sourceId: post.id,
+    title: post.title,
+    body: post.body,
+    topic,
+    topicLabel: topicConfig.label,
+    topicKicker: topicConfig.kicker,
+    summary: topicConfig.summary,
+    commentCount: post.comment_count || 0,
+    authorName,
+    authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || author.email || "Employee",
+    initials: author.initials || initialsFromName(authorName),
+    avatar: gradientKeyFromText(`${authorName}-${topic}`),
+    postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
+    createdAt: post.created_at || "",
+    pinned: Boolean(post.pinned),
+  };
+}
+
+function mapVoicePoll(poll) {
+  return {
+    ...poll,
+    options: Array.isArray(poll.options)
+      ? poll.options.map((option, index) => ({
+        ...option,
+        color: VOICE_POLL_OPTION_BACKGROUNDS[index % VOICE_POLL_OPTION_BACKGROUNDS.length],
+      }))
+      : [],
+  };
+}
+
 function getFilteredCommunityPosts() {
   const posts = appData.communityPosts.slice().sort((left, right) => {
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
@@ -2887,6 +3183,16 @@ function getFilteredCommunityPosts() {
     return posts;
   }
   return posts.filter((post) => post.board === state.communityFilter);
+}
+
+function getFilteredVoicePosts() {
+  const posts = appData.voicePosts.slice().sort((left, right) => {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+  if (state.voiceFilter === "all") {
+    return posts;
+  }
+  return posts.filter((post) => post.topic === state.voiceFilter);
 }
 
 function getFilteredLearningBooks() {
@@ -2972,6 +3278,95 @@ function syncCommunityComposer() {
   elements.communityMetaInput.placeholder = boardConfig.metaPlaceholder;
 }
 
+function syncVoiceComposer() {
+  if (!elements.voiceTopicSelect) {
+    return;
+  }
+
+  const options = appData.currentUser.is_staff
+    ? ["idea", "csr", "ceo_corner"]
+    : ["idea", "csr"];
+  const previousValue = elements.voiceTopicSelect.value;
+
+  elements.voiceTopicSelect.innerHTML = options.map((topic) => `
+    <option value="${escapeHtml(topic)}">${escapeHtml(VOICE_TOPIC_CONFIG[topic].label)}</option>
+  `).join("");
+
+  if (options.includes(previousValue)) {
+    elements.voiceTopicSelect.value = previousValue;
+  }
+}
+
+async function submitVoicePost() {
+  const formData = new FormData(elements.voiceForm);
+  const topic = String(formData.get("topic") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+
+  if (!topic || !title || !body) {
+    showToast("Choose a channel, add a title and write the message before posting.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body,
+        module: "ideas_voice",
+        topic,
+      },
+    });
+
+    if (payload.post) {
+      appData.voicePosts.unshift(mapVoicePost(payload.post));
+      elements.voiceForm.reset();
+      syncVoiceComposer();
+      renderVoicePanel();
+      renderPoll();
+      showToast(
+        payload.post.moderation_status === "published"
+          ? "Post shared live in Ideas & Voice."
+          : "Post submitted for review.",
+      );
+      return;
+    }
+
+    showToast("Ideas & Voice post created.");
+  } catch (error) {
+    showToast(error.message || "Could not post to Ideas & Voice.");
+  }
+}
+
+async function voteOnPoll(optionId) {
+  if (!appData.activePoll) {
+    showToast("No active poll is running right now.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/voice/polls/${appData.activePoll.id}/vote/`, {
+      method: "POST",
+      body: {
+        option_id: Number(optionId),
+      },
+    });
+
+    if (payload.poll) {
+      appData.activePoll = mapVoicePoll(payload.poll);
+      renderVoicePollCard();
+      renderPoll();
+      showToast("Your vote has been recorded.");
+      return;
+    }
+
+    showToast("Vote recorded.");
+  } catch (error) {
+    showToast(error.message || "Could not record your vote.");
+  }
+}
+
 function hydrateState() {
   const saved = readState();
   if (!saved) {
@@ -2987,6 +3382,12 @@ function hydrateState() {
     )
       ? saved.communityFilter
       : defaultState.communityFilter,
+    voiceFilter: (
+      typeof saved.voiceFilter === "string"
+      && ["all", ...Object.keys(VOICE_TOPIC_CONFIG)].includes(saved.voiceFilter)
+    )
+      ? saved.voiceFilter
+      : defaultState.voiceFilter,
     learningBookFilter: (
       typeof saved.learningBookFilter === "string"
       && ["all", "available", "requested"].includes(saved.learningBookFilter)
@@ -3112,6 +3513,11 @@ function getCommunityTypeLabel(board, type) {
   const boardConfig = COMMUNITY_BOARD_CONFIG[board];
   const match = boardConfig ? boardConfig.types.find((item) => item.value === type) : null;
   return match ? match.label : capitalize(String(type || "").replaceAll("_", " "));
+}
+
+function getVoiceTopicLabel(topic) {
+  return (VOICE_TOPIC_CONFIG[topic] && VOICE_TOPIC_CONFIG[topic].label)
+    || capitalize(String(topic || "").replaceAll("_", " "));
 }
 
 function formatDisplayDate(value) {
@@ -3257,6 +3663,69 @@ function showToast(message) {
   toastTimeoutId = window.setTimeout(() => {
     elements.toast.classList.remove("show");
   }, 2200);
+}
+
+function renderVoicePostCard(post) {
+  return `
+    <article class="card voice-card voice-topic-${escapeHtml(post.topic)}" id="${post.id}">
+      <div class="voice-card-top">
+        <div class="voice-card-tags">
+          <span class="mini-chip">${escapeHtml(post.topicLabel)}</span>
+          ${post.pinned ? `<span class="mini-chip success">Pinned</span>` : ""}
+        </div>
+        <div class="community-time">${escapeHtml(post.postedAtLabel)}</div>
+      </div>
+      <div class="card-header">
+        <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
+        <div class="card-meta">
+          <div class="card-name">${escapeHtml(post.authorName)}</div>
+          <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(post.title)}</div>
+        <p>${escapeHtml(post.body)}</p>
+      </div>
+      <div class="card-actions">
+        <button type="button" class="action-btn" data-action="placeholder-comment">
+          ${commentIcon()}${escapeHtml(String(post.commentCount))}
+        </button>
+        <div class="spacer"></div>
+        <button
+          type="button"
+          class="btn-outline"
+          data-action="post-cta"
+          data-message="${escapeHtml(`Open a discussion around this ${getVoiceTopicLabel(post.topic).toLowerCase()} post.`)}"
+        >
+          Discuss
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderPollOptions(poll) {
+  if (!poll.options.length) {
+    return `<div class="empty-state">Poll options are not configured yet.</div>`;
+  }
+
+  return poll.options.map((option) => {
+    const voted = poll.user_vote_option_id === option.id;
+    const disabled = !poll.is_open ? "disabled" : "";
+    return `
+      <button
+        type="button"
+        class="poll-option ${voted ? "voted" : ""}"
+        data-action="vote-poll"
+        data-id="${option.id}"
+        ${disabled}
+      >
+        <div class="poll-bar" style="width:${option.percent}%;background:${option.color}"></div>
+        <span class="poll-text">${escapeHtml(option.label)}</span>
+        <span class="poll-pct">${escapeHtml(String(option.percent))}%</span>
+      </button>
+    `;
+  }).join("");
 }
 
 function likeIcon() {

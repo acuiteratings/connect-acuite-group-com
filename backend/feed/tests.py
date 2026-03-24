@@ -113,3 +113,44 @@ class FeedApiTests(TestCase):
             Post.ModerationStatus.PUBLISHED,
         )
         self.assertEqual(payload["post"]["metadata"]["city"], "Mumbai")
+
+    def test_ideas_voice_posts_auto_publish_for_authenticated_employee(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps(
+                {
+                    "title": "Idea for better sector sharing",
+                    "body": "Create monthly cross-sector review circles.",
+                    "module": "ideas_voice",
+                    "topic": "idea",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["post"]["moderation_status"],
+            Post.ModerationStatus.PUBLISHED,
+        )
+
+    def test_ceo_corner_posts_require_staff_publish_access(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps(
+                {
+                    "title": "Leadership note",
+                    "body": "A direct note to everyone.",
+                    "module": "ideas_voice",
+                    "topic": "ceo_corner",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Post.objects.count(), 0)

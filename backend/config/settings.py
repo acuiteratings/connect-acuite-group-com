@@ -120,6 +120,7 @@ INSTALLED_APPS = [
     "feed",
     "learning",
     "operations",
+    "voice",
 ]
 
 MIDDLEWARE = [
