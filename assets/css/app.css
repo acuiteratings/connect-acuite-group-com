@@ -135,20 +135,31 @@ select {
 .topnav-left {
   display: flex;
   align-items: center;
-  gap: 16px;
 }
 
-.topnav-logo {
-  height: 30px;
+.connect-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
-.topnav-brand {
-  font-size: 20px;
+.connect-brand-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.connect-brand-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(26, 26, 26, 0.22);
+}
+
+.connect-brand-text {
+  font-size: 25px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: var(--grad-warm);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #8f1d1d;
 }
 
 .topnav-search {
@@ -2207,7 +2218,7 @@ select {
 
 .connect-auth-shell {
   min-height: 100vh;
-  padding: 28px;
+  padding: 24px;
 }
 
 .connect-auth-header,
@@ -2228,12 +2239,6 @@ select {
   display: flex;
   align-items: flex-start;
   gap: 22px;
-}
-
-.connect-auth-logo {
-  width: auto;
-  height: 84px;
-  object-fit: contain;
 }
 
 .connect-auth-brand-copy h1 {
@@ -2691,10 +2696,6 @@ select {
   .connect-auth-brand {
     flex-direction: column;
     gap: 16px;
-  }
-
-  .connect-auth-logo {
-    height: 68px;
   }
 
   .person-detail-grid {
