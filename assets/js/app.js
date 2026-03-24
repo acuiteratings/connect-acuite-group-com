@@ -310,6 +310,17 @@ const appData = {
     role: "Senior Analyst - Ratings",
     city: "Mumbai",
     is_staff: false,
+    accessLevel: "employee",
+    accessRights: {
+      can_employee: true,
+      can_moderate: false,
+      can_administer: false,
+      can_manage_access_rights: false,
+      can_post: true,
+      can_comment: true,
+      can_react: true,
+      can_post_as_company: false,
+    },
   },
   currentProfile: null,
   profileSkillLibrary: [],
@@ -1191,6 +1202,11 @@ async function init() {
       role: authenticatedUser.title || appData.currentUser.role,
       city: authenticatedUser.location || appData.currentUser.city,
       is_staff: Boolean(authenticatedUser.is_staff),
+      accessLevel: authenticatedUser.access_level || appData.currentUser.accessLevel,
+      accessRights: {
+        ...appData.currentUser.accessRights,
+        ...(authenticatedUser.access_rights || {}),
+      },
     };
   }
 
@@ -1802,6 +1818,7 @@ function renderAll() {
   renderPanels();
   renderProfile();
   renderProfileBuilder();
+  syncComposerAccess();
   renderHomeAnnouncement();
   renderTodayPanel();
   renderTasksPanel();
@@ -1834,6 +1851,28 @@ function renderAll() {
   renderPoll();
   renderSavedResources();
   syncFilterButtons();
+}
+
+function currentUserAccessRights() {
+  return {
+    can_employee: true,
+    can_moderate: false,
+    can_administer: false,
+    can_manage_access_rights: false,
+    can_post: true,
+    can_comment: true,
+    can_react: true,
+    can_post_as_company: false,
+    ...(appData.currentUser.accessRights || {}),
+  };
+}
+
+function currentUserCanCreatePosts() {
+  return Boolean(currentUserAccessRights().can_post);
+}
+
+function currentUserCanAdministerConnect() {
+  return Boolean(currentUserAccessRights().can_administer);
 }
 
 function renderPanels() {
@@ -1929,6 +1968,48 @@ function renderProfileBuilder() {
     elements.profileBuilderStatus.textContent = profileBuilderLoadError
       ? profileBuilderLoadError
       : "Add up to 2 photos, choose up to 10 skills, and tell colleagues what you enjoy.";
+  }
+}
+
+function syncComposerAccess() {
+  const canCreatePosts = currentUserCanCreatePosts();
+  [
+    elements.communityForm,
+    elements.voiceForm,
+    elements.recognitionForm,
+    elements.bulletinForm,
+    elements.kudosForm,
+    elements.pitchForm,
+  ].forEach((form) => {
+    setComposerAccessState(form, canCreatePosts);
+  });
+}
+
+function setComposerAccessState(form, canCreatePosts) {
+  if (!form) {
+    return;
+  }
+
+  form.classList.toggle("is-disabled", !canCreatePosts);
+  form.querySelectorAll("input, textarea, select, button").forEach((control) => {
+    control.disabled = !canCreatePosts;
+  });
+
+  const actionsContainer = form.querySelector(".form-actions");
+  let note = form.querySelector(".composer-access-note");
+  if (!canCreatePosts) {
+    if (!note) {
+      note = document.createElement("p");
+      note.className = "composer-access-note";
+      if (actionsContainer) {
+        actionsContainer.prepend(note);
+      } else {
+        form.prepend(note);
+      }
+    }
+    note.textContent = "Your posting access is currently disabled. An admin can restore it.";
+  } else if (note) {
+    note.remove();
   }
 }
 
@@ -3506,6 +3587,10 @@ function renderLearningBookCard(book) {
 }
 
 async function submitCommunity() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.communityForm);
   const board = String(formData.get("board") || "marketplace");
   const communityType = String(formData.get("community_type") || "").trim();
@@ -3599,6 +3684,10 @@ async function redeemStoreItem(itemId) {
 }
 
 function submitBulletin() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.bulletinForm);
   const title = String(formData.get("title") || "").trim();
   const message = String(formData.get("message") || "").trim();
@@ -3625,6 +3714,10 @@ function submitBulletin() {
 }
 
 function submitKudos() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.kudosForm);
   const recipient = String(formData.get("recipient") || "").trim();
   const message = String(formData.get("message") || "").trim();
@@ -3651,6 +3744,10 @@ function submitKudos() {
 }
 
 function submitPitch() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.pitchForm);
   const title = String(formData.get("title") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -4289,7 +4386,7 @@ function syncVoiceComposer() {
     return;
   }
 
-  const options = appData.currentUser.is_staff
+  const options = currentUserCanAdministerConnect()
     ? ["idea", "csr", "ceo_corner"]
     : ["idea", "csr"];
   const previousValue = elements.voiceTopicSelect.value;
@@ -4335,6 +4432,10 @@ function syncRecognitionComposer() {
 }
 
 async function submitVoicePost() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.voiceForm);
   const topic = String(formData.get("topic") || "").trim();
   const title = String(formData.get("title") || "").trim();
@@ -4377,6 +4478,10 @@ async function submitVoicePost() {
 }
 
 async function submitRecognitionPost() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
   const formData = new FormData(elements.recognitionForm);
   const topic = String(formData.get("topic") || "").trim();
   const tag = String(formData.get("tag") || "").trim();

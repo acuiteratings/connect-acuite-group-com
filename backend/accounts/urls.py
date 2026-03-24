@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views import (
+    access_user_collection,
+    access_user_detail,
     change_password_and_login,
     current_user,
     forgot_password,
@@ -14,6 +16,8 @@ from .views import (
 
 urlpatterns = [
     path("me/", current_user, name="current-user"),
+    path("access/users/", access_user_collection, name="access-user-collection"),
+    path("access/users/<int:user_id>/", access_user_detail, name="access-user-detail"),
     path("auth/request-otp/", request_login_otp, name="request-login-otp"),
     path("auth/forgot-password/", forgot_password, name="forgot-password"),
     path("auth/verify-otp/", verify_login_code, name="verify-login-code"),

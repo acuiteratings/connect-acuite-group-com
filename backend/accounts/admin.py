@@ -9,6 +9,16 @@ def require_password_change(modeladmin, request, queryset):
     queryset.update(must_change_password=True)
 
 
+@admin.action(description="Disable posting access in Connect")
+def disable_connect_posting(modeladmin, request, queryset):
+    queryset.update(can_post_in_connect=False)
+
+
+@admin.action(description="Restore posting access in Connect")
+def restore_connect_posting(modeladmin, request, queryset):
+    queryset.update(can_post_in_connect=True)
+
+
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     ordering = ("email",)
@@ -20,11 +30,19 @@ class UserAdmin(DjangoUserAdmin):
         "title",
         "employment_status",
         "access_level",
+        "can_post_in_connect",
         "is_staff",
         "must_change_password",
         "password_due_display",
     )
-    list_filter = ("employment_status", "access_level", "department", "location", "is_staff")
+    list_filter = (
+        "employment_status",
+        "access_level",
+        "can_post_in_connect",
+        "department",
+        "location",
+        "is_staff",
+    )
     search_fields = ("email", "first_name", "last_name", "display_name", "employee_code")
     readonly_fields = (
         "date_joined",
@@ -34,7 +52,7 @@ class UserAdmin(DjangoUserAdmin):
         "password_changed_at",
         "password_due_display",
     )
-    actions = (require_password_change,)
+    actions = (require_password_change, disable_connect_posting, restore_connect_posting)
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         (
@@ -58,6 +76,7 @@ class UserAdmin(DjangoUserAdmin):
                 "fields": (
                     "employment_status",
                     "access_level",
+                    "can_post_in_connect",
                     "is_directory_visible",
                     "must_change_password",
                     "is_active",
@@ -93,6 +112,7 @@ class UserAdmin(DjangoUserAdmin):
                     "title",
                     "employment_status",
                     "access_level",
+                    "can_post_in_connect",
                     "must_change_password",
                     "is_staff",
                     "is_superuser",

@@ -23,14 +23,34 @@ def _parse_json_body(request):
 
 def _can_moderate(user):
     return user.is_authenticated and (
-        user.is_staff
+        getattr(user, "can_moderate_connect", False)
+        or user.is_staff
         or user.has_perm("feed.moderate_post")
         or user.has_perm("feed.moderate_comment")
     )
 
 
 def _can_publish(user):
-    return user.is_authenticated and (user.is_staff or user.has_perm("feed.publish_post"))
+    return user.is_authenticated and (
+        getattr(user, "can_administer_connect", False)
+        or user.is_staff
+        or user.has_perm("feed.publish_post")
+    )
+
+
+def _can_post_as_company(user):
+    return user.is_authenticated and (
+        getattr(user, "can_post_as_company", False)
+        or user.has_perm("accounts.post_as_company")
+    )
+
+
+def _can_comment(user):
+    return user.is_authenticated and getattr(user, "can_comment_in_connect", False)
+
+
+def _can_react(user):
+    return user.is_authenticated and getattr(user, "can_react_in_connect", False)
 
 
 @csrf_exempt
@@ -74,6 +94,16 @@ def posts_collection(request):
 
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "Authentication required."}, status=403)
+    if not getattr(request.user, "has_employee_access", False):
+        return JsonResponse(
+            {"detail": "This account does not currently have employee access to Acuité Connect."},
+            status=403,
+        )
+    if not getattr(request.user, "can_create_connect_posts", False):
+        return JsonResponse(
+            {"detail": "Your posting access is disabled. Ask an admin to restore it."},
+            status=403,
+        )
 
     try:
         payload = _parse_json_body(request)
@@ -97,6 +127,30 @@ def posts_collection(request):
     metadata = payload.get("metadata") or {}
     if not isinstance(metadata, dict):
         return JsonResponse({"detail": "Metadata must be a JSON object."}, status=400)
+
+    post_as_company = bool(payload.get("post_as_company"))
+    if post_as_company and not _can_post_as_company(request.user):
+        return JsonResponse(
+            {"detail": "Only admins can post on behalf of the company."},
+            status=403,
+        )
+    if post_as_company:
+        metadata = {
+            **metadata,
+            "post_as_company": True,
+            "company_author_name": str(
+                payload.get("company_author_name") or "Acuité Ratings & Research"
+            ).strip()
+            or "Acuité Ratings & Research",
+            "company_author_title": str(
+                payload.get("company_author_title") or "Official company post"
+            ).strip()
+            or "Official company post",
+            "company_author_initials": str(
+                payload.get("company_author_initials") or "AR"
+            ).strip()[:4]
+            or "AR",
+        }
 
     visibility = payload.get("visibility") or Post.Visibility.COMPANY
     can_publish = _can_publish(request.user)
@@ -171,8 +225,8 @@ def post_comments(request, post_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["GET", "POST"])
 
-    if not request.user.is_authenticated:
-        return JsonResponse({"detail": "Authentication required."}, status=403)
+    if not _can_comment(request.user):
+        return JsonResponse({"detail": "Commenting is not available for this account."}, status=403)
     if not post.allow_comments:
         return JsonResponse({"detail": "Comments are disabled for this post."}, status=400)
 
@@ -213,8 +267,8 @@ def post_comments(request, post_id):
 def toggle_post_reaction(request, post_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
-    if not request.user.is_authenticated:
-        return JsonResponse({"detail": "Authentication required."}, status=403)
+    if not _can_react(request.user):
+        return JsonResponse({"detail": "Likes are not available for this account."}, status=403)
 
     post = get_object_or_404(Post.objects.select_related("author"), pk=post_id)
     if (

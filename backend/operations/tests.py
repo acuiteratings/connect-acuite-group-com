@@ -21,7 +21,6 @@ class OperationsApiTests(TestCase):
             last_name="Erator",
             title="Internal Comms",
             department="HR",
-            is_staff=True,
             access_level=User.AccessLevel.MODERATOR,
         )
         self.employee = User.objects.create_user(
@@ -50,7 +49,7 @@ class OperationsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    def test_moderation_queue_returns_pending_items_for_staff(self):
+    def test_moderation_queue_returns_pending_items_for_moderator_access(self):
         self.client.force_login(self.staff)
 
         response = self.client.get("/api/ops/moderation/queue/")

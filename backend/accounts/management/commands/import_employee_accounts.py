@@ -261,6 +261,7 @@ class Command(BaseCommand):
                     row.get("access_level", User.AccessLevel.EMPLOYEE)
                 ).strip()
                 or User.AccessLevel.EMPLOYEE,
+                "can_post_in_connect": parse_bool(row.get("can_post_in_connect"), True),
                 "is_staff": parse_bool(row.get("is_staff"), False),
                 "is_active": parse_bool(row.get("is_active"), True),
                 "is_directory_visible": parse_bool(row.get("is_directory_visible"), True),

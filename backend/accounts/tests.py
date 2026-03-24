@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import datetime
 from datetime import timedelta
@@ -27,6 +28,15 @@ class AuthApiTests(TestCase):
             password="Welcome@123",
             first_name="Employee",
             last_name="One",
+            must_change_password=False,
+            password_changed_at=timezone.now(),
+        )
+        self.admin_user = User.objects.create_user(
+            email="admin.one@acuite.in",
+            password="Welcome@123",
+            first_name="Admin",
+            last_name="One",
+            access_level=User.AccessLevel.ADMIN,
             must_change_password=False,
             password_changed_at=timezone.now(),
         )
@@ -227,6 +237,46 @@ class AuthApiTests(TestCase):
         local_deadline = timezone.localtime(deadline)
         self.assertEqual(local_deadline.hour, 0)
         self.assertEqual(local_deadline.minute, 0)
+
+    def test_me_endpoint_returns_access_rights_for_authenticated_user(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get("/api/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["authenticated"])
+        self.assertEqual(payload["user"]["access_level"], User.AccessLevel.ADMIN)
+        self.assertTrue(payload["user"]["access_rights"]["can_administer"])
+        self.assertTrue(payload["user"]["access_rights"]["can_manage_access_rights"])
+        self.assertTrue(payload["user"]["access_rights"]["can_post_as_company"])
+
+    def test_admin_can_assign_access_rights_and_block_posting(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/api/accounts/access/users/{self.user.id}/",
+            data=json.dumps(
+                {
+                    "access_level": User.AccessLevel.MODERATOR,
+                    "can_post_in_connect": False,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.access_level, User.AccessLevel.MODERATOR)
+        self.assertFalse(self.user.can_post_in_connect)
+        self.assertEqual(AuditLog.objects.filter(action="accounts.access.updated").count(), 1)
+
+    def test_employee_cannot_assign_access_rights(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/api/accounts/access/users/")
+
+        self.assertEqual(response.status_code, 403)
 
     def test_expired_session_deadline_logs_user_out(self):
         self.client.force_login(self.user)

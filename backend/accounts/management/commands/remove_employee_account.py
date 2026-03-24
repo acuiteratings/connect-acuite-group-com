@@ -22,7 +22,11 @@ class Command(BaseCommand):
         except User.DoesNotExist as exc:
             raise CommandError(f"No employee account found for {email}.") from exc
 
-        if user.is_staff or user.is_superuser:
+        if (
+            user.is_staff
+            or user.is_superuser
+            or user.access_level in {User.AccessLevel.MODERATOR, User.AccessLevel.ADMIN}
+        ):
             raise CommandError(
                 f"Refusing to delete privileged account {email}. Remove it manually if intended."
             )

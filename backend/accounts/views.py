@@ -4,12 +4,15 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.db import models
 from django.http import HttpResponseNotAllowed, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
+from .models import User
 from .session import ensure_session_deadline
 from .serializers import serialize_user
 from .services import (
@@ -54,6 +57,24 @@ def _error_response(exc):
     return JsonResponse(payload, status=exc.status)
 
 
+def _admin_forbidden(detail="Admin access required."):
+    return JsonResponse({"detail": detail}, status=403)
+
+
+def _is_access_admin(user):
+    return user.is_authenticated and (
+        getattr(user, "can_manage_access_rights", False)
+        or user.is_superuser
+        or user.has_perm("accounts.manage_access_rights")
+    )
+
+
+def _coerce_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def _password_change_reason(user):
     if user.must_change_password or not user.password_changed_at:
         return "first_login"
@@ -89,6 +110,116 @@ def current_user(request):
             ],
             "auth_policy": _auth_policy_payload(),
             "session_expires_at": None,
+        }
+    )
+
+
+def access_user_collection(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    if not _is_access_admin(request.user):
+        return _admin_forbidden()
+
+    query = str(request.GET.get("q", "")).strip()
+    queryset = User.objects.order_by("display_name", "email")
+    if query:
+        queryset = queryset.filter(
+            models.Q(email__icontains=query)
+            | models.Q(first_name__icontains=query)
+            | models.Q(last_name__icontains=query)
+            | models.Q(display_name__icontains=query)
+            | models.Q(employee_code__icontains=query)
+            | models.Q(title__icontains=query)
+            | models.Q(department__icontains=query)
+        )
+
+    results = [serialize_user(user) for user in queryset[:200]]
+    return JsonResponse(
+        {
+            "count": len(results),
+            "results": results,
+            "available_access_levels": [
+                User.AccessLevel.EMPLOYEE,
+                User.AccessLevel.MODERATOR,
+                User.AccessLevel.ADMIN,
+            ],
+        }
+    )
+
+
+@csrf_exempt
+def access_user_detail(request, user_id):
+    if request.method not in {"GET", "POST", "PATCH"}:
+        return HttpResponseNotAllowed(["GET", "POST", "PATCH"])
+    if not _is_access_admin(request.user):
+        return _admin_forbidden()
+
+    user = get_object_or_404(User, pk=user_id)
+    if request.method == "GET":
+        return JsonResponse({"user": serialize_user(user)})
+
+    if user.is_superuser and not request.user.is_superuser:
+        return _admin_forbidden("Only a superuser can modify this account.")
+    if request.user.pk == user.pk and not request.user.is_superuser:
+        return _admin_forbidden("You cannot edit your own access rights from this screen.")
+
+    try:
+        payload = _parse_json_body(request)
+    except AuthFlowError as exc:
+        return _error_response(exc)
+
+    changes = {}
+    update_fields = []
+
+    if "access_level" in payload:
+        access_level = str(payload.get("access_level") or "").strip().lower()
+        allowed_access_levels = {
+            User.AccessLevel.EMPLOYEE,
+            User.AccessLevel.MODERATOR,
+            User.AccessLevel.ADMIN,
+        }
+        if access_level not in allowed_access_levels:
+            return JsonResponse({"detail": "Invalid access level supplied."}, status=400)
+        if user.access_level != access_level:
+            changes["access_level"] = {"from": user.access_level, "to": access_level}
+            user.access_level = access_level
+            update_fields.append("access_level")
+
+    if "can_post_in_connect" in payload:
+        requested_can_post = _coerce_bool(payload.get("can_post_in_connect"))
+        if user.can_post_in_connect != requested_can_post:
+            changes["can_post_in_connect"] = {
+                "from": user.can_post_in_connect,
+                "to": requested_can_post,
+            }
+            user.can_post_in_connect = requested_can_post
+            update_fields.append("can_post_in_connect")
+
+    if not update_fields:
+        return JsonResponse({"user": serialize_user(user), "detail": "No access changes were applied."})
+
+    update_fields.append("updated_at")
+    user.save(update_fields=update_fields)
+
+    record_audit_event(
+        action="accounts.access.updated",
+        actor=request.user,
+        target=user,
+        summary=f"Updated access rights for {user.email}",
+        metadata={"changes": changes},
+        request=request,
+    )
+    record_analytics_event(
+        "accounts",
+        "access_updated",
+        actor=request.user,
+        metadata={"target_user_id": user.id, "changes": changes},
+        request=request,
+    )
+    return JsonResponse(
+        {
+            "detail": "Access rights updated successfully.",
+            "user": serialize_user(user),
         }
     )
 

@@ -80,6 +80,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=AccessLevel.EMPLOYEE,
     )
     is_directory_visible = models.BooleanField(default=True)
+    can_post_in_connect = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     must_change_password = models.BooleanField(default=True)
@@ -95,6 +96,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ("email",)
+        permissions = [
+            ("manage_access_rights", "Can assign Connect access rights"),
+            ("post_as_company", "Can post on behalf of the company"),
+            ("disable_connect_posting", "Can disable posting access in Connect"),
+        ]
 
     def save(self, *args, **kwargs):
         self.email = (self.email or "").lower().strip()
@@ -145,6 +151,61 @@ class User(AbstractBaseUser, PermissionsMixin):
         return (
             self.is_active
             and self.employment_status == self.EmploymentStatus.ACTIVE
+        )
+
+    @property
+    def has_employee_access(self):
+        if self.is_superuser:
+            return True
+        return self.login_allowed and self.access_level in {
+            self.AccessLevel.EMPLOYEE,
+            self.AccessLevel.MANAGER,
+            self.AccessLevel.MODERATOR,
+            self.AccessLevel.ADMIN,
+        }
+
+    @property
+    def can_comment_in_connect(self):
+        return self.has_employee_access
+
+    @property
+    def can_react_in_connect(self):
+        return self.has_employee_access
+
+    @property
+    def can_create_connect_posts(self):
+        return self.has_employee_access and self.can_post_in_connect
+
+    @property
+    def can_moderate_connect(self):
+        if self.is_superuser:
+            return True
+        return self.has_employee_access and (
+            self.access_level in {self.AccessLevel.MODERATOR, self.AccessLevel.ADMIN}
+            or self.has_perm("feed.moderate_post")
+            or self.has_perm("feed.moderate_comment")
+        )
+
+    @property
+    def can_administer_connect(self):
+        if self.is_superuser:
+            return True
+        return self.has_employee_access and (
+            self.access_level == self.AccessLevel.ADMIN
+            or self.has_perm("accounts.manage_access_rights")
+        )
+
+    @property
+    def can_manage_access_rights(self):
+        return self.can_administer_connect
+
+    @property
+    def can_post_as_company(self):
+        if self.is_superuser:
+            return True
+        return self.has_employee_access and (
+            self.access_level == self.AccessLevel.ADMIN
+            or self.has_perm("accounts.post_as_company")
         )
 
 

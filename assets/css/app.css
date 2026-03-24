@@ -940,6 +940,17 @@ select {
   margin-bottom: 20px;
 }
 
+.story-form.is-disabled,
+.kudos-form.is-disabled {
+  opacity: 0.72;
+}
+
+.composer-access-note {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange);
+}
+
 .section-card-head {
   display: flex;
   align-items: center;

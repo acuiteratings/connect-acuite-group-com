@@ -22,7 +22,9 @@ def _parse_json_body(request):
 
 
 def _can_manage_learning(user):
-    return user.is_authenticated and user.is_staff
+    return user.is_authenticated and (
+        user.is_staff or getattr(user, "can_administer_connect", False)
+    )
 
 
 @csrf_exempt

@@ -5,7 +5,7 @@ from django.test import TestCase
 from accounts.models import User
 from operations.models import AnalyticsEvent, AuditLog
 
-from .models import Post, PostReaction
+from .models import Comment, Post, PostReaction
 
 
 class FeedApiTests(TestCase):
@@ -17,6 +17,14 @@ class FeedApiTests(TestCase):
             last_name="Mehta",
             title="Senior Analyst",
             department="Ratings",
+        )
+        self.admin_user = User.objects.create_user(
+            email="admin.connect@acuite.in",
+            password="testpass123",
+            first_name="Acuite",
+            last_name="Admin",
+            access_level=User.AccessLevel.ADMIN,
+            must_change_password=False,
         )
 
     def test_feed_lists_published_posts(self):
@@ -56,6 +64,24 @@ class FeedApiTests(TestCase):
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual(AuditLog.objects.filter(action="post.created").count(), 1)
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="post_created").count(), 1)
+
+    def test_user_with_posting_disabled_cannot_create_post(self):
+        self.user.can_post_in_connect = False
+        self.user.save(update_fields=["can_post_in_connect", "updated_at"])
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps({"title": "Blocked", "body": "This should fail"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()["detail"],
+            "Your posting access is disabled. Ask an admin to restore it.",
+        )
+        self.assertEqual(Post.objects.count(), 0)
 
     def test_feed_can_filter_posts_by_module(self):
         Post.objects.create(
@@ -154,6 +180,52 @@ class FeedApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Post.objects.count(), 0)
+
+    def test_admin_can_post_ceo_corner_as_company(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps(
+                {
+                    "title": "Leadership note",
+                    "body": "A direct note to everyone.",
+                    "module": "ideas_voice",
+                    "topic": "ceo_corner",
+                    "post_as_company": True,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()["post"]
+        self.assertEqual(payload["moderation_status"], Post.ModerationStatus.PUBLISHED)
+        self.assertTrue(payload["posted_as_company"])
+        self.assertEqual(payload["author"]["name"], "Acuité Ratings & Research")
+
+    def test_user_with_posting_disabled_can_still_comment_and_like(self):
+        post = Post.objects.create(
+            author=self.admin_user,
+            title="Published post",
+            body="Visible to the company",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.user.can_post_in_connect = False
+        self.user.save(update_fields=["can_post_in_connect", "updated_at"])
+        self.client.force_login(self.user)
+
+        comment_response = self.client.post(
+            f"/api/feed/posts/{post.id}/comments/",
+            data=json.dumps({"body": "Still able to comment."}),
+            content_type="application/json",
+        )
+        like_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(comment_response.status_code, 201)
+        self.assertEqual(like_response.status_code, 200)
+        self.assertEqual(Comment.objects.count(), 1)
+        self.assertEqual(PostReaction.objects.count(), 1)
 
     def test_authenticated_user_can_toggle_like_reaction(self):
         post = Post.objects.create(
