@@ -231,10 +231,12 @@ function showPasswordResetStep(reason) {
   const panel = document.getElementById("connect-password-change-form");
   const copy = document.getElementById("password-reset-copy");
   panel.hidden = false;
-  copy.textContent =
-    reason === "expired"
-      ? "Your password has crossed the 90-day rotation window. Set a new one to continue."
-      : "This is your first login or an administrator has reset your password. Choose a new password to continue.";
+  if (copy) {
+    copy.textContent =
+      reason === "expired"
+        ? "Your password has crossed the 90-day rotation window. Set a new one to continue."
+        : "This is your first login or an administrator has reset your password. Choose a new password to continue.";
+  }
   document.getElementById("new-password").focus();
 }
 
