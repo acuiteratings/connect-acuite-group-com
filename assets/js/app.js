@@ -274,6 +274,8 @@ const appData = {
     city: "Mumbai",
     is_staff: false,
   },
+  currentProfile: null,
+  profileSkillLibrary: [],
   agenda: [
     {
       id: "agenda-committee-huddle",
@@ -1042,6 +1044,8 @@ const appData = {
 };
 
 Object.assign(appData, {
+  currentProfile: null,
+  profileSkillLibrary: [],
   agenda: [],
   tasks: [],
   pulse: [],
@@ -1124,6 +1128,8 @@ let voiceLoadError = "";
 let recognitionLoadError = "";
 let storeLoadError = "";
 let learningLoadError = "";
+let profileBuilderLoadError = "";
+let profileBuilderDraft = createProfileBuilderDraft();
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -1166,6 +1172,14 @@ async function init() {
     bulletinForm: document.getElementById("bulletin-form"),
     kudosForm: document.getElementById("kudos-form"),
     pitchForm: document.getElementById("pitch-form"),
+    profileBuilderForm: document.getElementById("profile-builder-form"),
+    profilePhotoInputOne: document.getElementById("profile-photo-input-1"),
+    profilePhotoInputTwo: document.getElementById("profile-photo-input-2"),
+    profilePhotoPreviewGrid: document.getElementById("profile-photo-preview-grid"),
+    profileSkillLibrary: document.getElementById("profile-skill-library"),
+    profileHobbiesInput: document.getElementById("profile-hobbies-input"),
+    profileInterestsInput: document.getElementById("profile-interests-input"),
+    profileBuilderStatus: document.getElementById("profile-builder-status"),
     toast: document.getElementById("toast"),
     navAvatar: document.getElementById("nav-avatar"),
     composeAvatar: document.getElementById("compose-avatar"),
@@ -1177,9 +1191,37 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadRecognitionData(), loadStoreData(), loadLearningData()]);
+  await Promise.all([
+    loadCurrentProfile(),
+    loadDirectoryData(),
+    loadCommunityPosts(),
+    loadVoiceData(),
+    loadRecognitionData(),
+    loadStoreData(),
+    loadLearningData(),
+  ]);
   bindEvents();
   renderAll();
+}
+
+async function loadCurrentProfile() {
+  profileBuilderLoadError = "";
+  appData.currentProfile = null;
+  appData.profileSkillLibrary = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    profileBuilderLoadError = "Profile builder is unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/me/");
+    appData.currentProfile = payload.profile || null;
+    appData.profileSkillLibrary = Array.isArray(payload.skill_library) ? payload.skill_library : [];
+    profileBuilderDraft = createProfileDraftFromProfile(appData.currentProfile);
+  } catch (error) {
+    profileBuilderLoadError = error.message || "Could not load your profile builder.";
+  }
 }
 
 async function loadDirectoryData() {
@@ -1384,6 +1426,30 @@ function bindEvents() {
     saveState();
     renderDirectory();
   });
+
+  if (elements.profileHobbiesInput) {
+    elements.profileHobbiesInput.addEventListener("input", (event) => {
+      profileBuilderDraft.hobbiesText = event.target.value;
+    });
+  }
+
+  if (elements.profileInterestsInput) {
+    elements.profileInterestsInput.addEventListener("input", (event) => {
+      profileBuilderDraft.interestsText = event.target.value;
+    });
+  }
+
+  if (elements.profilePhotoInputOne) {
+    elements.profilePhotoInputOne.addEventListener("change", (event) => {
+      void handleProfilePhotoSelection(event, 0);
+    });
+  }
+
+  if (elements.profilePhotoInputTwo) {
+    elements.profilePhotoInputTwo.addEventListener("change", (event) => {
+      void handleProfilePhotoSelection(event, 1);
+    });
+  }
 }
 
 async function handleDocumentClick(event) {
@@ -1417,6 +1483,16 @@ async function handleDocumentClick(event) {
         await window.AcuiteConnectAuth.logout();
       }
       window.location.href = "/login.html";
+      return;
+    }
+
+    if (actionName === "toggle-profile-skill") {
+      toggleProfileSkill(action.dataset.skill);
+      return;
+    }
+
+    if (actionName === "clear-profile-photo") {
+      clearProfilePhoto(Number(action.dataset.index));
       return;
     }
 
@@ -1595,6 +1671,12 @@ function handleSubmit(event) {
   if (event.target === elements.pitchForm) {
     event.preventDefault();
     submitPitch();
+    return;
+  }
+
+  if (event.target === elements.profileBuilderForm) {
+    event.preventDefault();
+    void saveProfileBuilder();
   }
 }
 
@@ -1613,6 +1695,7 @@ function renderAll() {
   applyTheme();
   renderPanels();
   renderProfile();
+  renderProfileBuilder();
   renderHeroStats();
   renderTodayPanel();
   renderTasksPanel();
@@ -1667,12 +1750,72 @@ function renderProfile() {
   if (elements.composeAvatar) {
     elements.composeAvatar.textContent = appData.currentUser.initials;
   }
-  elements.profileAvatar.textContent = appData.currentUser.initials;
+  setAvatarElement(elements.profileAvatar, {
+    initials: appData.currentUser.initials,
+    gradient: "warm",
+    photoUrl: appData.currentProfile?.profile_photos?.[0] || "",
+  });
   elements.profileName.textContent = appData.currentUser.name;
   elements.profileRole.textContent = appData.currentUser.role;
   elements.profileKudos.textContent = String(receivedKudos);
   elements.profileClubs.textContent = String(joinedClubs);
   elements.profilePitches.textContent = String(pitchesByRahul);
+}
+
+function renderProfileBuilder() {
+  if (!elements.profileBuilderForm) {
+    return;
+  }
+
+  elements.profileBuilderForm.classList.toggle("is-disabled", Boolean(profileBuilderLoadError));
+  if (elements.profileHobbiesInput) {
+    elements.profileHobbiesInput.value = profileBuilderDraft.hobbiesText;
+  }
+  if (elements.profileInterestsInput) {
+    elements.profileInterestsInput.value = profileBuilderDraft.interestsText;
+  }
+
+  if (elements.profilePhotoPreviewGrid) {
+    const photos = profileBuilderDraft.photos;
+    elements.profilePhotoPreviewGrid.innerHTML = [0, 1].map((index) => {
+      const photo = photos[index] || "";
+      return `
+        <div class="profile-photo-card ${photo ? "has-photo" : ""}">
+          ${
+            photo
+              ? `<img src="${escapeHtml(photo)}" alt="Profile photo ${index + 1}">`
+              : `<div class="profile-photo-placeholder">Photo ${index + 1}</div>`
+          }
+          ${
+            photo
+              ? `<button type="button" class="btn-link profile-photo-clear" data-action="clear-profile-photo" data-index="${index}">Remove</button>`
+              : ""
+          }
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (elements.profileSkillLibrary) {
+    elements.profileSkillLibrary.innerHTML = appData.profileSkillLibrary.length
+      ? appData.profileSkillLibrary.map((skill) => `
+          <button
+            type="button"
+            class="profile-skill-chip ${profileBuilderDraft.skills.includes(skill) ? "active" : ""}"
+            data-action="toggle-profile-skill"
+            data-skill="${escapeHtml(skill)}"
+          >
+            ${escapeHtml(skill)}
+          </button>
+        `).join("")
+      : `<div class="mini-item-meta">Skill library is loading...</div>`;
+  }
+
+  if (elements.profileBuilderStatus) {
+    elements.profileBuilderStatus.textContent = profileBuilderLoadError
+      ? profileBuilderLoadError
+      : "Add up to 2 photos, choose up to 10 skills, and tell colleagues what you enjoy.";
+  }
 }
 
 function renderHeroStats() {
@@ -2700,7 +2843,7 @@ function renderDirectory() {
     ? filtered.map((person) => `
       <article class="person-card" id="${person.id}">
         <div class="person-head">
-          <div class="person-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>
+          ${renderDirectoryAvatar(person)}
           <div class="person-meta">
             <h3>${escapeHtml(person.name)}</h3>
             <div class="person-role">${escapeHtml(person.role)}</div>
@@ -2718,6 +2861,13 @@ function renderDirectory() {
         <div class="team-row">
           ${person.teams.map((team) => `<span class="team-chip">${escapeHtml(team)}</span>`).join("")}
         </div>
+        ${
+          person.skills.length
+            ? `<div class="skill-row">
+                ${person.skills.slice(0, 4).map((skill) => `<span class="skill-chip">${escapeHtml(skill)}</span>`).join("")}
+              </div>`
+            : ""
+        }
         <div class="person-footer">
           <span class="availability">${escapeHtml(person.contactLine)}</span>
           <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View details</button>
@@ -4224,6 +4374,27 @@ function createDirectoryFilterOptions() {
   };
 }
 
+function createProfileBuilderDraft() {
+  return {
+    skills: [],
+    hobbiesText: "",
+    interestsText: "",
+    photos: [],
+  };
+}
+
+function createProfileDraftFromProfile(profile) {
+  if (!profile) {
+    return createProfileBuilderDraft();
+  }
+  return {
+    skills: Array.isArray(profile.skills) ? profile.skills.slice(0, 10) : [],
+    hobbiesText: Array.isArray(profile.hobbies) ? profile.hobbies.join(", ") : "",
+    interestsText: Array.isArray(profile.interests) ? profile.interests.join(", ") : "",
+    photos: Array.isArray(profile.profile_photos) ? profile.profile_photos.slice(0, 2) : [],
+  };
+}
+
 function createDirectoryFiltersState() {
   return {
     company: [],
@@ -4363,6 +4534,31 @@ function directoryCardDetail(label, value) {
   `;
 }
 
+function renderDirectoryAvatar(person) {
+  const primaryPhoto = person.profilePhotos[0] || "";
+  if (primaryPhoto) {
+    return `
+      <div class="person-avatar has-photo" style="background-image:url('${escapeHtml(primaryPhoto)}')">
+        ${escapeHtml(person.initials)}
+      </div>
+    `;
+  }
+  return `<div class="person-avatar" style="background:${gradientValue(person.gradient)}">${escapeHtml(person.initials)}</div>`;
+}
+
+function setAvatarElement(element, { initials, gradient, photoUrl }) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.toggle("has-photo", Boolean(photoUrl));
+  element.style.background = photoUrl ? "" : gradientValue(gradient);
+  element.style.backgroundImage = photoUrl ? `url("${photoUrl}")` : "";
+  element.style.backgroundSize = photoUrl ? "cover" : "";
+  element.style.backgroundPosition = photoUrl ? "center" : "";
+  element.textContent = photoUrl ? initials : initials;
+}
+
 function mapDirectoryProfileToCard(profile) {
   const company = profile.company_name || "";
   const companyLabel = displayCompanyName(company);
@@ -4372,6 +4568,10 @@ function mapDirectoryProfileToCard(profile) {
   const office = profile.office_location || profile.location || profile.city || "";
   const joinedOn = formatDisplayDate(profile.joined_on);
   const contactLine = [profile.email, profile.mobile_number || profile.phone_number].filter(Boolean).join(" | ");
+  const skills = Array.isArray(profile.skills) ? profile.skills : [];
+  const hobbies = Array.isArray(profile.hobbies) ? profile.hobbies : [];
+  const interests = Array.isArray(profile.interests) ? profile.interests : [];
+  const profilePhotos = Array.isArray(profile.profile_photos) ? profile.profile_photos.slice(0, 2) : [];
   const teams = [companyLabel, department, functionName].filter(Boolean);
 
   return {
@@ -4392,7 +4592,11 @@ function mapDirectoryProfileToCard(profile) {
     joinedOn,
     contactLine,
     teams,
-    skills: [],
+    skills,
+    hobbies,
+    interests,
+    profilePhotos,
+    blurb: profile.bio || profile.expertise || "",
     searchText: [
       profile.name,
       profile.email,
@@ -4406,12 +4610,109 @@ function mapDirectoryProfileToCard(profile) {
       profile.location,
       profile.mobile_number,
       profile.employee_code,
+      ...skills,
+      ...hobbies,
+      ...interests,
     ]
       .filter(Boolean)
       .join(" ")
       .toLowerCase(),
     gradient: gradientKeyFromText(`${company}-${department}-${profile.name}`),
   };
+}
+
+function toggleProfileSkill(skill) {
+  if (!skill) {
+    return;
+  }
+  if (profileBuilderDraft.skills.includes(skill)) {
+    profileBuilderDraft.skills = profileBuilderDraft.skills.filter((item) => item !== skill);
+    renderProfileBuilder();
+    return;
+  }
+  if (profileBuilderDraft.skills.length >= 10) {
+    showToast("You can select up to 10 skills.");
+    return;
+  }
+  profileBuilderDraft.skills = [...profileBuilderDraft.skills, skill];
+  renderProfileBuilder();
+}
+
+function clearProfilePhoto(index) {
+  if (Number.isNaN(index) || index < 0 || index > 1) {
+    return;
+  }
+  profileBuilderDraft.photos[index] = "";
+  renderProfileBuilder();
+}
+
+async function handleProfilePhotoSelection(event, index) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) {
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    showToast("Choose an image file for the profile photo.");
+    event.target.value = "";
+    return;
+  }
+  if (file.size > 1_500_000) {
+    showToast("Each profile photo should be under 1.5 MB.");
+    event.target.value = "";
+    return;
+  }
+
+  const dataUrl = await readFileAsDataUrl(file);
+  profileBuilderDraft.photos[index] = dataUrl;
+  renderProfileBuilder();
+  event.target.value = "";
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveProfileBuilder() {
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    showToast("Profile builder is unavailable right now.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/me/", {
+      method: "POST",
+      body: {
+        skills: profileBuilderDraft.skills,
+        hobbies: profileBuilderDraft.hobbiesText,
+        interests: profileBuilderDraft.interestsText,
+        profile_photos: profileBuilderDraft.photos.filter(Boolean),
+      },
+    });
+
+    appData.currentProfile = payload.profile || appData.currentProfile;
+    appData.profileSkillLibrary = Array.isArray(payload.skill_library)
+      ? payload.skill_library
+      : appData.profileSkillLibrary;
+    profileBuilderDraft = createProfileDraftFromProfile(appData.currentProfile);
+    if (appData.currentProfile) {
+      const updatedCard = mapDirectoryProfileToCard(appData.currentProfile);
+      const index = appData.directory.findIndex((person) => person.sourceUserId === updatedCard.sourceUserId);
+      if (index >= 0) {
+        appData.directory.splice(index, 1, updatedCard);
+      }
+    }
+    renderProfile();
+    renderProfileBuilder();
+    renderDirectory();
+    showToast("Your profile has been updated.");
+  } catch (error) {
+    showToast(error.message || "Could not save your profile.");
+  }
 }
 
 function initialsFromName(name) {

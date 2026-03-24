@@ -18,6 +18,9 @@ def serialize_directory_profile(profile):
             "bio": profile.bio,
             "expertise": profile.expertise,
             "skills": profile.skills,
+            "hobbies": profile.hobbies,
+            "interests": profile.interests,
+            "profile_photos": profile.profile_photos,
             "joined_on": profile.joined_on.isoformat() if profile.joined_on else None,
             "profile_visible": profile.is_visible,
         }

@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
@@ -211,6 +212,32 @@ class AuthApiTests(TestCase):
 
         me_response = self.client.get("/api/accounts/me/")
         self.assertFalse(me_response.json()["authenticated"])
+
+    def test_authenticated_session_includes_midnight_expiry(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/api/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["authenticated"])
+        self.assertIsNotNone(payload["session_expires_at"])
+
+        deadline = datetime.fromisoformat(payload["session_expires_at"])
+        local_deadline = timezone.localtime(deadline)
+        self.assertEqual(local_deadline.hour, 0)
+        self.assertEqual(local_deadline.minute, 0)
+
+    def test_expired_session_deadline_logs_user_out(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["session_logout_at"] = (timezone.now() - timedelta(minutes=1)).isoformat()
+        session.save()
+
+        response = self.client.get("/api/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["authenticated"])
 
     @override_settings(
         TRUSTED_SSO_CLIENTS={

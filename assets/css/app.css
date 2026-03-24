@@ -2410,6 +2410,120 @@ select {
   letter-spacing: 0.06em;
 }
 
+.profile-builder-form {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-builder-form.is-disabled {
+  opacity: 0.72;
+}
+
+.profile-builder-form input[type="file"],
+.profile-builder-form textarea {
+  width: 100%;
+  padding: 11px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.profile-builder-form textarea {
+  resize: vertical;
+  min-height: 86px;
+}
+
+.profile-builder-form textarea:focus,
+.profile-builder-form input[type="file"]:focus {
+  border-color: var(--amber);
+}
+
+.profile-photo-inputs {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-photo-card {
+  min-height: 124px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.profile-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-card.has-photo {
+  border-style: solid;
+}
+
+.profile-photo-placeholder {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+}
+
+.profile-photo-clear {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  padding: 4px 0;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.profile-skill-library {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-skill-chip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.profile-skill-chip:hover,
+.profile-skill-chip.active {
+  border-color: rgba(247, 148, 29, 0.22);
+  background: rgba(247, 148, 29, 0.14);
+  color: var(--orange);
+}
+
+.profile-builder-actions {
+  margin-top: 4px;
+}
+
+.avatar.has-photo,
+.person-avatar.has-photo {
+  background-color: var(--bg3);
+  background-size: cover;
+  background-position: center;
+  color: transparent;
+}
+
 .bday-item {
   display: flex;
   align-items: center;

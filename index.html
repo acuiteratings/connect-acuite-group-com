@@ -778,6 +778,39 @@
       </div>
 
       <div class="widget">
+        <div class="widget-title">Build Your Profile</div>
+        <form id="profile-builder-form" class="profile-builder-form">
+          <div class="profile-photo-grid" id="profile-photo-preview-grid"></div>
+          <div class="profile-photo-inputs">
+            <label class="field profile-photo-field">
+              <span>Photo 1</span>
+              <input type="file" id="profile-photo-input-1" accept="image/*">
+            </label>
+            <label class="field profile-photo-field">
+              <span>Photo 2</span>
+              <input type="file" id="profile-photo-input-2" accept="image/*">
+            </label>
+          </div>
+          <div class="field">
+            <span>Skills</span>
+            <div class="profile-skill-library" id="profile-skill-library"></div>
+          </div>
+          <label class="field">
+            <span>Hobbies</span>
+            <textarea id="profile-hobbies-input" rows="3" placeholder="Reading, cricket, travel..."></textarea>
+          </label>
+          <label class="field">
+            <span>Interests</span>
+            <textarea id="profile-interests-input" rows="3" placeholder="Mentoring, markets, photography..."></textarea>
+          </label>
+          <div class="form-actions profile-builder-actions">
+            <p id="profile-builder-status">Add up to 2 photos, choose a few skills, and tell colleagues what you enjoy.</p>
+            <button type="submit" class="btn-warm">Save profile</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="widget">
         <div class="widget-title">Birthdays</div>
         <div id="birthdays-list"></div>
       </div>

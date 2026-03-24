@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
+from .session import ensure_session_deadline
 from .serializers import serialize_user
 from .services import (
     AuthFlowError,
@@ -61,12 +62,14 @@ def _password_change_reason(user):
 
 def _authenticated_payload(request, *, password_changed=False):
     permissions = sorted(request.user.get_all_permissions())
+    session_deadline = ensure_session_deadline(request)
     return {
         "authenticated": True,
         "user": serialize_user(request.user),
         "permissions": permissions,
         "password_changed": password_changed,
         "auth_policy": _auth_policy_payload(),
+        "session_expires_at": session_deadline.isoformat() if session_deadline else None,
     }
 
 
@@ -85,6 +88,7 @@ def current_user(request):
                 "password_with_rotation",
             ],
             "auth_policy": _auth_policy_payload(),
+            "session_expires_at": None,
         }
     )
 
@@ -235,6 +239,7 @@ def login_with_password(request):
 
     user.backend = SESSION_AUTH_BACKEND
     auth_login(request, user)
+    ensure_session_deadline(request, reset=True)
     record_audit_event(
         action="auth.login.completed",
         actor=user,
@@ -271,6 +276,7 @@ def change_password_and_login(request):
 
     user.backend = SESSION_AUTH_BACKEND
     auth_login(request, user)
+    ensure_session_deadline(request, reset=True)
     record_audit_event(
         action="auth.password.changed",
         actor=user,

@@ -1,9 +1,26 @@
+import json
+
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponseNotAllowed, JsonResponse
 
 from .models import DirectoryProfile
 from .serializers import serialize_directory_profile
-from .utils import CONNECT_DEPARTMENT_LABELS
+from .utils import (
+    CONNECT_DEPARTMENT_LABELS,
+    PROFILE_SKILL_LIBRARY,
+    map_department_for_connect,
+    normalize_profile_photos,
+    normalize_string_list,
+)
+
+
+def _parse_json_body(request):
+    if not request.body:
+        return {}
+    try:
+        return json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def _distinct_values(queryset, field_name):
@@ -77,4 +94,50 @@ def directory_list(request):
     }
     return JsonResponse({"count": len(results), "results": results, "filters": filters})
 
-# Create your views here.
+
+def my_profile(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    profile, _ = DirectoryProfile.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "city": request.user.location,
+            "office_location": request.user.location,
+            "department_for_connect": map_department_for_connect(request.user.department),
+            "is_visible": True,
+        },
+    )
+
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "profile": serialize_directory_profile(profile),
+                "skill_library": PROFILE_SKILL_LIBRARY,
+                "limits": {"max_photos": 2, "max_skills": 10},
+            }
+        )
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    payload = _parse_json_body(request)
+    selected_skills = [
+        skill
+        for skill in normalize_string_list(payload.get("skills"), max_items=10)
+        if skill in PROFILE_SKILL_LIBRARY
+    ]
+    profile.skills = selected_skills
+    profile.hobbies = normalize_string_list(payload.get("hobbies"), max_items=12)
+    profile.interests = normalize_string_list(payload.get("interests"), max_items=12)
+    profile.profile_photos = normalize_profile_photos(payload.get("profile_photos"), max_items=2)
+    profile.save(update_fields=["skills", "hobbies", "interests", "profile_photos", "department_for_connect", "updated_at"])
+
+    return JsonResponse(
+        {
+            "detail": "Profile updated successfully.",
+            "profile": serialize_directory_profile(profile),
+            "skill_library": PROFILE_SKILL_LIBRARY,
+            "limits": {"max_photos": 2, "max_skills": 10},
+        }
+    )

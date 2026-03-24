@@ -3,6 +3,7 @@
   const ME_ENDPOINT = "/api/accounts/me/";
   let cachedSession = null;
   let sessionRequest = null;
+  let sessionExpiryTimer = null;
 
   function readCookie(name) {
     const prefix = `${name}=`;
@@ -35,6 +36,45 @@
     } catch (error) {
       return { detail: text };
     }
+  }
+
+  function clearSessionExpiryTimer() {
+    if (sessionExpiryTimer) {
+      window.clearTimeout(sessionExpiryTimer);
+      sessionExpiryTimer = null;
+    }
+  }
+
+  function scheduleSessionExpiry(session) {
+    clearSessionExpiryTimer();
+    if (!session || !session.authenticated || !session.session_expires_at) {
+      return;
+    }
+
+    const deadline = Date.parse(session.session_expires_at);
+    if (!Number.isFinite(deadline)) {
+      return;
+    }
+
+    const delay = deadline - Date.now();
+    const triggerLogout = async () => {
+      try {
+        await logout();
+      } finally {
+        if (window.location.pathname !== "/login.html") {
+          window.location.href = "/login.html";
+        }
+      }
+    };
+
+    if (delay <= 0) {
+      void triggerLogout();
+      return;
+    }
+
+    sessionExpiryTimer = window.setTimeout(() => {
+      void triggerLogout();
+    }, delay);
   }
 
   async function apiRequest(path, options = {}) {
@@ -79,6 +119,7 @@
   function clearSession() {
     cachedSession = null;
     sessionRequest = null;
+    clearSessionExpiryTimer();
   }
 
   async function fetchCurrentSession({ forceRefresh = false } = {}) {
@@ -92,6 +133,7 @@
     sessionRequest = apiRequest(ME_ENDPOINT)
       .then((payload) => {
         cachedSession = payload;
+        scheduleSessionExpiry(payload);
         return payload;
       })
       .finally(() => {
