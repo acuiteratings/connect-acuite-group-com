@@ -1130,6 +1130,7 @@ let storeLoadError = "";
 let learningLoadError = "";
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
+let profileMenuOpen = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -1173,6 +1174,8 @@ async function init() {
     kudosForm: document.getElementById("kudos-form"),
     pitchForm: document.getElementById("pitch-form"),
     profileBuilderForm: document.getElementById("profile-builder-form"),
+    profileMenu: document.getElementById("profile-menu"),
+    profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
     profilePhotoInputOne: document.getElementById("profile-photo-input-1"),
     profilePhotoInputTwo: document.getElementById("profile-photo-input-2"),
     profilePhotoPreviewGrid: document.getElementById("profile-photo-preview-grid"),
@@ -1479,10 +1482,27 @@ async function handleDocumentClick(event) {
     }
 
     if (actionName === "logout") {
+      closeProfileMenu();
       if (window.AcuiteConnectAuth && window.AcuiteConnectAuth.logout) {
         await window.AcuiteConnectAuth.logout();
       }
       window.location.href = "/login.html";
+      return;
+    }
+
+    if (actionName === "toggle-profile-menu") {
+      toggleProfileMenu();
+      return;
+    }
+
+    if (actionName === "open-profile-builder") {
+      closeProfileMenu();
+      openProfileBuilder();
+      return;
+    }
+
+    if (actionName === "close-profile-builder") {
+      closeProfileBuilder();
       return;
     }
 
@@ -1608,6 +1628,7 @@ async function handleDocumentClick(event) {
 
   const switcher = event.target.closest("[data-switch-tab]");
   if (switcher) {
+    closeProfileMenu();
     switchTab(switcher.dataset.switchTab);
     return;
   }
@@ -1630,6 +1651,14 @@ async function handleDocumentClick(event) {
     renderDirectory();
     renderDirectoryChips();
     return;
+  }
+
+  if (elements.profileModalBackdrop && event.target === elements.profileModalBackdrop) {
+    closeProfileBuilder();
+  }
+
+  if (!event.target.closest(".profile-menu-shell")) {
+    closeProfileMenu();
   }
 
   if (!event.target.closest(".topnav-search")) {
@@ -1746,7 +1775,12 @@ function renderProfile() {
   const joinedClubs = state.joinedClubIds.length;
   const pitchesByRahul = appData.pitches.filter((item) => item.author === appData.currentUser.name).length + state.customPitches.length;
 
-  elements.navAvatar.textContent = appData.currentUser.initials;
+  setAvatarElement(elements.navAvatar, {
+    initials: appData.currentUser.initials,
+    gradient: "warm",
+    photoUrl: appData.currentProfile?.profile_photos?.[0] || "",
+  });
+  elements.navAvatar.setAttribute("aria-expanded", profileMenuOpen ? "true" : "false");
   if (elements.composeAvatar) {
     elements.composeAvatar.textContent = appData.currentUser.initials;
   }
@@ -1760,6 +1794,9 @@ function renderProfile() {
   elements.profileKudos.textContent = String(receivedKudos);
   elements.profileClubs.textContent = String(joinedClubs);
   elements.profilePitches.textContent = String(pitchesByRahul);
+  if (elements.profileMenu) {
+    elements.profileMenu.hidden = !profileMenuOpen;
+  }
 }
 
 function renderProfileBuilder() {
@@ -4545,6 +4582,35 @@ function setAvatarElement(element, { initials, gradient, photoUrl }) {
   element.style.backgroundSize = photoUrl ? "cover" : "";
   element.style.backgroundPosition = photoUrl ? "center" : "";
   element.textContent = photoUrl ? initials : initials;
+}
+
+function toggleProfileMenu() {
+  profileMenuOpen = !profileMenuOpen;
+  renderProfile();
+}
+
+function closeProfileMenu() {
+  if (!profileMenuOpen) {
+    return;
+  }
+  profileMenuOpen = false;
+  renderProfile();
+}
+
+function openProfileBuilder() {
+  if (!elements.profileModalBackdrop) {
+    return;
+  }
+  elements.profileModalBackdrop.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeProfileBuilder() {
+  if (!elements.profileModalBackdrop) {
+    return;
+  }
+  elements.profileModalBackdrop.hidden = true;
+  document.body.classList.remove("modal-open");
 }
 
 function mapDirectoryProfileToCard(profile) {
