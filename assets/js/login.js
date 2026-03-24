@@ -327,8 +327,13 @@ function showStatus(message, tone = "info") {
 }
 
 function updateStep(label, copy) {
-  document.getElementById("auth-step-label").textContent = label;
-  document.getElementById("auth-step-copy").textContent = copy;
+  const labelNode = document.getElementById("auth-step-label");
+  const copyNode = document.getElementById("auth-step-copy");
+  if (!labelNode || !copyNode) {
+    return;
+  }
+  labelNode.textContent = label;
+  copyNode.textContent = copy;
 }
 
 function showOtpPreview(code) {
