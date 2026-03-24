@@ -2235,10 +2235,7 @@ select {
 }
 
 .connect-auth-main {
-  display: grid;
-  grid-template-columns: minmax(0, 540px) minmax(280px, 1fr);
-  gap: 24px;
-  align-items: start;
+  max-width: 540px;
 }
 
 .auth-wrap {
@@ -2529,50 +2526,6 @@ select {
   font-size: 13px;
 }
 
-.connect-auth-side {
-  display: grid;
-  gap: 16px;
-}
-
-.connect-auth-info-card {
-  padding: 22px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: var(--shadow);
-}
-
-.connect-auth-info-card h3 {
-  font-size: 22px;
-  letter-spacing: -0.03em;
-  margin-bottom: 12px;
-}
-
-.connect-auth-list {
-  list-style: none;
-  display: grid;
-  gap: 12px;
-}
-
-.connect-auth-list li {
-  padding-left: 18px;
-  position: relative;
-  color: var(--text2);
-  font-size: 14px;
-}
-
-.connect-auth-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.7em;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--orange);
-  transform: translateY(-50%);
-}
-
 @keyframes pulse-highlight {
   0% {
     box-shadow: 0 0 0 0 rgba(247, 148, 29, 0.35);
@@ -2594,7 +2547,6 @@ select {
 
 @media (max-width: 1320px) {
   .hero-banner,
-  .connect-auth-main,
   .knowledge-layout,
   .two-column-layout {
     grid-template-columns: 1fr;
