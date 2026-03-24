@@ -20,6 +20,7 @@ from .services import (
     get_trusted_sso_client,
     issue_trusted_sso_grant,
     normalize_email,
+    reset_password_to_first_time_password,
     start_login_challenge,
     validate_trusted_redirect_uri,
     validate_password_step,
@@ -122,6 +123,38 @@ def request_login_otp(request):
     if preview_code:
         response["preview_code"] = preview_code
     return JsonResponse(response, status=201)
+
+
+def forgot_password(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        payload = _parse_json_body(request)
+        user = reset_password_to_first_time_password(payload.get("email"))
+    except AuthFlowError as exc:
+        return _error_response(exc)
+
+    if user:
+        record_audit_event(
+            action="auth.password.reset_emailed",
+            actor=user,
+            target=user,
+            summary=f"Temporary password emailed to {user.email}",
+            request=request,
+        )
+        record_analytics_event(
+            "auth",
+            "password_reset_emailed",
+            actor=user,
+            request=request,
+        )
+
+    return JsonResponse(
+        {
+            "detail": "If the email is provisioned, the temporary password has been emailed. Request a fresh OTP, then log in and change your password.",
+        }
+    )
 
 
 def verify_login_code(request):

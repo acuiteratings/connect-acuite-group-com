@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     change_password_and_login,
     current_user,
+    forgot_password,
     login_with_password,
     logout_view,
     request_login_otp,
@@ -14,6 +15,7 @@ from .views import (
 urlpatterns = [
     path("me/", current_user, name="current-user"),
     path("auth/request-otp/", request_login_otp, name="request-login-otp"),
+    path("auth/forgot-password/", forgot_password, name="forgot-password"),
     path("auth/verify-otp/", verify_login_code, name="verify-login-code"),
     path("auth/login/", login_with_password, name="login-with-password"),
     path("auth/change-password/", change_password_and_login, name="change-password-and-login"),

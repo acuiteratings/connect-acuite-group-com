@@ -51,6 +51,36 @@ class AuthApiTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(LoginChallenge.objects.count(), 1)
 
+    def test_forgot_password_emails_first_time_password_and_forces_change(self):
+        response = self.client.post(
+            "/api/accounts/auth/forgot-password/",
+            data={"email": self.user.email},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("314159", mail.outbox[0].body)
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.must_change_password)
+        self.assertIsNone(self.user.password_changed_at)
+        self.assertTrue(self.user.check_password("314159"))
+
+    def test_forgot_password_returns_generic_success_for_unknown_email(self):
+        response = self.client.post(
+            "/api/accounts/auth/forgot-password/",
+            data={"email": "unknown.user@acuite.in"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["detail"],
+            "If the email is provisioned, the temporary password has been emailed. Request a fresh OTP, then log in and change your password.",
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_full_login_flow_requires_validated_otp_before_password(self):
         otp_response = self.client.post(
             "/api/accounts/auth/request-otp/",

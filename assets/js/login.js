@@ -50,6 +50,9 @@ async function initLoginPage() {
     .addEventListener("submit", (event) => {
       void handlePasswordChangeForm(event);
     });
+  document.getElementById("forgot-password-button").addEventListener("click", (event) => {
+    void handleForgotPassword(event);
+  });
 
   bindToggle("password-toggle", "login-password");
   bindToggle("new-password-toggle", "new-password");
@@ -180,6 +183,46 @@ async function handlePasswordForm(event) {
       window.location.href = getPostLoginTarget();
     }, 350);
   }, "password-error");
+}
+
+async function handleForgotPassword(event) {
+  event.preventDefault();
+  clearErrors();
+
+  const emailInput = document.getElementById("login-email");
+  const codeInput = document.getElementById("login-code");
+  const email = emailInput.value.trim().toLowerCase();
+  const trigger = event.currentTarget;
+
+  if (!email) {
+    showFieldError("email-error", "Enter your employee email ID first.");
+    emailInput.focus();
+    return;
+  }
+
+  await withButtonBusy(trigger, async () => {
+    const response = await window.AcuiteConnectAuth.apiRequest(
+      "/api/accounts/auth/forgot-password/",
+      {
+        method: "POST",
+        body: { email },
+      }
+    );
+
+    authFlow.challengeToken = "";
+    authFlow.email = email;
+    codeInput.disabled = true;
+    codeInput.value = "";
+    document.getElementById("validate-code-button").disabled = true;
+    disablePasswordStep();
+    hidePasswordResetStep();
+    showOtpPreview("");
+    showStatus(response.detail, "info");
+    updateStep(
+      "Step 1 of 3",
+      "Request a fresh OTP, then log in with the temporary password from your email."
+    );
+  }, "email-error");
 }
 
 async function handlePasswordChangeForm(event) {

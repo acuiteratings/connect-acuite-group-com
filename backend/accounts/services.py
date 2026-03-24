@@ -5,6 +5,7 @@ from secrets import compare_digest
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -105,6 +106,25 @@ def _send_login_otp_email(user, code):
     )
 
 
+def _send_first_time_password_email(user, temporary_password):
+    subject = "Your Acuite Connect temporary password"
+    message = (
+        f"Hello {user.full_name},\n\n"
+        "Your Acuite Connect password has been reset.\n"
+        f"Temporary password: {temporary_password}\n\n"
+        "Use this password to log in after requesting a fresh OTP.\n"
+        "You will be asked to choose a new password immediately.\n\n"
+        "If you did not request this reset, please contact the internal admin team."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+
+
 def start_login_challenge(email):
     user = get_login_user(email)
     now = timezone.now()
@@ -151,6 +171,60 @@ def start_login_challenge(email):
         )
 
     return challenge, preview_code
+
+
+def reset_password_to_first_time_password(email):
+    normalized_email = normalize_email(email)
+    if not normalized_email:
+        raise AuthFlowError("Enter your employee email ID first.", status=400, code="email_required")
+
+    try:
+        validate_email(normalized_email)
+    except ValidationError as exc:
+        raise AuthFlowError("Enter a valid employee email ID.", status=400, code="email_invalid") from exc
+
+    try:
+        user = get_login_user(normalized_email)
+    except AuthFlowError as exc:
+        if exc.code in {"user_not_found", "user_inactive"}:
+            return None
+        raise
+
+    if not _email_delivery_configured():
+        raise AuthFlowError(
+            "Password reset email delivery is not configured yet. Ask an administrator to finish email setup.",
+            status=503,
+            code="reset_delivery_unavailable",
+        )
+
+    temporary_password = str(getattr(settings, "AUTH_FIRST_TIME_PASSWORD", "314159")).strip()
+    if not temporary_password:
+        raise AuthFlowError(
+            "Temporary password reset is not configured yet. Ask an administrator to finish setup.",
+            status=503,
+            code="reset_password_unavailable",
+        )
+
+    now = timezone.now()
+    try:
+        with transaction.atomic():
+            LoginChallenge.objects.filter(
+                user=user,
+                consumed_at__isnull=True,
+            ).update(consumed_at=now)
+            user.set_password(temporary_password)
+            user.must_change_password = True
+            user.password_changed_at = None
+            user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
+            _send_first_time_password_email(user, temporary_password)
+    except Exception as exc:
+        raise AuthFlowError(
+            "We couldn't send the reset email right now. Please try again in a moment.",
+            status=503,
+            code="reset_email_failed",
+        ) from exc
+
+    return user
 
 
 def verify_login_otp(public_id, code):

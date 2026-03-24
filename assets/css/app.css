@@ -2435,6 +2435,26 @@ select {
   gap: 18px;
 }
 
+.auth-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.auth-text-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--maroon);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-text-link:hover {
+  text-decoration: underline;
+}
+
 .button-block {
   width: 100%;
 }
