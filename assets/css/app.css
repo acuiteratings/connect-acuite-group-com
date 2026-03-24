@@ -2247,7 +2247,7 @@ select {
 }
 
 .connect-gptw-badge {
-  width: 118px;
+  width: 48px;
   height: auto;
   display: block;
   flex-shrink: 0;
@@ -2280,7 +2280,7 @@ select {
 
 .connect-story-copy p {
   margin: 0;
-  font-size: 15px;
+  font-size: 12px;
   line-height: 1.85;
   color: var(--text2);
 }
@@ -2664,7 +2664,7 @@ select {
   }
 
   .connect-gptw-badge {
-    width: 88px;
+    width: 36px;
   }
 }
 
