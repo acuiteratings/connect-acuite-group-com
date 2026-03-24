@@ -2229,50 +2229,9 @@ select {
 
 .connect-auth-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 22px;
-  margin-bottom: 28px;
-}
-
-.connect-auth-brand {
-  display: flex;
-  align-items: flex-start;
-  gap: 22px;
-}
-
-.connect-auth-brand-copy h1 {
-  font-size: clamp(30px, 4.2vw, 46px);
-  line-height: 1.04;
-  letter-spacing: -0.04em;
-  margin-bottom: 10px;
-}
-
-.connect-auth-brand-copy p:last-child {
-  max-width: 620px;
-  color: var(--text2);
-}
-
-.connect-auth-badge {
-  min-width: 220px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(10px);
-}
-
-.connect-auth-badge strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.connect-auth-badge span {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text3);
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 24px;
 }
 
 .connect-auth-main {
@@ -2657,7 +2616,7 @@ select {
   }
 
   .connect-auth-header {
-    flex-direction: column;
+    margin-bottom: 20px;
   }
 }
 
@@ -2691,11 +2650,6 @@ select {
 
   .connect-auth-shell {
     padding: 18px;
-  }
-
-  .connect-auth-brand {
-    flex-direction: column;
-    gap: 16px;
   }
 
   .person-detail-grid {
