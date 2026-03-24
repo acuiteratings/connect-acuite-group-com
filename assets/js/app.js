@@ -266,6 +266,43 @@ const HOME_FOUNDATION_LAYERS = [
   },
 ];
 
+const FEATURED_HOME_ANNOUNCEMENT = {
+  id: "announcement-townhall-launch",
+  eyebrow: "Priority Announcement",
+  type: "Town Hall",
+  format: "Hybrid",
+  title: "Acuite Connect launch town hall and leadership briefing.",
+  summary: "The next all-hands is being treated as a high-signal moment: a live walkthrough of Acuite Connect, a business update from leadership, and a focused Q&A on how we work together better from here.",
+  dateLabel: "Friday, 27 March 2026",
+  timeLabel: "4:00 PM - 5:30 PM IST",
+  venueLabel: "Acuite Auditorium, Mumbai + companywide live stream",
+  hostLabel: "Hosted by the MD & CEO with the leadership team",
+  audienceLabel: "Open to all employees",
+  countdownLabel: "2 days to go",
+  agenda: [
+    "Acuite Connect launch and rollout note",
+    "Business priorities and FY27 direction",
+    "Open floor Q&A with leadership",
+  ],
+  outcomes: [
+    "Reserve your seat or mark yourself as interested",
+    "Block the time directly on your calendar",
+    "Signal momentum through likes before the event",
+  ],
+  baseMetrics: {
+    booked: 84,
+    interested: 127,
+    likes: 96,
+  },
+  calendar: {
+    title: "Acuite Connect Launch Town Hall",
+    description: "Acuite Connect launch walkthrough, business update, and leadership Q&A for all employees.",
+    location: "Acuite Auditorium, Mumbai + companywide live stream",
+    start: "2026-03-27T16:00:00+05:30",
+    end: "2026-03-27T17:30:00+05:30",
+  },
+};
+
 const appData = {
   currentUser: {
     name: "Rahul Mehta",
@@ -1109,6 +1146,10 @@ const defaultState = {
   directoryQuery: "",
   selectedKudosTagId: "analysis",
   likedPostIds: [],
+  homeAnnouncementLiked: false,
+  homeAnnouncementInterested: false,
+  homeAnnouncementBooked: false,
+  homeAnnouncementCalendarBlocked: false,
   joinedClubIds: appData.clubs.filter((club) => club.defaultJoined).map((club) => club.id),
   upvotedPitchIds: appData.pitches.filter((pitch) => pitch.defaultUpvoted).map((pitch) => pitch.id),
   bookmarkedKnowledgeIds: appData.knowledgeItems.filter((item) => item.savedByDefault).map((item) => item.id),
@@ -1481,6 +1522,42 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "book-home-announcement") {
+      state.homeAnnouncementBooked = !state.homeAnnouncementBooked;
+      if (state.homeAnnouncementBooked) {
+        state.homeAnnouncementInterested = true;
+      }
+      saveState();
+      renderHomeAnnouncement();
+      showToast(state.homeAnnouncementBooked ? "Your seat is booked." : "Your booking has been removed.");
+      return;
+    }
+
+    if (actionName === "block-home-announcement") {
+      downloadAnnouncementCalendarInvite();
+      state.homeAnnouncementCalendarBlocked = true;
+      saveState();
+      renderHomeAnnouncement();
+      showToast("Calendar block downloaded.");
+      return;
+    }
+
+    if (actionName === "interest-home-announcement") {
+      state.homeAnnouncementInterested = !state.homeAnnouncementInterested;
+      saveState();
+      renderHomeAnnouncement();
+      showToast(state.homeAnnouncementInterested ? "Marked as interested." : "Interest removed.");
+      return;
+    }
+
+    if (actionName === "like-home-announcement") {
+      state.homeAnnouncementLiked = !state.homeAnnouncementLiked;
+      saveState();
+      renderHomeAnnouncement();
+      showToast(state.homeAnnouncementLiked ? "Announcement liked." : "Like removed.");
+      return;
+    }
+
     if (actionName === "logout") {
       closeProfileMenu();
       if (window.AcuiteConnectAuth && window.AcuiteConnectAuth.logout) {
@@ -1725,7 +1802,7 @@ function renderAll() {
   renderPanels();
   renderProfile();
   renderProfileBuilder();
-  renderHeroStats();
+  renderHomeAnnouncement();
   renderTodayPanel();
   renderTasksPanel();
   renderPulsePanel();
@@ -1855,32 +1932,128 @@ function renderProfileBuilder() {
   }
 }
 
-function renderHeroStats() {
-  const stats = [
-    {
-      label: "Core spaces",
-      value: "6",
-      note: "Community, learning, voice, rewards, store and business",
-    },
-    {
-      label: "Foundation layers",
-      value: "3",
-      note: "Directory, tools and knowledge support every module",
-    },
-    {
-      label: "Vision items",
-      value: "14",
-      note: "The current feature list now has clear homes inside Connect",
-    },
-  ];
+function renderHomeAnnouncement() {
+  const container = document.getElementById("home-announcement");
+  if (!container) {
+    return;
+  }
 
-  document.getElementById("hero-stats").innerHTML = stats.map((item) => `
-    <article class="hero-stat">
-      <div class="hero-stat-label">${escapeHtml(item.label)}</div>
-      <div class="hero-stat-value">${escapeHtml(item.value)}</div>
-      <div class="hero-stat-note">${escapeHtml(item.note)}</div>
-    </article>
-  `).join("");
+  const announcement = FEATURED_HOME_ANNOUNCEMENT;
+  const bookedCount = announcement.baseMetrics.booked + (state.homeAnnouncementBooked ? 1 : 0);
+  const interestedCount = announcement.baseMetrics.interested + (state.homeAnnouncementInterested ? 1 : 0);
+  const likeCount = announcement.baseMetrics.likes + (state.homeAnnouncementLiked ? 1 : 0);
+
+  container.innerHTML = `
+    <div class="announcement-main">
+      <div class="announcement-topline">
+        <p class="eyebrow">${escapeHtml(announcement.eyebrow)}</p>
+        <div class="announcement-badges">
+          <span class="announcement-badge strong">${escapeHtml(announcement.type)}</span>
+          <span class="announcement-badge">${escapeHtml(announcement.format)}</span>
+          <span class="announcement-badge">${escapeHtml(announcement.dateLabel)}</span>
+        </div>
+      </div>
+
+      <h1 class="announcement-title">${escapeHtml(announcement.title)}</h1>
+      <p class="announcement-summary">${escapeHtml(announcement.summary)}</p>
+
+      <div class="announcement-meta-grid">
+        <article class="announcement-meta-card">
+          <span class="announcement-meta-label">When</span>
+          <strong>${escapeHtml(announcement.timeLabel)}</strong>
+          <span>${escapeHtml(announcement.dateLabel)}</span>
+        </article>
+        <article class="announcement-meta-card">
+          <span class="announcement-meta-label">Where</span>
+          <strong>${escapeHtml(announcement.venueLabel)}</strong>
+          <span>${escapeHtml(announcement.audienceLabel)}</span>
+        </article>
+        <article class="announcement-meta-card">
+          <span class="announcement-meta-label">Hosted by</span>
+          <strong>${escapeHtml(announcement.hostLabel)}</strong>
+          <span>${escapeHtml(announcement.countdownLabel)}</span>
+        </article>
+      </div>
+
+      <div class="announcement-actions">
+        <button
+          type="button"
+          class="btn-warm announcement-action ${state.homeAnnouncementBooked ? "is-active" : ""}"
+          data-action="book-home-announcement"
+          aria-pressed="${state.homeAnnouncementBooked ? "true" : "false"}"
+        >
+          ${state.homeAnnouncementBooked ? "Seat booked" : "Book a seat"}
+        </button>
+        <button
+          type="button"
+          class="btn-outline announcement-action ${state.homeAnnouncementCalendarBlocked ? "is-active" : ""}"
+          data-action="block-home-announcement"
+        >
+          ${state.homeAnnouncementCalendarBlocked ? "Time blocked" : "Block the time"}
+        </button>
+      </div>
+
+      <div class="announcement-reactions">
+        <button
+          type="button"
+          class="announcement-reaction ${state.homeAnnouncementInterested ? "is-active" : ""}"
+          data-action="interest-home-announcement"
+          aria-pressed="${state.homeAnnouncementInterested ? "true" : "false"}"
+        >
+          Interested
+          <span>${escapeHtml(String(interestedCount))}</span>
+        </button>
+        <button
+          type="button"
+          class="announcement-reaction ${state.homeAnnouncementLiked ? "is-active" : ""}"
+          data-action="like-home-announcement"
+          aria-pressed="${state.homeAnnouncementLiked ? "true" : "false"}"
+        >
+          Like
+          <span>${escapeHtml(String(likeCount))}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="announcement-side">
+      <article class="announcement-panel response-panel">
+        <div class="announcement-panel-head">
+          <p class="widget-kicker">Response pulse</p>
+          <strong>${escapeHtml(announcement.countdownLabel)}</strong>
+        </div>
+        <div class="announcement-metrics">
+          <div class="announcement-metric">
+            <span class="announcement-metric-label">Booked</span>
+            <strong>${escapeHtml(String(bookedCount))}</strong>
+          </div>
+          <div class="announcement-metric">
+            <span class="announcement-metric-label">Interested</span>
+            <strong>${escapeHtml(String(interestedCount))}</strong>
+          </div>
+          <div class="announcement-metric">
+            <span class="announcement-metric-label">Likes</span>
+            <strong>${escapeHtml(String(likeCount))}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="announcement-panel">
+        <p class="widget-kicker">What to expect</p>
+        <h3>Key agenda</h3>
+        <ul class="announcement-list">
+          ${announcement.agenda.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </article>
+
+      <article class="announcement-panel">
+        <p class="widget-kicker">Why respond now</p>
+        <h3>Make the event visible</h3>
+        <ul class="announcement-list">
+          ${announcement.outcomes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </article>
+    </div>
+  `;
 }
 
 function renderTodayPanel() {
@@ -4360,6 +4533,10 @@ function hydrateState() {
         )
         : {}),
     },
+    homeAnnouncementLiked: Boolean(saved.homeAnnouncementLiked),
+    homeAnnouncementInterested: Boolean(saved.homeAnnouncementInterested),
+    homeAnnouncementBooked: Boolean(saved.homeAnnouncementBooked),
+    homeAnnouncementCalendarBlocked: Boolean(saved.homeAnnouncementCalendarBlocked),
     likedPostIds: Array.isArray(saved.likedPostIds) ? saved.likedPostIds : defaultState.likedPostIds.slice(),
     joinedClubIds: Array.isArray(saved.joinedClubIds) ? saved.joinedClubIds : defaultState.joinedClubIds.slice(),
     upvotedPitchIds: Array.isArray(saved.upvotedPitchIds) ? saved.upvotedPitchIds : defaultState.upvotedPitchIds.slice(),
@@ -4389,6 +4566,50 @@ function saveState() {
 
 function toggleArrayValue(items, value) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
+}
+
+function downloadAnnouncementCalendarInvite() {
+  const calendar = FEATURED_HOME_ANNOUNCEMENT.calendar;
+  const content = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Acuite Connect//EN",
+    "BEGIN:VEVENT",
+    `UID:${FEATURED_HOME_ANNOUNCEMENT.id}@connect.acuite-group.com`,
+    `DTSTAMP:${toICSDateTime(new Date().toISOString())}`,
+    `DTSTART:${toICSDateTime(calendar.start)}`,
+    `DTEND:${toICSDateTime(calendar.end)}`,
+    `SUMMARY:${escapeICS(calendar.title)}`,
+    `DESCRIPTION:${escapeICS(calendar.description)}`,
+    `LOCATION:${escapeICS(calendar.location)}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = "acuite-connect-town-hall.ics";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(objectUrl);
+  }, 1000);
+}
+
+function toICSDateTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function escapeICS(value) {
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replaceAll("\n", "\\n")
+    .replaceAll(",", "\\,")
+    .replaceAll(";", "\\;");
 }
 
 function createDirectoryFilterOptions() {
