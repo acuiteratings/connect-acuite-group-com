@@ -145,6 +145,54 @@ const STORE_CATEGORY_LABELS = {
   desk: "Desk",
   memorabilia: "Memorabilia",
 };
+const BULLETIN_CATEGORY_LABELS = {
+  announcements: "Announcements",
+  hr: "HR",
+  events: "Events",
+  security: "Security",
+};
+const BULLETIN_TEMPLATE_LIBRARY = [
+  {
+    key: "town_hall",
+    label: "Town Hall",
+    category: "announcements",
+    title: "Town hall | Leadership update and open Q&A",
+    body:
+      "We are hosting a company town hall to share key business updates, priorities for the coming quarter, and a live Q&A with leadership. Please block the time and join promptly.",
+  },
+  {
+    key: "cybersecurity_warning",
+    label: "Cybersecurity Warning",
+    category: "security",
+    title: "Cybersecurity advisory | Please review immediately",
+    body:
+      "A fresh cybersecurity advisory is being issued for all employees. Please review the guidance, avoid suspicious links or attachments, and report anything unusual to the IT team without delay.",
+  },
+  {
+    key: "picnic",
+    label: "Picnic",
+    category: "events",
+    title: "Company picnic | Save the date",
+    body:
+      "We are planning a company picnic for employees and would love broad participation. Venue, reporting time, transport details and participation instructions will follow shortly.",
+  },
+  {
+    key: "office_party",
+    label: "Office Party",
+    category: "events",
+    title: "Office party | Join the celebration",
+    body:
+      "We are getting together for an office celebration and would love everyone to join. Please block the evening, come ready to unwind, and watch this space for final timing and venue details.",
+  },
+  {
+    key: "offsite",
+    label: "Offsite",
+    category: "events",
+    title: "Team offsite | Planning note",
+    body:
+      "We are planning an upcoming offsite focused on collaboration, reflection and future priorities. Please indicate your availability once dates and logistics are shared.",
+  },
+];
 
 const HOME_PILLARS = [
   {
@@ -429,7 +477,7 @@ const appData = {
       status: "planned",
       note: "Ideal for the next workflow layer",
       gradient: "ember",
-      message: "Help Desk is shown as a planned module in this MVP foundation.",
+      message: "Help Desk is staged as a planned module in the current Connect foundation.",
     },
   ],
   communityPosts: [],
@@ -446,6 +494,7 @@ const appData = {
     locked_points: 0,
     available_points: 0,
   },
+  adminUsers: [],
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [
@@ -538,7 +587,7 @@ const appData = {
       category: "announcements",
       title: "Acuité Connect beta is now open for internal feedback",
       body: [
-        "This is the first pass at turning the social prototype into a practical employee workspace. Please explore the new directory, tool hub, and knowledge sections.",
+        "This is an early practical workspace pass for Connect. Please explore the new directory, tool hub, and knowledge sections.",
       ],
       authorName: "Internal Comms",
       authorMeta: "1 day ago",
@@ -1180,9 +1229,13 @@ let voiceLoadError = "";
 let recognitionLoadError = "";
 let storeLoadError = "";
 let learningLoadError = "";
+let bulletinLoadError = "";
+let adminUsersLoadError = "";
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
 let profileMenuOpen = false;
+let selectedAdminUserId = null;
+let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -1224,6 +1277,28 @@ async function init() {
     communityTypeSelect: document.getElementById("community-type-select"),
     communityMetaLabel: document.getElementById("community-meta-label"),
     communityMetaInput: document.getElementById("community-meta-input"),
+    adminSidebarTab: document.getElementById("admin-sidebar-tab"),
+    bulletinAdminOpenButton: document.getElementById("bulletin-admin-open-btn"),
+    adminCreateUserForm: document.getElementById("admin-create-user-form"),
+    adminEditUserForm: document.getElementById("admin-edit-user-form"),
+    adminBulletinForm: document.getElementById("admin-bulletin-form"),
+    adminUserSearchInput: document.getElementById("admin-user-search"),
+    adminUserList: document.getElementById("admin-user-list"),
+    adminUserResultsMeta: document.getElementById("admin-user-results-meta"),
+    adminEditUserId: document.getElementById("admin-edit-user-id"),
+    adminEditDisplayName: document.getElementById("admin-edit-display-name"),
+    adminEditEmail: document.getElementById("admin-edit-email"),
+    adminEditTitle: document.getElementById("admin-edit-title"),
+    adminEditDepartment: document.getElementById("admin-edit-department"),
+    adminEditLocation: document.getElementById("admin-edit-location"),
+    adminEditCode: document.getElementById("admin-edit-code"),
+    adminEditAccessLevel: document.getElementById("admin-edit-access-level"),
+    adminEditEmploymentStatus: document.getElementById("admin-edit-employment-status"),
+    adminEditCanPost: document.getElementById("admin-edit-can-post"),
+    adminEditIsActive: document.getElementById("admin-edit-is-active"),
+    adminEditStatus: document.getElementById("admin-edit-status"),
+    adminEditSubmit: document.getElementById("admin-edit-submit"),
+    adminBulletinTemplates: document.getElementById("admin-bulletin-templates"),
     voiceForm: document.getElementById("voice-form"),
     voiceTopicSelect: document.getElementById("voice-topic-select"),
     recognitionForm: document.getElementById("recognition-form"),
@@ -1256,7 +1331,7 @@ async function init() {
   };
 
   try {
-    await Promise.all([
+    const bootTasks = [
       loadCurrentProfile(),
       loadDirectoryData(),
       loadCommunityPosts(),
@@ -1264,7 +1339,12 @@ async function init() {
       loadRecognitionData(),
       loadStoreData(),
       loadLearningData(),
-    ]);
+      loadBulletinPosts(),
+    ];
+    if (currentUserCanAdministerConnect()) {
+      bootTasks.push(loadAdminUsers());
+    }
+    await Promise.all(bootTasks);
     bindEvents();
     renderAll();
   } catch (error) {
@@ -1453,6 +1533,45 @@ async function loadStoreData() {
   }
 }
 
+async function loadBulletinPosts() {
+  bulletinLoadError = "";
+  appData.bulletinPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    bulletinLoadError = "Bulletin services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=general&kind=announcement");
+    appData.bulletinPosts = Array.isArray(payload.results)
+      ? payload.results.map(mapBulletinPost)
+      : [];
+  } catch (error) {
+    bulletinLoadError = error.message || "Could not load the Bulletin Board.";
+  }
+}
+
+async function loadAdminUsers() {
+  adminUsersLoadError = "";
+  appData.adminUsers = [];
+
+  if (!currentUserCanAdministerConnect()) {
+    return;
+  }
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    adminUsersLoadError = "Admin services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/accounts/access/users/");
+    appData.adminUsers = Array.isArray(payload.results) ? payload.results : [];
+  } catch (error) {
+    adminUsersLoadError = error.message || "Could not load employee admin tools.";
+  }
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
@@ -1490,6 +1609,12 @@ function bindEvents() {
       state.learningBookQuery = event.target.value;
       saveState();
       renderLearningPanel();
+    });
+  }
+
+  if (elements.adminUserSearchInput) {
+    elements.adminUserSearchInput.addEventListener("input", () => {
+      renderAdminUserList();
     });
   }
 
@@ -1621,6 +1746,17 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "select-admin-user") {
+      selectedAdminUserId = Number(action.dataset.id);
+      renderAdminPanel();
+      return;
+    }
+
+    if (actionName === "apply-bulletin-template") {
+      applyBulletinTemplate(action.dataset.templateKey);
+      return;
+    }
+
     if (actionName === "toggle-like") {
       state.likedPostIds = toggleArrayValue(state.likedPostIds, action.dataset.id);
       saveState();
@@ -1630,6 +1766,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "toggle-live-reaction") {
       await toggleLiveReaction(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "delete-live-post") {
+      await deleteLivePost(action.dataset.id, action.dataset.module);
       return;
     }
 
@@ -1698,7 +1839,7 @@ async function handleDocumentClick(event) {
     }
 
     if (actionName === "invite-alumni") {
-      showToast("Alumni invitations are staged as a future step for this MVP.");
+      showToast("Alumni invitations are staged as a future step for Connect.");
       return;
     }
 
@@ -1790,9 +1931,21 @@ function handleSubmit(event) {
     return;
   }
 
-  if (event.target === elements.bulletinForm) {
+  if (event.target === elements.adminCreateUserForm) {
     event.preventDefault();
-    submitBulletin();
+    void submitAdminCreateUser();
+    return;
+  }
+
+  if (event.target === elements.adminEditUserForm) {
+    event.preventDefault();
+    void submitAdminEditUser();
+    return;
+  }
+
+  if (event.target === elements.adminBulletinForm) {
+    event.preventDefault();
+    void submitAdminBulletinPost();
     return;
   }
 
@@ -1842,7 +1995,8 @@ function renderAll() {
   renderRecognitionPanel();
   renderStorePanel();
   renderLearningPanel();
-  renderBulletinFeed();
+  renderBulletinPanel();
+  renderAdminPanel();
   renderKudosTags();
   renderWallFeed();
   renderLeaderboard();
@@ -1888,7 +2042,22 @@ function currentUserCanAdministerConnect() {
 }
 
 function renderPanels() {
+  const canAdminister = currentUserCanAdministerConnect();
+  if (!canAdminister && state.activeTab === "admin") {
+    state.activeTab = "home";
+    saveState();
+  }
   document.documentElement.setAttribute("data-theme", state.theme);
+  const adminPanel = document.getElementById("panel-admin");
+  if (elements.adminSidebarTab) {
+    elements.adminSidebarTab.hidden = !canAdminister;
+  }
+  if (elements.bulletinAdminOpenButton) {
+    elements.bulletinAdminOpenButton.hidden = !canAdminister;
+  }
+  if (adminPanel) {
+    adminPanel.hidden = !canAdminister;
+  }
   document.querySelectorAll(".panel").forEach((panel) => {
     panel.classList.toggle("active", panel.id === `panel-${state.activeTab}`);
   });
@@ -2162,10 +2331,30 @@ function renderPulsePanel() {
 }
 
 function renderHomeTools() {
+  const head = document.getElementById("home-core-spaces-head");
+  if (head) {
+    head.innerHTML = `
+      <div>
+        <p class="widget-kicker">Core Spaces</p>
+        <h2>Explore the main employee spaces inside Connect</h2>
+      </div>
+      <button type="button" class="btn-link" data-switch-tab="community">Start exploring</button>
+    `;
+  }
   document.getElementById("home-tools-grid").innerHTML = HOME_CORE_SPACES.map(renderHomeSpaceCard).join("");
 }
 
 function renderHomeFeed() {
+  const head = document.getElementById("home-foundation-head");
+  if (head) {
+    head.innerHTML = `
+      <div>
+        <p class="widget-kicker">Foundation Layers</p>
+        <h2>People, tools and knowledge behind every module</h2>
+      </div>
+      <button type="button" class="btn-link" data-switch-tab="directory">Open directory</button>
+    `;
+  }
   document.getElementById("home-feed").innerHTML = HOME_FOUNDATION_LAYERS.map((layer) => `
     <article class="summary-card foundation-card">
       <strong>${escapeHtml(layer.title)}</strong>
@@ -2906,12 +3095,188 @@ function renderStoreItemCard(item) {
   `;
 }
 
-function renderBulletinFeed() {
-  const allPosts = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts];
-  const filtered = allPosts.filter((post) => state.bulletinFilter === "all" || post.category === state.bulletinFilter);
-  document.getElementById("bulletin-feed").innerHTML = filtered.length
-    ? filtered.map(renderPost).join("")
-    : `<div class="empty-state">No bulletin posts match this filter yet.</div>`;
+function renderBulletinPanel() {
+  const container = document.getElementById("bulletin-feed");
+  const meta = document.getElementById("bulletin-results-meta");
+  if (!container || !meta) {
+    return;
+  }
+
+  if (bulletinLoadError) {
+    meta.textContent = "Bulletin services issue";
+    container.innerHTML = `<div class="empty-state">${escapeHtml(bulletinLoadError)}</div>`;
+    return;
+  }
+
+  const posts = getFilteredBulletinPosts();
+  meta.textContent = appData.bulletinPosts.length
+    ? `${posts.length} of ${appData.bulletinPosts.length} bulletin posts shown`
+    : "Live company announcement board";
+
+  if (!appData.bulletinPosts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No company bulletin posts have been published yet. The first town hall, advisory or event note will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!posts.length) {
+    container.innerHTML = `<div class="empty-state">No bulletin posts match this filter right now.</div>`;
+    return;
+  }
+
+  container.innerHTML = posts.map(renderBulletinPostCard).join("");
+}
+
+function renderAdminPanel() {
+  const panel = document.getElementById("panel-admin");
+  if (!panel) {
+    return;
+  }
+  if (!currentUserCanAdministerConnect()) {
+    panel.hidden = true;
+    return;
+  }
+
+  panel.hidden = false;
+  renderAdminUserList();
+  renderAdminEditForm();
+  renderAdminBulletinTemplates();
+  if (elements.adminBulletinForm && !elements.adminBulletinForm.elements.title.value && !elements.adminBulletinForm.elements.body.value) {
+    applyBulletinTemplate(selectedBulletinTemplateKey);
+  }
+}
+
+function renderAdminUserList() {
+  if (!elements.adminUserList || !elements.adminUserResultsMeta) {
+    return;
+  }
+  if (adminUsersLoadError) {
+    elements.adminUserResultsMeta.textContent = "Admin data issue";
+    elements.adminUserList.innerHTML = `<div class="empty-state">${escapeHtml(adminUsersLoadError)}</div>`;
+    return;
+  }
+
+  const query = String(elements.adminUserSearchInput?.value || "").trim().toLowerCase();
+  const users = appData.adminUsers.filter((user) => {
+    if (!query) {
+      return true;
+    }
+    return [
+      user.name,
+      user.email,
+      user.title,
+      user.department,
+      user.location,
+      user.employee_code,
+      user.access_level,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+
+  elements.adminUserResultsMeta.textContent = appData.adminUsers.length
+    ? `${users.length} of ${appData.adminUsers.length} employees shown`
+    : "No employee accounts loaded yet";
+
+  if (!users.length) {
+    elements.adminUserList.innerHTML = `<div class="empty-state">No employee matches that search.</div>`;
+    return;
+  }
+
+  elements.adminUserList.innerHTML = users.slice(0, 30).map((user) => `
+    <button
+      type="button"
+      class="admin-user-card ${selectedAdminUserId === user.id ? "active" : ""}"
+      data-action="select-admin-user"
+      data-id="${user.id}"
+    >
+      <div>
+        <div class="mini-item-title">${escapeHtml(user.name || user.email)}</div>
+        <div class="mini-item-meta">${escapeHtml([user.title, user.location].filter(Boolean).join(" | ") || user.email)}</div>
+      </div>
+      <div class="admin-user-badges">
+        <span class="mini-chip">${escapeHtml(capitalize(user.access_level || "employee"))}</span>
+        <span class="mini-chip ${user.can_post_in_connect ? "success" : ""}">${escapeHtml(user.can_post_in_connect ? "Posting on" : "Posting off")}</span>
+      </div>
+    </button>
+  `).join("");
+}
+
+function renderAdminEditForm() {
+  if (!elements.adminEditUserForm) {
+    return;
+  }
+  const user = appData.adminUsers.find((item) => item.id === selectedAdminUserId);
+  const controls = elements.adminEditUserForm.querySelectorAll("input, select, button");
+
+  if (!user) {
+    elements.adminEditUserForm.reset();
+    if (elements.adminEditStatus) {
+      elements.adminEditStatus.textContent = "Select an employee to edit their account.";
+    }
+    controls.forEach((control) => {
+      if (control.type !== "hidden") {
+        control.disabled = true;
+      }
+    });
+    if (elements.adminEditSubmit) {
+      elements.adminEditSubmit.disabled = true;
+    }
+    return;
+  }
+
+  if (elements.adminEditUserId) elements.adminEditUserId.value = String(user.id);
+  if (elements.adminEditDisplayName) elements.adminEditDisplayName.value = user.name || "";
+  if (elements.adminEditEmail) elements.adminEditEmail.value = user.email || "";
+  if (elements.adminEditTitle) elements.adminEditTitle.value = user.title || "";
+  if (elements.adminEditDepartment) elements.adminEditDepartment.value = user.department || "";
+  if (elements.adminEditLocation) elements.adminEditLocation.value = user.location || "";
+  if (elements.adminEditCode) elements.adminEditCode.value = user.employee_code || "";
+  if (elements.adminEditAccessLevel) elements.adminEditAccessLevel.value = user.access_level || "employee";
+  if (elements.adminEditEmploymentStatus) elements.adminEditEmploymentStatus.value = user.employment_status || "active";
+  if (elements.adminEditCanPost) elements.adminEditCanPost.checked = Boolean(user.can_post_in_connect);
+  if (elements.adminEditIsActive) elements.adminEditIsActive.checked = Boolean(user.is_active);
+  if (elements.adminEditStatus) {
+    elements.adminEditStatus.textContent = `Editing ${user.name || user.email}. Save to update access, posting and account status.`;
+  }
+  controls.forEach((control) => {
+    if (control.type !== "hidden") {
+      control.disabled = false;
+    }
+  });
+}
+
+function renderAdminBulletinTemplates() {
+  if (!elements.adminBulletinTemplates) {
+    return;
+  }
+  elements.adminBulletinTemplates.innerHTML = BULLETIN_TEMPLATE_LIBRARY.map((template) => `
+    <button
+      type="button"
+      class="admin-template-chip ${selectedBulletinTemplateKey === template.key ? "active" : ""}"
+      data-action="apply-bulletin-template"
+      data-template-key="${template.key}"
+    >
+      ${escapeHtml(template.label)}
+    </button>
+  `).join("");
+}
+
+function applyBulletinTemplate(templateKey) {
+  const template = BULLETIN_TEMPLATE_LIBRARY.find((item) => item.key === templateKey);
+  if (!template || !elements.adminBulletinForm) {
+    return;
+  }
+  selectedBulletinTemplateKey = template.key;
+  elements.adminBulletinForm.elements.category.value = template.category;
+  elements.adminBulletinForm.elements.title.value = template.title;
+  elements.adminBulletinForm.elements.body.value = template.body;
+  renderAdminBulletinTemplates();
 }
 
 function renderKudosTags() {
@@ -3546,6 +3911,7 @@ function renderCommunityPostCard(post) {
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
+        ${renderDeleteLivePostButton(post, "community")}
         <button
           type="button"
           class="btn-outline"
@@ -3695,34 +4061,150 @@ async function redeemStoreItem(itemId) {
   }
 }
 
-function submitBulletin() {
-  if (!currentUserCanCreatePosts()) {
-    showToast("Your posting access is currently disabled.");
+async function submitAdminCreateUser() {
+  if (!currentUserCanAdministerConnect()) {
+    showToast("Admin access is required for account creation.");
     return;
   }
-  const formData = new FormData(elements.bulletinForm);
+  const formData = new FormData(elements.adminCreateUserForm);
+  const displayName = String(formData.get("display_name") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+
+  if (!displayName || !email) {
+    showToast("Add at least employee name and email.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/accounts/access/users/", {
+      method: "POST",
+      body: {
+        display_name: displayName,
+        email,
+        title: String(formData.get("title") || "").trim(),
+        department: String(formData.get("department") || "").trim(),
+        location: String(formData.get("location") || "").trim(),
+        employee_code: String(formData.get("employee_code") || "").trim(),
+        access_level: String(formData.get("access_level") || "employee"),
+        can_post_in_connect: formData.get("can_post_in_connect") === "on",
+      },
+    });
+    elements.adminCreateUserForm.reset();
+    await Promise.all([loadAdminUsers(), loadDirectoryData()]);
+    renderAdminPanel();
+    renderDirectory();
+    showToast(`Account created for ${email}.`);
+  } catch (error) {
+    showToast(error.message || "Could not create the employee account.");
+  }
+}
+
+async function submitAdminEditUser() {
+  if (!currentUserCanAdministerConnect()) {
+    showToast("Admin access is required to edit accounts.");
+    return;
+  }
+  const userId = Number(elements.adminEditUserId?.value || 0);
+  if (!userId) {
+    showToast("Select an employee to edit first.");
+    return;
+  }
+
+  const formData = new FormData(elements.adminEditUserForm);
+  try {
+    await window.AcuiteConnectAuth.apiRequest(`/api/accounts/access/users/${userId}/`, {
+      method: "PATCH",
+      body: {
+        display_name: String(formData.get("display_name") || "").trim(),
+        title: String(formData.get("title") || "").trim(),
+        department: String(formData.get("department") || "").trim(),
+        location: String(formData.get("location") || "").trim(),
+        employee_code: String(formData.get("employee_code") || "").trim(),
+        access_level: String(formData.get("access_level") || "employee"),
+        employment_status: String(formData.get("employment_status") || "active"),
+        can_post_in_connect: formData.get("can_post_in_connect") === "on",
+        is_active: formData.get("is_active") === "on",
+      },
+    });
+    await Promise.all([loadAdminUsers(), loadDirectoryData()]);
+    renderAdminPanel();
+    renderDirectory();
+    showToast("Employee account updated.");
+  } catch (error) {
+    showToast(error.message || "Could not update the employee account.");
+  }
+}
+
+async function submitAdminBulletinPost() {
+  if (!currentUserCanAdministerConnect()) {
+    showToast("Admin access is required to publish bulletin posts.");
+    return;
+  }
+
+  const formData = new FormData(elements.adminBulletinForm);
   const title = String(formData.get("title") || "").trim();
-  const message = String(formData.get("message") || "").trim();
-  const category = String(formData.get("category") || "announcements");
+  const body = String(formData.get("body") || "").trim();
+  const category = String(formData.get("category") || "announcements").trim().toLowerCase();
 
-  if (!title || !message) {
-    showToast("Add both a title and message before posting.");
+  if (!title || !body) {
+    showToast("Add both a headline and message before publishing.");
     return;
   }
 
-  state.customBulletins.unshift({
-    id: `custom-bulletin-${Date.now()}`,
-    title,
-    message,
-    category,
-    likes: 0,
-    comments: 0,
-    createdAt: Date.now(),
-  });
-  saveState();
-  elements.bulletinForm.reset();
-  renderAll();
-  showToast("Bulletin post added to the prototype.");
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body,
+        kind: "announcement",
+        module: "general",
+        topic: category,
+        post_as_company: true,
+        allow_comments: formData.get("allow_comments") === "on",
+        pinned: formData.get("pinned") === "on",
+        metadata: {
+          bulletin_category: category,
+          bulletin_template: selectedBulletinTemplateKey,
+        },
+      },
+    });
+    showToast(
+      payload.post && formData.get("pinned") === "on"
+        ? "Pinned company bulletin published."
+        : "Company bulletin published."
+    );
+    await loadBulletinPosts();
+    renderBulletinPanel();
+    switchTab("bulletin");
+  } catch (error) {
+    showToast(error.message || "Could not publish the bulletin post.");
+  }
+}
+
+async function deleteLivePost(postId, moduleName) {
+  if (!postId) {
+    return;
+  }
+  const confirmed = window.confirm("Delete this post?");
+  if (!confirmed) {
+    return;
+  }
+  try {
+    await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${postId}/`, {
+      method: "DELETE",
+    });
+    await Promise.all([
+      loadCommunityPosts(),
+      loadVoiceData(),
+      loadRecognitionData(),
+      loadBulletinPosts(),
+    ]);
+    renderAll();
+    showToast(moduleName === "general" ? "Bulletin post deleted." : "Post deleted.");
+  } catch (error) {
+    showToast(error.message || "Could not delete the post.");
+  }
 }
 
 function submitKudos() {
@@ -3894,13 +4376,13 @@ function buildSearchIndex() {
       .toLowerCase(),
   }));
 
-  const bulletin = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts].map((post) => ({
+  const bulletin = appData.bulletinPosts.map((post) => ({
     title: post.title,
     subtitle: `${post.authorName} - Bulletin`,
     type: "post",
     tab: "bulletin",
     targetId: post.id,
-    searchText: [post.title, post.authorName, post.body.join(" "), post.category].join(" ").toLowerCase(),
+    searchText: [post.title, post.authorName, post.body.join(" "), post.categoryLabel].join(" ").toLowerCase(),
   }));
 
   const directory = appData.directory.map((person) => ({
@@ -4198,6 +4680,8 @@ function mapCommunityPost(post) {
     createdAt: post.created_at || "",
     reactionCount: post.reaction_count || 0,
     currentUserHasReacted: Boolean(post.current_user_has_reacted),
+    canDelete: Boolean(post.viewer_can_delete),
+    isAuthor: Boolean(post.viewer_is_author),
   };
 }
 
@@ -4226,6 +4710,8 @@ function mapVoicePost(post) {
     pinned: Boolean(post.pinned),
     reactionCount: post.reaction_count || 0,
     currentUserHasReacted: Boolean(post.current_user_has_reacted),
+    canDelete: Boolean(post.viewer_can_delete),
+    isAuthor: Boolean(post.viewer_is_author),
   };
 }
 
@@ -4258,6 +4744,36 @@ function mapRecognitionPost(post) {
     commentCount: post.comment_count || 0,
     reactionCount: post.reaction_count || 0,
     currentUserHasReacted: Boolean(post.current_user_has_reacted),
+    canDelete: Boolean(post.viewer_can_delete),
+    isAuthor: Boolean(post.viewer_is_author),
+  };
+}
+
+function mapBulletinPost(post) {
+  const metadata = post.metadata || {};
+  const author = post.author || {};
+  const category = (post.topic || metadata.bulletin_category || "announcements").toLowerCase();
+  const authorName = author.name || "Acuité Ratings & Research";
+
+  return {
+    id: `bulletin-post-${post.id}`,
+    sourceId: post.id,
+    title: post.title,
+    body: Array.isArray(post.body) ? post.body : [post.body],
+    category,
+    categoryLabel: BULLETIN_CATEGORY_LABELS[category] || capitalize(category),
+    templateKey: metadata.bulletin_template || "",
+    authorName,
+    authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
+    initials: author.initials || initialsFromName(authorName),
+    avatar: gradientKeyFromText(`${authorName}-${category}`),
+    postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
+    createdAt: post.created_at || "",
+    commentCount: post.comment_count || 0,
+    reactionCount: post.reaction_count || 0,
+    currentUserHasReacted: Boolean(post.current_user_has_reacted),
+    canDelete: Boolean(post.viewer_can_delete),
+    isAuthor: Boolean(post.viewer_is_author),
   };
 }
 
@@ -4281,6 +4797,16 @@ function getFilteredCommunityPosts() {
     return posts;
   }
   return posts.filter((post) => post.board === state.communityFilter);
+}
+
+function getFilteredBulletinPosts() {
+  const posts = appData.bulletinPosts.slice().sort((left, right) => {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+  if (state.bulletinFilter === "all") {
+    return posts;
+  }
+  return posts.filter((post) => post.category === state.bulletinFilter);
 }
 
 function getFilteredVoicePosts() {
@@ -5184,6 +5710,7 @@ function renderVoicePostCard(post) {
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
+        ${renderDeleteLivePostButton(post, "ideas_voice")}
         <button
           type="button"
           class="btn-outline"
@@ -5238,6 +5765,7 @@ function renderRecognitionPostCard(post) {
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
+        ${renderDeleteLivePostButton(post, "recognition")}
         <button
           type="button"
           class="btn-outline"
@@ -5248,6 +5776,63 @@ function renderRecognitionPostCard(post) {
         </button>
       </div>
     </article>
+  `;
+}
+
+function renderBulletinPostCard(post) {
+  return `
+    <article class="card voice-card bulletin-card bulletin-category-${escapeHtml(post.category)}" id="${post.id}">
+      <div class="voice-card-top">
+        <div class="voice-card-tags">
+          <span class="mini-chip">${escapeHtml(post.categoryLabel)}</span>
+          ${post.templateKey ? `<span class="mini-chip success">${escapeHtml(capitalize(post.templateKey.replaceAll("_", " ")))}</span>` : ""}
+        </div>
+        <div class="community-time">${escapeHtml(post.postedAtLabel)}</div>
+      </div>
+      <div class="card-header">
+        <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
+        <div class="card-meta">
+          <div class="card-name">${escapeHtml(post.authorName)}</div>
+          <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(post.title)}</div>
+        ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+      </div>
+      <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn ${post.currentUserHasReacted ? "liked" : ""}"
+          data-action="toggle-live-reaction"
+          data-id="${post.sourceId}"
+        >
+          ${likeIcon()}${escapeHtml(String(post.reactionCount))}
+        </button>
+        <button type="button" class="action-btn" data-action="placeholder-comment">
+          ${commentIcon()}${escapeHtml(String(post.commentCount))}
+        </button>
+        <div class="spacer"></div>
+        ${renderDeleteLivePostButton(post, "general")}
+      </div>
+    </article>
+  `;
+}
+
+function renderDeleteLivePostButton(post, moduleName) {
+  if (!post.canDelete) {
+    return "";
+  }
+  return `
+    <button
+      type="button"
+      class="btn-link post-delete-btn"
+      data-action="delete-live-post"
+      data-id="${post.sourceId}"
+      data-module="${moduleName}"
+    >
+      Delete
+    </button>
   `;
 }
 

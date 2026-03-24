@@ -67,6 +67,7 @@ def posts_collection(request):
                 distinct=True,
             ),
         )
+        queryset = queryset.exclude(moderation_status=Post.ModerationStatus.REMOVED)
         if not _can_moderate(request.user):
             queryset = queryset.filter(moderation_status=Post.ModerationStatus.PUBLISHED)
 
@@ -171,6 +172,7 @@ def posts_collection(request):
         metadata=metadata,
         visibility=visibility,
         allow_comments=bool(payload.get("allow_comments", True)),
+        pinned=bool(payload.get("pinned", False)) and can_publish,
         moderation_status=(
             Post.ModerationStatus.PUBLISHED
             if auto_publish
@@ -322,3 +324,53 @@ def toggle_post_reaction(request, post_id):
     return JsonResponse(
         {"post": serialize_post(refreshed_post, viewer=request.user), "reacted": reacted}
     )
+
+
+@csrf_exempt
+def post_detail(request, post_id):
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    post = get_object_or_404(Post.objects.select_related("author"), pk=post_id)
+    if post.moderation_status == Post.ModerationStatus.REMOVED:
+        return JsonResponse({"detail": "Post not available."}, status=404)
+
+    is_author = request.user.pk == post.author_id
+    is_moderator = _can_moderate(request.user)
+    if not is_author and not is_moderator:
+        return JsonResponse({"detail": "You do not have permission to delete this post."}, status=403)
+
+    post.moderation_status = Post.ModerationStatus.REMOVED
+    post.pinned = False
+    post.save(update_fields=["moderation_status", "pinned", "updated_at"])
+
+    action_name = "post.deleted_by_author" if is_author and not is_moderator else "post.removed_by_moderator"
+    summary = (
+        f"Deleted own post '{post.title}'"
+        if is_author and not is_moderator
+        else f"Removed post '{post.title}'"
+    )
+    record_audit_event(
+        action=action_name,
+        actor=request.user,
+        target=post,
+        summary=summary,
+        metadata={"post_id": post.id, "post_author_id": post.author_id},
+        request=request,
+    )
+    record_analytics_event(
+        "feed",
+        "post_deleted",
+        actor=request.user,
+        metadata={
+            "post_id": post.id,
+            "deleted_by_author": is_author,
+            "deleted_by_moderator": is_moderator and not is_author,
+            "module": post.module,
+            "topic": post.topic,
+        },
+        request=request,
+    )
+    return JsonResponse({"detail": "Post deleted successfully.", "post_id": post.id})

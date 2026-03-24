@@ -27,11 +27,20 @@ def serialize_post(post, *, viewer=None):
         post.reactions.filter(reaction_type=PostReaction.ReactionType.LIKE).count(),
     )
     current_user_has_reacted = False
+    viewer_is_author = False
+    viewer_can_delete = False
     if viewer and getattr(viewer, "is_authenticated", False):
+        viewer_is_author = post.author_id == viewer.id
         current_user_has_reacted = post.reactions.filter(
             user=viewer,
             reaction_type=PostReaction.ReactionType.LIKE,
         ).exists()
+        viewer_can_delete = viewer_is_author or bool(
+            getattr(viewer, "can_moderate_connect", False)
+            or getattr(viewer, "is_staff", False)
+            or viewer.has_perm("feed.moderate_post")
+            or viewer.has_perm("feed.moderate_comment")
+        )
     return {
         "id": post.id,
         "title": post.title,
@@ -48,10 +57,13 @@ def serialize_post(post, *, viewer=None):
         "published_at": post.published_at.isoformat() if post.published_at else None,
         "created_at": post.created_at.isoformat(),
         "updated_at": post.updated_at.isoformat(),
+        "author_user_id": post.author_id,
         "author": author,
         "comment_count": comment_count,
         "reaction_count": reaction_count,
         "current_user_has_reacted": current_user_has_reacted,
+        "viewer_is_author": viewer_is_author,
+        "viewer_can_delete": viewer_can_delete,
     }
 
 

@@ -271,6 +271,58 @@ class AuthApiTests(TestCase):
         self.assertFalse(self.user.can_post_in_connect)
         self.assertEqual(AuditLog.objects.filter(action="accounts.access.updated").count(), 1)
 
+    def test_admin_can_create_employee_account(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/accounts/access/users/",
+            data=json.dumps(
+                {
+                    "email": "new.employee@acuite.in",
+                    "display_name": "New Employee",
+                    "title": "Associate",
+                    "department": "Technology",
+                    "location": "Mumbai",
+                    "access_level": User.AccessLevel.EMPLOYEE,
+                    "can_post_in_connect": True,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created = User.objects.get(email="new.employee@acuite.in")
+        self.assertEqual(created.display_name, "New Employee")
+        self.assertEqual(created.access_level, User.AccessLevel.EMPLOYEE)
+        self.assertTrue(created.must_change_password)
+        self.assertTrue(created.check_password("314159"))
+        self.assertTrue(DirectoryProfile.objects.filter(user=created).exists())
+
+    def test_admin_can_edit_employee_account_fields(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.patch(
+            f"/api/accounts/access/users/{self.user.id}/",
+            data=json.dumps(
+                {
+                    "display_name": "Employee Prime",
+                    "title": "Lead Analyst",
+                    "location": "Ahmedabad",
+                    "employment_status": User.EmploymentStatus.SUSPENDED,
+                    "is_active": False,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.display_name, "Employee Prime")
+        self.assertEqual(self.user.title, "Lead Analyst")
+        self.assertEqual(self.user.location, "Ahmedabad")
+        self.assertEqual(self.user.employment_status, User.EmploymentStatus.SUSPENDED)
+        self.assertFalse(self.user.is_active)
+
     def test_employee_cannot_assign_access_rights(self):
         self.client.force_login(self.user)
 

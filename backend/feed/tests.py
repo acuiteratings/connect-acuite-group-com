@@ -26,6 +26,14 @@ class FeedApiTests(TestCase):
             access_level=User.AccessLevel.ADMIN,
             must_change_password=False,
         )
+        self.moderator_user = User.objects.create_user(
+            email="moderator.connect@acuite.in",
+            password="testpass123",
+            first_name="Acuite",
+            last_name="Moderator",
+            access_level=User.AccessLevel.MODERATOR,
+            must_change_password=False,
+        )
 
     def test_feed_lists_published_posts(self):
         Post.objects.create(
@@ -253,3 +261,48 @@ class FeedApiTests(TestCase):
         self.assertEqual(second_response.json()["post"]["reaction_count"], 0)
         self.assertFalse(second_response.json()["post"]["current_user_has_reacted"])
         self.assertEqual(PostReaction.objects.count(), 0)
+
+    def test_author_can_delete_own_post(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Own post",
+            body="Delete me",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.delete(f"/api/feed/posts/{post.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.moderation_status, Post.ModerationStatus.REMOVED)
+
+    def test_moderator_can_delete_any_post(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Moderate me",
+            body="Please remove",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.client.force_login(self.moderator_user)
+
+        response = self.client.delete(f"/api/feed/posts/{post.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.moderation_status, Post.ModerationStatus.REMOVED)
+
+    def test_employee_cannot_delete_someone_elses_post(self):
+        post = Post.objects.create(
+            author=self.admin_user,
+            title="Not yours",
+            body="Protected",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.delete(f"/api/feed/posts/{post.id}/")
+
+        self.assertEqual(response.status_code, 403)
+        post.refresh_from_db()
+        self.assertEqual(post.moderation_status, Post.ModerationStatus.PUBLISHED)

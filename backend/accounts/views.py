@@ -4,12 +4,15 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import models
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
+from directory.models import DirectoryProfile
 from operations.services import record_analytics_event, record_audit_event
 
 from .models import User
@@ -75,6 +78,61 @@ def _coerce_bool(value):
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _split_display_name(display_name, fallback_email=""):
+    cleaned = str(display_name or "").strip()
+    if not cleaned and fallback_email:
+        cleaned = fallback_email.split("@", 1)[0].replace(".", " ").replace("_", " ").title()
+    parts = [part for part in cleaned.split() if part]
+    if not parts:
+        return "", "", ""
+    if len(parts) == 1:
+        return cleaned, parts[0], ""
+    return cleaned, parts[0], " ".join(parts[1:])
+
+
+def _company_name_for_email(email):
+    domain = str(email or "").strip().lower().split("@")[-1]
+    if domain == "smera.in":
+        return "SMERA"
+    if domain == "esgrisk.ai":
+        return "ESGRisk.ai"
+    return "Acuite"
+
+
+def _sync_directory_profile(user, payload):
+    existing_profile = getattr(user, "directory_profile", None)
+    DirectoryProfile.objects.update_or_create(
+        user=user,
+        defaults={
+            "company_name": str(
+                payload.get("company_name")
+                or (existing_profile.company_name if existing_profile else "")
+                or _company_name_for_email(user.email)
+            ).strip(),
+            "function_name": str(
+                payload.get("function_name")
+                or (existing_profile.function_name if existing_profile else "")
+            ).strip(),
+            "office_location": str(
+                payload.get("office_location")
+                or payload.get("location")
+                or (existing_profile.office_location if existing_profile else user.location)
+            ).strip(),
+            "city": str(
+                payload.get("city")
+                or payload.get("location")
+                or (existing_profile.city if existing_profile else user.location)
+            ).strip(),
+            "mobile_number": str(
+                payload.get("mobile_number")
+                or payload.get("phone_number")
+                or (existing_profile.mobile_number if existing_profile else user.phone_number)
+            ).strip(),
+            "is_visible": True,
+        },
+    )
+
+
 def _password_change_reason(user):
     if user.must_change_password or not user.password_changed_at:
         return "first_login"
@@ -115,10 +173,97 @@ def current_user(request):
 
 
 def access_user_collection(request):
-    if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])
     if not _is_access_admin(request.user):
         return _admin_forbidden()
+
+    if request.method == "POST":
+        try:
+            payload = _parse_json_body(request)
+        except AuthFlowError as exc:
+            return _error_response(exc)
+
+        email = normalize_email(payload.get("email"))
+        if not email:
+            return JsonResponse({"detail": "Email is required."}, status=400)
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({"detail": "Enter a valid employee email ID."}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({"detail": "An employee account with this email already exists."}, status=409)
+
+        access_level = str(payload.get("access_level") or User.AccessLevel.EMPLOYEE).strip().lower()
+        allowed_access_levels = {
+            User.AccessLevel.EMPLOYEE,
+            User.AccessLevel.MODERATOR,
+            User.AccessLevel.ADMIN,
+        }
+        if access_level not in allowed_access_levels:
+            return JsonResponse({"detail": "Invalid access level supplied."}, status=400)
+
+        employment_status = str(
+            payload.get("employment_status") or User.EmploymentStatus.ACTIVE
+        ).strip().lower()
+        if employment_status not in set(User.EmploymentStatus.values):
+            return JsonResponse({"detail": "Invalid employment status supplied."}, status=400)
+
+        display_name, first_name, last_name = _split_display_name(
+            payload.get("display_name") or payload.get("name"),
+            email,
+        )
+        temporary_password = str(
+            payload.get("temporary_password") or settings.AUTH_FIRST_TIME_PASSWORD
+        ).strip() or settings.AUTH_FIRST_TIME_PASSWORD
+
+        user = User.objects.create_user(
+            email=email,
+            password=temporary_password,
+            first_name=first_name,
+            last_name=last_name,
+            display_name=display_name,
+            employee_code=str(payload.get("employee_code") or "").strip(),
+            title=str(payload.get("title") or "").strip(),
+            department=str(payload.get("department") or "").strip(),
+            location=str(payload.get("location") or "").strip(),
+            phone_number=str(payload.get("phone_number") or "").strip(),
+            access_level=access_level,
+            employment_status=employment_status,
+            can_post_in_connect=_coerce_bool(payload.get("can_post_in_connect", True)),
+            is_active=_coerce_bool(payload.get("is_active", True)),
+            must_change_password=True,
+            password_changed_at=None,
+        )
+        _sync_directory_profile(user, payload)
+
+        record_audit_event(
+            action="accounts.user.created",
+            actor=request.user,
+            target=user,
+            summary=f"Created employee account for {user.email}",
+            metadata={
+                "access_level": user.access_level,
+                "employment_status": user.employment_status,
+                "can_post_in_connect": user.can_post_in_connect,
+            },
+            request=request,
+        )
+        record_analytics_event(
+            "accounts",
+            "user_created",
+            actor=request.user,
+            metadata={"target_user_id": user.id, "access_level": user.access_level},
+            request=request,
+        )
+        return JsonResponse(
+            {
+                "detail": "Employee account created successfully.",
+                "user": serialize_user(user),
+            },
+            status=201,
+        )
+
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET", "POST"])
 
     query = str(request.GET.get("q", "")).strip()
     queryset = User.objects.order_by("display_name", "email")
@@ -170,6 +315,10 @@ def access_user_detail(request, user_id):
 
     changes = {}
     update_fields = []
+    profile_fields_supplied = any(
+        field in payload
+        for field in {"company_name", "function_name", "office_location", "city", "mobile_number"}
+    )
 
     if "access_level" in payload:
         access_level = str(payload.get("access_level") or "").strip().lower()
@@ -195,11 +344,62 @@ def access_user_detail(request, user_id):
             user.can_post_in_connect = requested_can_post
             update_fields.append("can_post_in_connect")
 
-    if not update_fields:
+    editable_user_fields = {
+        "title": "title",
+        "department": "department",
+        "location": "location",
+        "employee_code": "employee_code",
+        "phone_number": "phone_number",
+    }
+    for payload_field, model_field in editable_user_fields.items():
+        if payload_field not in payload:
+            continue
+        new_value = str(payload.get(payload_field) or "").strip()
+        if getattr(user, model_field) != new_value:
+            changes[model_field] = {"from": getattr(user, model_field), "to": new_value}
+            setattr(user, model_field, new_value)
+            update_fields.append(model_field)
+
+    if "display_name" in payload:
+        display_name, first_name, last_name = _split_display_name(payload.get("display_name"), user.email)
+        if user.display_name != display_name:
+            changes["display_name"] = {"from": user.display_name, "to": display_name}
+            user.display_name = display_name
+            update_fields.append("display_name")
+        if user.first_name != first_name:
+            changes["first_name"] = {"from": user.first_name, "to": first_name}
+            user.first_name = first_name
+            update_fields.append("first_name")
+        if user.last_name != last_name:
+            changes["last_name"] = {"from": user.last_name, "to": last_name}
+            user.last_name = last_name
+            update_fields.append("last_name")
+
+    if "employment_status" in payload:
+        employment_status = str(payload.get("employment_status") or "").strip().lower()
+        if employment_status not in set(User.EmploymentStatus.values):
+            return JsonResponse({"detail": "Invalid employment status supplied."}, status=400)
+        if user.employment_status != employment_status:
+            changes["employment_status"] = {"from": user.employment_status, "to": employment_status}
+            user.employment_status = employment_status
+            update_fields.append("employment_status")
+
+    if "is_active" in payload:
+        requested_is_active = _coerce_bool(payload.get("is_active"))
+        if user.is_active != requested_is_active:
+            changes["is_active"] = {"from": user.is_active, "to": requested_is_active}
+            user.is_active = requested_is_active
+            update_fields.append("is_active")
+
+    if not update_fields and not profile_fields_supplied and "location" not in payload and "phone_number" not in payload:
         return JsonResponse({"user": serialize_user(user), "detail": "No access changes were applied."})
 
-    update_fields.append("updated_at")
-    user.save(update_fields=update_fields)
+    if update_fields:
+        update_fields.append("updated_at")
+        user.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    if profile_fields_supplied or "location" in payload or "phone_number" in payload:
+        _sync_directory_profile(user, payload)
 
     record_audit_event(
         action="accounts.access.updated",
@@ -218,7 +418,7 @@ def access_user_detail(request, user_id):
     )
     return JsonResponse(
         {
-            "detail": "Access rights updated successfully.",
+            "detail": "Employee account updated successfully.",
             "user": serialize_user(user),
         }
     )

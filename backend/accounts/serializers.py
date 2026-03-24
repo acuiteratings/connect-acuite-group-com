@@ -10,6 +10,7 @@ def serialize_user(user):
         "employee_code": user.employee_code,
         "phone_number": user.phone_number,
         "employment_status": user.employment_status,
+        "is_active": user.is_active,
         "access_level": user.access_level,
         "is_staff": user.is_staff,
         "can_post_in_connect": user.can_post_in_connect,
