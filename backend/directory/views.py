@@ -3,6 +3,7 @@ from django.http import JsonResponse
 
 from .models import DirectoryProfile
 from .serializers import serialize_directory_profile
+from .utils import CONNECT_DEPARTMENT_LABELS
 
 
 def _distinct_values(queryset, field_name):
@@ -30,7 +31,7 @@ def directory_list(request):
     if company:
         queryset = queryset.filter(company_name__iexact=company.strip())
     if department:
-        queryset = queryset.filter(user__department__iexact=department.strip())
+        queryset = queryset.filter(department_for_connect__iexact=department.strip())
     if function_name:
         queryset = queryset.filter(function_name__iexact=function_name.strip())
     if location:
@@ -48,6 +49,7 @@ def directory_list(request):
             | Q(user__email__icontains=needle)
             | Q(user__title__icontains=needle)
             | Q(user__department__icontains=needle)
+            | Q(department_for_connect__icontains=needle)
             | Q(company_name__icontains=needle)
             | Q(function_name__icontains=needle)
             | Q(expertise__icontains=needle)
@@ -57,7 +59,11 @@ def directory_list(request):
     results = [serialize_directory_profile(profile) for profile in queryset.order_by("user__display_name", "user__email")[:500]]
     filters = {
         "company": _distinct_values(base_queryset, "company_name"),
-        "department": _distinct_values(base_queryset, "user__department"),
+        "department": [
+            value
+            for value in CONNECT_DEPARTMENT_LABELS
+            if base_queryset.filter(department_for_connect=value).exists()
+        ],
         "function": _distinct_values(base_queryset, "function_name"),
         "location": sorted(
             {

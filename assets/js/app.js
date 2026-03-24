@@ -139,6 +139,12 @@ const REWARD_RULE_LABELS = {
   reaction_given: "Like given",
   reaction_received: "Like received",
 };
+const STORE_CATEGORY_LABELS = {
+  apparel: "Apparel",
+  drinkware: "Drinkware",
+  desk: "Desk",
+  memorabilia: "Memorabilia",
+};
 
 const HOME_PILLARS = [
   {
@@ -383,6 +389,13 @@ const appData = {
   currentUserPoints: 0,
   rewardRules: [],
   recognitionTotals: {},
+  storeItems: [],
+  storeRedemptions: [],
+  storeBalance: {
+    earned_points: 0,
+    locked_points: 0,
+    available_points: 0,
+  },
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [
@@ -1039,6 +1052,13 @@ Object.assign(appData, {
   currentUserPoints: 0,
   rewardRules: [],
   recognitionTotals: {},
+  storeItems: [],
+  storeRedemptions: [],
+  storeBalance: {
+    earned_points: 0,
+    locked_points: 0,
+    available_points: 0,
+  },
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [],
@@ -1074,6 +1094,7 @@ const defaultState = {
   communityFilter: "all",
   voiceFilter: "all",
   recognitionFilter: "all",
+  storeFilter: "all",
   learningBookFilter: "all",
   learningBookQuery: "",
   bulletinFilter: "all",
@@ -1101,6 +1122,7 @@ let directoryLoadError = "";
 let communityLoadError = "";
 let voiceLoadError = "";
 let recognitionLoadError = "";
+let storeLoadError = "";
 let learningLoadError = "";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1155,7 +1177,7 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
-  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadRecognitionData(), loadLearningData()]);
+  await Promise.all([loadDirectoryData(), loadCommunityPosts(), loadVoiceData(), loadRecognitionData(), loadStoreData(), loadLearningData()]);
   bindEvents();
   renderAll();
 }
@@ -1289,6 +1311,31 @@ async function loadRecognitionData() {
     appData.currentUserPoints = 0;
     appData.rewardRules = [];
     appData.recognitionTotals = {};
+  }
+}
+
+async function loadStoreData() {
+  storeLoadError = "";
+  appData.storeItems = [];
+  appData.storeRedemptions = [];
+  appData.storeBalance = {
+    earned_points: 0,
+    locked_points: 0,
+    available_points: 0,
+  };
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    storeLoadError = "Brand Store services are unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/store/overview/");
+    appData.storeItems = Array.isArray(payload.items) ? payload.items : [];
+    appData.storeRedemptions = Array.isArray(payload.my_redemptions) ? payload.my_redemptions : [];
+    appData.storeBalance = payload.balance || appData.storeBalance;
+  } catch (error) {
+    storeLoadError = error.message || "Could not load the Brand Store.";
   }
 }
 
@@ -1434,6 +1481,11 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "redeem-store-item") {
+      await redeemStoreItem(action.dataset.id);
+      return;
+    }
+
     if (actionName === "jump-to-item") {
       jumpToItem(action.dataset.tab, action.dataset.targetId);
       return;
@@ -1570,6 +1622,7 @@ function renderAll() {
   renderCommunityPanel();
   renderVoicePanel();
   renderRecognitionPanel();
+  renderStorePanel();
   renderLearningPanel();
   renderBulletinFeed();
   renderKudosTags();
@@ -1706,6 +1759,14 @@ function renderRecognitionPanel() {
   renderRecognitionLeaderboardCard();
   renderRecognitionCelebrationsCard();
   renderRecognitionRewardsCard();
+}
+
+function renderStorePanel() {
+  renderStoreSummary();
+  renderStoreCatalog();
+  renderStoreBalanceCard();
+  renderStoreRedemptionsCard();
+  renderStorePolicyCard();
 }
 
 function renderCommunitySummary() {
@@ -2222,6 +2283,183 @@ function renderRecognitionRewardsCard() {
   `;
 }
 
+function renderStoreSummary() {
+  const items = getFilteredStoreItems();
+  const availableItems = appData.storeItems.filter((item) => item.available_units > 0).length;
+
+  document.getElementById("store-summary-grid").innerHTML = [
+    {
+      kicker: "Balance",
+      title: `${appData.storeBalance.available_points || 0} pts`,
+      copy: "Available reward points that can be used on the current catalog.",
+    },
+    {
+      kicker: "Catalog",
+      title: `${appData.storeItems.length} live item${appData.storeItems.length === 1 ? "" : "s"}`,
+      copy: "Admin-managed branded merchandise, memorabilia and desk items.",
+    },
+    {
+      kicker: "Availability",
+      title: `${availableItems} ready now`,
+      copy: "Items with at least one available unit for redemption.",
+    },
+    {
+      kicker: "My requests",
+      title: `${appData.storeRedemptions.length} request${appData.storeRedemptions.length === 1 ? "" : "s"}`,
+      copy: items.length
+        ? `${items.length} items match the current filter.`
+        : "Switch category filters to browse more of the store catalog.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+}
+
+function renderStoreCatalog() {
+  const container = document.getElementById("store-catalog-grid");
+  if (storeLoadError) {
+    document.getElementById("store-results-meta").textContent = "Store load issue";
+    container.innerHTML = `<div class="empty-state">${escapeHtml(storeLoadError)}</div>`;
+    return;
+  }
+
+  const items = getFilteredStoreItems();
+  document.getElementById("store-results-meta").textContent = appData.storeItems.length
+    ? `${items.length} of ${appData.storeItems.length} brand-store items shown`
+    : "Live Acuité brand-store catalog";
+
+  if (!appData.storeItems.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        The Brand Store catalog is empty right now. Once admins upload merchandise in the backend, employees will be able to redeem it here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No store items match that category right now. Try a broader filter.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = items.map(renderStoreItemCard).join("");
+}
+
+function renderStoreBalanceCard() {
+  document.getElementById("store-balance-card").innerHTML = `
+    <p class="widget-kicker">My points</p>
+    <h3>${escapeHtml(String(appData.storeBalance.available_points || 0))} available</h3>
+    <ul class="simple-list">
+      <li>Earned: ${escapeHtml(String(appData.storeBalance.earned_points || 0))} pts</li>
+      <li>Locked in redemptions: ${escapeHtml(String(appData.storeBalance.locked_points || 0))} pts</li>
+      <li>Use Recognition &amp; Rewards to keep building your balance.</li>
+    </ul>
+  `;
+}
+
+function renderStoreRedemptionsCard() {
+  document.getElementById("store-redemptions-card").innerHTML = `
+    <p class="widget-kicker">My redemptions</p>
+    <h3>Recent requests</h3>
+    ${
+      appData.storeRedemptions.length
+        ? `<ul class="mini-list">
+            ${appData.storeRedemptions.map((item) => `
+              <li>
+                <div>
+                  <div class="mini-item-title">${escapeHtml(item.item.name)}</div>
+                  <div class="mini-item-meta">${escapeHtml(item.item.category_label)}</div>
+                </div>
+                <div class="learning-req-status ${escapeHtml(item.status)}">${escapeHtml(capitalize(item.status))}</div>
+              </li>
+            `).join("")}
+          </ul>`
+        : `<div class="empty-state">Your brand-store requests will appear here after your first redemption.</div>`
+    }
+  `;
+}
+
+function renderStorePolicyCard() {
+  document.getElementById("store-policy-card").innerHTML = `
+    <p class="widget-kicker">How it works</p>
+    <h3>Redemption rules</h3>
+    <ul class="simple-list">
+      <li>Items are redeemed using available Connect reward points.</li>
+      <li>Submitting a request locks points until the request is fulfilled, declined or cancelled.</li>
+      <li>Stock visibility is live, so employees only request items that are still available.</li>
+    </ul>
+  `;
+}
+
+function renderStoreItemCard(item) {
+  const accent = item.accent_hex || "#e8722a";
+  const activeRedemption = appData.storeRedemptions.find((redemption) => {
+    return redemption.item.id === item.id
+      && ["requested", "approved", "fulfilled"].includes(redemption.status);
+  });
+  const availablePoints = Number(appData.storeBalance.available_points || 0);
+  const missingPoints = Math.max(item.point_cost - availablePoints, 0);
+  const outOfStock = item.available_units <= 0;
+  const canRedeem = !activeRedemption && !outOfStock && availablePoints >= item.point_cost;
+  let actionLabel = "Redeem";
+
+  if (activeRedemption) {
+    actionLabel = capitalize(activeRedemption.status);
+  } else if (outOfStock) {
+    actionLabel = "Out of stock";
+  } else if (missingPoints > 0) {
+    actionLabel = `Need ${missingPoints} pts`;
+  }
+
+  return `
+    <article class="tool-card store-item-card" id="store-item-${item.id}">
+      <div class="store-item-art" style="background:${escapeHtml(accent)}">
+        <span>${escapeHtml(STORE_CATEGORY_LABELS[item.category] || item.category_label || "Store")}</span>
+      </div>
+      <div class="store-item-copy">
+        <div class="tool-card-head store-item-head">
+          <div>
+            <h3>${escapeHtml(item.name)}</h3>
+            <span class="tool-status ${item.available_units > 0 ? "live" : "planned"}">${escapeHtml(item.category_label)}</span>
+          </div>
+          <div class="store-item-cost">${escapeHtml(String(item.point_cost))} pts</div>
+        </div>
+        <p>${escapeHtml(item.description || "Admin-managed branded merchandise available for point redemption inside Connect.")}</p>
+        <div class="store-item-meta">
+          <span class="mini-chip ${item.available_units > 0 ? "success" : ""}">
+            ${escapeHtml(`${item.available_units} available`)}
+          </span>
+          <span class="mini-item-meta">${escapeHtml(`${item.stock_units} total stock`)}</span>
+        </div>
+      </div>
+      <div class="tool-meta store-item-footer">
+        <span class="mini-item-meta">
+          ${activeRedemption
+            ? escapeHtml(`You already have a ${activeRedemption.status.replaceAll("_", " ")} request`)
+            : escapeHtml(`Use ${item.point_cost} points to request this item`)}
+        </span>
+        <button
+          type="button"
+          class="tool-open ${canRedeem ? "live" : ""}"
+          data-action="redeem-store-item"
+          data-id="${item.id}"
+          ${canRedeem ? "" : "disabled"}
+        >
+          ${escapeHtml(actionLabel)}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 function renderBulletinFeed() {
   const allPosts = [...state.customBulletins.map(mapCustomBulletinToPost), ...appData.bulletinPosts];
   const filtered = allPosts.filter((post) => state.bulletinFilter === "all" || post.category === state.bulletinFilter);
@@ -2434,7 +2672,7 @@ function renderDirectory() {
     if (selectedLocations.length && !selectedLocations.includes(person.office)) {
       return false;
     }
-    if (selectedDepartments.length && !selectedDepartments.includes(person.department)) {
+    if (selectedDepartments.length && !selectedDepartments.includes(person.departmentForConnect)) {
       return false;
     }
     if (!query) {
@@ -2989,6 +3227,29 @@ async function requestBook(bookId) {
   }
 }
 
+async function redeemStoreItem(itemId) {
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/store/redemptions/", {
+      method: "POST",
+      body: {
+        item_id: Number(itemId),
+      },
+    });
+
+    if (payload.redemption) {
+      await loadStoreData();
+      renderStorePanel();
+      renderRecognitionRewardsCard();
+      showToast(`Redemption request placed for ${payload.redemption.item.name}.`);
+      return;
+    }
+
+    showToast("Store redemption submitted.");
+  } catch (error) {
+    showToast(error.message || "Could not place the redemption request.");
+  }
+}
+
 function submitBulletin() {
   const formData = new FormData(elements.bulletinForm);
   const title = String(formData.get("title") || "").trim();
@@ -3220,6 +3481,22 @@ function buildSearchIndex() {
     targetId: `book-${book.id}`,
     searchText: [book.title, book.author, book.summary].filter(Boolean).join(" ").toLowerCase(),
   }));
+  const store = appData.storeItems.map((item) => ({
+    title: item.name,
+    subtitle: `${item.category_label} - ${item.point_cost} pts`,
+    type: "store",
+    tab: "store",
+    targetId: `store-item-${item.id}`,
+    searchText: [
+      item.name,
+      item.category_label,
+      item.description,
+      item.point_cost,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase(),
+  }));
   const poll = appData.activePoll
     ? [{
       title: appData.activePoll.question,
@@ -3238,7 +3515,7 @@ function buildSearchIndex() {
     }]
     : [];
 
-  return [...community, ...voice, ...recognition, ...bulletin, ...directory, ...tools, ...resources, ...books, ...poll];
+  return [...community, ...voice, ...recognition, ...bulletin, ...directory, ...tools, ...resources, ...books, ...store, ...poll];
 }
 
 function scoreSearchItem(item, query) {
@@ -3309,6 +3586,14 @@ function setFilter(group, value) {
     return;
   }
 
+  if (group === "store") {
+    state.storeFilter = value;
+    saveState();
+    renderStorePanel();
+    syncFilterButtons();
+    return;
+  }
+
   if (group === "learning-books") {
     state.learningBookFilter = value;
     saveState();
@@ -3354,6 +3639,7 @@ function syncFilterButtons() {
     community: state.communityFilter,
     voice: state.voiceFilter,
     recognition: state.recognitionFilter,
+    store: state.storeFilter,
     "learning-books": state.learningBookFilter,
     bulletin: state.bulletinFilter,
     pitch: state.pitchFilter,
@@ -3581,6 +3867,13 @@ function getFilteredLearningBooks() {
       .toLowerCase()
       .includes(query);
   });
+}
+
+function getFilteredStoreItems() {
+  if (state.storeFilter === "all") {
+    return appData.storeItems.slice();
+  }
+  return appData.storeItems.filter((item) => item.category === state.storeFilter);
 }
 
 function summarizeCommunityCities() {
@@ -3866,6 +4159,12 @@ function hydrateState() {
     )
       ? saved.recognitionFilter
       : defaultState.recognitionFilter,
+    storeFilter: (
+      typeof saved.storeFilter === "string"
+      && ["all", ...Object.keys(STORE_CATEGORY_LABELS)].includes(saved.storeFilter)
+    )
+      ? saved.storeFilter
+      : defaultState.storeFilter,
     learningBookFilter: (
       typeof saved.learningBookFilter === "string"
       && ["all", "available", "requested"].includes(saved.learningBookFilter)
@@ -4068,6 +4367,7 @@ function mapDirectoryProfileToCard(profile) {
   const company = profile.company_name || "";
   const companyLabel = displayCompanyName(company);
   const department = profile.department || "";
+  const departmentForConnect = profile.department_for_connect || "";
   const functionName = profile.function_name || "";
   const office = profile.office_location || profile.location || profile.city || "";
   const joinedOn = formatDisplayDate(profile.joined_on);
@@ -4084,6 +4384,7 @@ function mapDirectoryProfileToCard(profile) {
     company,
     companyLabel,
     department,
+    departmentForConnect,
     functionName,
     office,
     officeLine: [office, companyLabel].filter(Boolean).join(" | "),
@@ -4099,6 +4400,7 @@ function mapDirectoryProfileToCard(profile) {
       company,
       companyLabel,
       department,
+      departmentForConnect,
       functionName,
       office,
       profile.location,

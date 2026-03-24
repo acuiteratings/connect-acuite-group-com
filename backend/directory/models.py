@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from .utils import map_department_for_connect
+
 
 class DirectoryProfile(models.Model):
     class WorkMode(models.TextChoices):
@@ -24,6 +26,7 @@ class DirectoryProfile(models.Model):
     gender = models.CharField(max_length=32, blank=True)
     date_of_birth = models.DateField(blank=True, null=True)
     function_name = models.CharField(max_length=150, blank=True)
+    department_for_connect = models.CharField(max_length=120, blank=True)
     city = models.CharField(max_length=120, blank=True)
     office_location = models.CharField(max_length=120, blank=True)
     work_mode = models.CharField(
@@ -51,4 +54,9 @@ class DirectoryProfile(models.Model):
     def __str__(self):
         return f"Directory profile for {self.user.full_name}"
 
-# Create your models here.
+    def save(self, *args, **kwargs):
+        if self.user_id:
+            self.department_for_connect = map_department_for_connect(
+                getattr(self.user, "department", "")
+            )
+        super().save(*args, **kwargs)

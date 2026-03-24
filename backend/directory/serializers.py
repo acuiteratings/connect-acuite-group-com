@@ -9,6 +9,7 @@ def serialize_directory_profile(profile):
             "company_name": profile.company_name,
             "gender": profile.gender,
             "function_name": profile.function_name,
+            "department_for_connect": profile.department_for_connect,
             "city": profile.city,
             "office_location": profile.office_location,
             "work_mode": profile.work_mode,

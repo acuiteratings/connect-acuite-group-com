@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import User
 from directory.models import DirectoryProfile
+from directory.utils import map_department_for_connect
 
 
 def parse_bool(value, default=False):
@@ -291,6 +292,9 @@ class Command(BaseCommand):
                     "gender": str(row.get("gender", "")).strip(),
                     "date_of_birth": row.get("date_of_birth"),
                     "function_name": str(row.get("function_name", "")).strip(),
+                    "department_for_connect": map_department_for_connect(
+                        str(row.get("department", "")).strip()
+                    ),
                     "city": str(row.get("location", "")).strip(),
                     "office_location": str(row.get("office_location", row.get("location", ""))).strip(),
                     "mobile_number": str(row.get("mobile_number", row.get("phone_number", ""))).strip(),

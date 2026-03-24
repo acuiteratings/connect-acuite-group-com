@@ -120,6 +120,7 @@ INSTALLED_APPS = [
     "feed",
     "learning",
     "recognition",
+    "store",
     "operations",
     "voice",
 ]

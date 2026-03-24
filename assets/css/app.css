@@ -1380,6 +1380,11 @@ select {
   color: var(--green);
 }
 
+.learning-req-status.fulfilled {
+  background: rgba(46, 173, 43, 0.12);
+  color: var(--green);
+}
+
 .learning-req-status.returned {
   background: rgba(141, 198, 63, 0.16);
   color: var(--lime);
@@ -1389,6 +1394,65 @@ select {
 .learning-req-status.cancelled {
   background: rgba(123, 36, 28, 0.1);
   color: var(--maroon);
+}
+
+.store-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.store-item-card {
+  min-height: 320px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.store-item-art {
+  min-height: 118px;
+  padding: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.store-item-copy {
+  padding: 18px 18px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.store-item-head {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.store-item-cost {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--orange);
+  white-space: nowrap;
+}
+
+.store-item-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.store-item-footer {
+  margin: 0;
+  margin-top: auto;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--border);
+  align-items: center;
 }
 
 .filter-tabs {

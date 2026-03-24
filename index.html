@@ -408,48 +408,35 @@
             <h2>Brand Store</h2>
             <p>Acuité merchandise, memorabilia and reward redemption.</p>
           </div>
+          <div class="filter-tabs" data-filter-group="store">
+            <button type="button" class="active" data-filter="all">All items</button>
+            <button type="button" data-filter="apparel">Apparel</button>
+            <button type="button" data-filter="drinkware">Drinkware</button>
+            <button type="button" data-filter="desk">Desk</button>
+            <button type="button" data-filter="memorabilia">Memorabilia</button>
+          </div>
         </div>
 
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">Catalog</p>
-            <h3>Branded merchandise</h3>
-            <p class="muted-copy">T-shirts, coffee mugs, stationery and memorabilia can live in one curated catalog.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Redemption</p>
-            <h3>Use reward points</h3>
-            <p class="muted-copy">Employees should see exactly what items their engagement points can unlock.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Operations</p>
-            <h3>Inventory and approvals</h3>
-            <p class="muted-copy">This module will need stock visibility, redemption rules and admin controls.</p>
-          </article>
-        </div>
+        <div class="dashboard-grid" id="store-summary-grid"></div>
 
-        <section class="section-card">
-          <div class="section-card-head">
-            <div>
-              <p class="widget-kicker">Store vision</p>
-              <h2>How this will fit into Connect</h2>
+        <div class="two-column-layout store-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Live catalog</p>
+                <h2>Reward-led merchandise and memorabilia</h2>
+                <div class="mini-item-meta" id="store-results-meta">Loading the live brand-store catalog...</div>
+              </div>
             </div>
-          </div>
-          <div class="tool-grid compact">
-            <article class="tool-card landing-card">
-              <h3>Catalog showcase</h3>
-              <p>Employees browse available items with clear images, point cost and availability.</p>
-            </article>
-            <article class="tool-card landing-card">
-              <h3>Redemption history</h3>
-              <p>Every employee can see what has been redeemed and what remains in the balance.</p>
-            </article>
-            <article class="tool-card landing-card">
-              <h3>Admin controls</h3>
-              <p>Inventory upload, item activation, point pricing and issue tracking all sit here.</p>
-            </article>
-          </div>
-        </section>
+            <div class="store-catalog-grid" id="store-catalog-grid"></div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card" id="store-balance-card"></div>
+            <div class="widget-card" id="store-redemptions-card"></div>
+            <div class="widget-card" id="store-policy-card"></div>
+          </aside>
+        </div>
       </section>
 
       <section class="panel" id="panel-business">
