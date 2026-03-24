@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 620" role="img" aria-labelledby="title desc">
+  <title id="title">Great Place To Work Certified India Dec 2025 to Dec 2026</title>
+  <desc id="desc">Great Place To Work certification badge for India valid from December 2025 to December 2026.</desc>
+  <path fill="#ff1e2d" d="M0 0h360v395H0z"/>
+  <path fill="#112b83" d="M0 395h360v160L180 620 0 555z"/>
+  <g fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-weight="700">
+    <text x="24" y="82" font-size="76">Great</text>
+    <text x="24" y="160" font-size="76">Place</text>
+    <text x="24" y="238" font-size="76">To</text>
+    <text x="24" y="316" font-size="76">Work</text>
+    <text x="24" y="470" font-size="64">Certified</text>
+    <text x="24" y="532" font-size="38">DEC 2025-DEC 2026</text>
+    <text x="112" y="595" font-size="44">INDIA</text>
+  </g>
+</svg>
