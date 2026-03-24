@@ -26,7 +26,7 @@
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
   --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --nav-h: 64px;
-  --sidebar-left-w: 230px;
+  --sidebar-left-w: 252px;
   --sidebar-right-w: 310px;
   --grad-warm: linear-gradient(135deg, var(--amber), var(--orange));
   --grad-cool: linear-gradient(135deg, var(--green), var(--lime));
@@ -1275,6 +1275,52 @@ select {
   padding-left: 18px;
   color: var(--text2);
   font-size: 13px;
+}
+
+.landing-card {
+  min-height: 220px;
+}
+
+.landing-list {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.landing-list li {
+  position: relative;
+  padding-left: 16px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.landing-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+
+.landing-actions {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.foundation-card .btn-link,
+.mini-panel .btn-link {
+  display: inline-flex;
+  margin-top: 12px;
+}
+
+.home-foundation-grid {
+  margin-bottom: 0;
 }
 
 .clubs-grid,

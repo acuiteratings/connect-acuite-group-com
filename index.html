@@ -22,7 +22,7 @@
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path stroke-linecap="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
       </svg>
-      <input id="global-search" type="text" placeholder="Search people, posts, tools, resources..." autocomplete="off">
+      <input id="global-search" type="text" placeholder="Search people, spaces, tools and resources..." autocomplete="off">
       <div class="search-results" id="search-results" hidden></div>
     </div>
 
@@ -60,47 +60,41 @@
         </svg>
         Home
       </button>
-      <button type="button" class="tab" data-switch-tab="bulletin">
+      <button type="button" class="tab" data-switch-tab="community">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
         </svg>
-        Bulletin
+        Community
       </button>
-      <button type="button" class="tab" data-switch-tab="wall">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-        </svg>
-        The Wall
-      </button>
-      <button type="button" class="tab" data-switch-tab="clubs">
+      <button type="button" class="tab" data-switch-tab="clubs-learning">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
         </svg>
-        Clubs
+        Clubs &amp; Learning
       </button>
-      <button type="button" class="tab" data-switch-tab="spotlight">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        Spotlight
-      </button>
-      <button type="button" class="tab" data-switch-tab="pitch">
+      <button type="button" class="tab" data-switch-tab="ideas-voice">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
         </svg>
-        The Pitch
+        Ideas &amp; Voice
       </button>
-      <button type="button" class="tab" data-switch-tab="moments">
+      <button type="button" class="tab" data-switch-tab="recognition">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
         </svg>
-        Moments
+        Recognition
       </button>
-      <button type="button" class="tab" data-switch-tab="alumni">
+      <button type="button" class="tab" data-switch-tab="store">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 11a2 2 0 01-2 2H8a2 2 0 01-2-2L5 8zm3-3a4 4 0 018 0v3H8V5z"></path>
         </svg>
-        Alumni
+        Brand Store
+      </button>
+      <button type="button" class="tab" data-switch-tab="business">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm5-3h6a2 2 0 012 2v1H7V6a2 2 0 012-2z"></path>
+        </svg>
+        Business Desk
       </button>
 
       <div class="sep"></div>
@@ -129,12 +123,12 @@
       <section class="panel active" id="panel-home">
         <section class="hero-banner">
           <div class="hero-copy">
-            <p class="eyebrow">Employee social workspace</p>
-            <h1>Acuité Connect is evolving into the shared front door for people, culture, and internal tools.</h1>
-            <p>We kept the logo and familiar feed-based layout, then started layering in practical workplace tools that employees can use every day.</p>
+            <p class="eyebrow">Inside Acuité Connect</p>
+            <h1>One front door for community, learning, ideas, recognition, rewards and business updates.</h1>
+            <p>We are reshaping Connect around six core employee spaces, supported by the people directory, tool hub and knowledge layer.</p>
             <div class="hero-actions">
-              <button type="button" class="btn-warm" data-switch-tab="tools">Open Tool Hub</button>
-              <button type="button" class="btn-ghost" data-switch-tab="directory">Find an expert</button>
+              <button type="button" class="btn-warm" data-switch-tab="community">Open Community Exchange</button>
+              <button type="button" class="btn-ghost" data-switch-tab="business">Open Business Desk</button>
             </div>
           </div>
           <div class="hero-stats" id="hero-stats"></div>
@@ -149,24 +143,409 @@
         <section class="section-card">
           <div class="section-card-head">
             <div>
-              <p class="widget-kicker">Quick Launch</p>
-              <h2>Popular tools this week</h2>
+              <p class="widget-kicker">Core Spaces</p>
+              <h2>The inside-page structure we are building</h2>
             </div>
-            <button type="button" class="btn-link" data-switch-tab="tools">View all tools</button>
+            <button type="button" class="btn-link" data-switch-tab="community">Start exploring</button>
           </div>
           <div class="tool-grid compact" id="home-tools-grid"></div>
         </section>
 
-        <div class="compose" data-switch-tab="bulletin">
-          <div class="avatar avatar-small" id="compose-avatar">RM</div>
-          <div class="compose-placeholder">Share an update, celebrate a teammate, or push an idea forward.</div>
-          <div class="compose-actions">
-            <button type="button" class="btn-kudos" data-switch-tab="wall">Kudos</button>
-            <button type="button" class="btn-idea" data-switch-tab="pitch">Idea</button>
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Foundation Layers</p>
+              <h2>People, tools and knowledge behind every module</h2>
+            </div>
+            <button type="button" class="btn-link" data-switch-tab="directory">Open people layer</button>
+          </div>
+          <div class="tool-summary-grid home-foundation-grid" id="home-feed"></div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-community">
+        <div class="section-head">
+          <div>
+            <h2>Community Exchange</h2>
+            <p>Marketplace, housing help and everyday life updates for employees.</p>
           </div>
         </div>
 
-        <div id="home-feed"></div>
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">Exchange</p>
+            <h3>Give away, barter or sell</h3>
+            <p class="muted-copy">A clean internal board for books, gadgets, furniture and daily-use items.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Housing</p>
+            <h3>Stay and roommate requests</h3>
+            <p class="muted-copy">A place to ask for flatmates, paying guest options or short-term stay help.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Life Updates</p>
+            <h3>Share milestones that matter</h3>
+            <p class="muted-copy">Car, house, marriage, childbirth and other important moments belong here.</p>
+          </article>
+        </div>
+
+        <div class="two-column-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">What will live here</p>
+                <h2>Community boards</h2>
+              </div>
+            </div>
+            <div class="tool-grid compact">
+              <article class="tool-card landing-card">
+                <h3>Employee marketplace</h3>
+                <p>Posts for giveaway, barter and resale with simple moderation and clean categories.</p>
+                <ul class="landing-list">
+                  <li>Books, devices, furniture and home items</li>
+                  <li>Simple price, city and condition fields</li>
+                  <li>Useful for fast peer-to-peer exchange</li>
+                </ul>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Stay board</h3>
+                <p>A practical board for room, roommate, paying guest and relocation requests.</p>
+                <ul class="landing-list">
+                  <li>City-first view for faster matching</li>
+                  <li>Post availability, budget and timing</li>
+                  <li>Good fit for new joiners and transfers</li>
+                </ul>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Life moments</h3>
+                <p>Personal milestones deserve a warmer, more intentional home than a generic announcement stream.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="moments">Open current Moments prototype</button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>Build focus</h3>
+              <ul class="simple-list">
+                <li>Marketplace posts</li>
+                <li>Housing and roommate notices</li>
+                <li>Life-event announcements</li>
+              </ul>
+            </div>
+            <div class="widget-card">
+              <h3>Bridge from today</h3>
+              <p>Until this module is fully wired, Moments can continue to carry photo-led culture posts.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-clubs-learning">
+        <div class="section-head">
+          <div>
+            <h2>Clubs &amp; Learning</h2>
+            <p>Interest communities, book requisitions, mentoring and training exchange.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">Book Club</p>
+            <h3>Request a book from the library</h3>
+            <p class="muted-copy">Admins manage the catalog; employees place simple requisitions against available titles.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Mentoring</p>
+            <h3>Ask for or offer guidance</h3>
+            <p class="muted-copy">A space for mentorship topics, office hours and peer support.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Training</p>
+            <h3>Post a learning need</h3>
+            <p class="muted-copy">Anyone can request a skill session, and another colleague can volunteer to run it.</p>
+          </article>
+        </div>
+
+        <div class="two-column-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Spaces inside this module</p>
+                <h2>Learning journeys</h2>
+              </div>
+            </div>
+            <div class="tool-grid compact">
+              <article class="tool-card landing-card">
+                <h3>Book requisitions</h3>
+                <p>Catalog managed by admins with simple request, issue and return tracking.</p>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Training requests</h3>
+                <p>Employees can ask for training on sectors, tools, writing or compliance topics.</p>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Mentor matching</h3>
+                <p>Internal experts can volunteer short sessions, recurring guidance or structured learning help.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="clubs">Open current Clubs prototype</button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>What this solves</h3>
+              <ul class="simple-list">
+                <li>Book club becomes operational, not only social</li>
+                <li>Training needs become visible across the company</li>
+                <li>Peer-led learning gets a real home</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-ideas-voice">
+        <div class="section-head">
+          <div>
+            <h2>Ideas &amp; Voice</h2>
+            <p>Employee ideas, CEO corner, CSR recommendations and quick pulse-taking.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">The Pitch</p>
+            <h3>Employee ideas</h3>
+            <p class="muted-copy">This is the natural home for ideas that deserve comments, votes and follow-through.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Leadership</p>
+            <h3>MD &amp; CEO corner</h3>
+            <p class="muted-copy">A dedicated place for direct reflections, rants and sharp commentary from leadership.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">CSR</p>
+            <h3>Proposal recommendations</h3>
+            <p class="muted-copy">Employees can surface causes, partners and ideas worth considering.</p>
+          </article>
+        </div>
+
+        <div class="two-column-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Inside the module</p>
+                <h2>Voice channels</h2>
+              </div>
+            </div>
+            <div class="tool-grid compact">
+              <article class="tool-card landing-card">
+                <h3>Ideas board</h3>
+                <p>Employees post ideas, others comment, and leadership can mark them for action.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="pitch">Open current Pitch prototype</button>
+                </div>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>CEO notes</h3>
+                <p>A dedicated stream for strong, personal leadership notes without mixing them into general updates.</p>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Polls and CSR</h3>
+                <p>Short pulse checks and CSR recommendations sit well together inside a discussion-led module.</p>
+              </article>
+            </div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>Why this matters</h3>
+              <p>Employees should know exactly where to post an idea, where leadership speaks, and where company-purpose conversations belong.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-recognition">
+        <div class="section-head">
+          <div>
+            <h2>Recognition &amp; Rewards</h2>
+            <p>Appreciation, celebrations and the engagement economy of Connect.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">Recognition</p>
+            <h3>The Wall</h3>
+            <p class="muted-copy">Public appreciation remains the emotional core of employee engagement.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Celebrations</p>
+            <h3>Birthdays and anniversaries</h3>
+            <p class="muted-copy">These already exist in lightweight form and can now sit under a clearer destination.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Rewards</p>
+            <h3>Points and redemption</h3>
+            <p class="muted-copy">Likes, comments and posts can later translate into redeemable value inside the brand store.</p>
+          </article>
+        </div>
+
+        <div class="two-column-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Recognition layers</p>
+                <h2>What this module will hold</h2>
+              </div>
+            </div>
+            <div class="tool-grid compact">
+              <article class="tool-card landing-card">
+                <h3>Kudos and celebrations</h3>
+                <p>Public recognition, appreciation notes and social proof of good work.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="wall">Open current Wall prototype</button>
+                </div>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Milestone announcements</h3>
+                <p>Work anniversaries, birthdays and achievements in one recognisable place.</p>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Reward ledger</h3>
+                <p>A future layer that converts engagement into points and makes redemption visible.</p>
+              </article>
+            </div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>Later connection</h3>
+              <p>The rewards engine should come after Brand Store inventory and redemption rules are defined.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-store">
+        <div class="section-head">
+          <div>
+            <h2>Brand Store</h2>
+            <p>Acuité merchandise, memorabilia and reward redemption.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">Catalog</p>
+            <h3>Branded merchandise</h3>
+            <p class="muted-copy">T-shirts, coffee mugs, stationery and memorabilia can live in one curated catalog.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Redemption</p>
+            <h3>Use reward points</h3>
+            <p class="muted-copy">Employees should see exactly what items their engagement points can unlock.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Operations</p>
+            <h3>Inventory and approvals</h3>
+            <p class="muted-copy">This module will need stock visibility, redemption rules and admin controls.</p>
+          </article>
+        </div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Store vision</p>
+              <h2>How this will fit into Connect</h2>
+            </div>
+          </div>
+          <div class="tool-grid compact">
+            <article class="tool-card landing-card">
+              <h3>Catalog showcase</h3>
+              <p>Employees browse available items with clear images, point cost and availability.</p>
+            </article>
+            <article class="tool-card landing-card">
+              <h3>Redemption history</h3>
+              <p>Every employee can see what has been redeemed and what remains in the balance.</p>
+            </article>
+            <article class="tool-card landing-card">
+              <h3>Admin controls</h3>
+              <p>Inventory upload, item activation, point pricing and issue tracking all sit here.</p>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-business">
+        <div class="section-head">
+          <div>
+            <h2>Business Desk</h2>
+            <p>Business updates, client testimonials and leadership messages that matter to the company.</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="mini-panel">
+            <p class="widget-kicker">Updates</p>
+            <h3>Business-related announcements</h3>
+            <p class="muted-copy">Quarterly progress, mandates, internal wins and important operating developments.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Clients</p>
+            <h3>Testimonials</h3>
+            <p class="muted-copy">A dedicated space to preserve and celebrate trust voiced by clients and partners.</p>
+          </article>
+          <article class="mini-panel">
+            <p class="widget-kicker">Leadership</p>
+            <h3>High-signal communication</h3>
+            <p class="muted-copy">A cleaner home for messages that should stay visible beyond the fast-moving social stream.</p>
+          </article>
+        </div>
+
+        <div class="two-column-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Bridge from today</p>
+                <h2>What can anchor this module first</h2>
+              </div>
+            </div>
+            <div class="tool-grid compact">
+              <article class="tool-card landing-card">
+                <h3>Business updates stream</h3>
+                <p>Start by moving important business communication out of generic bulletin traffic.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="bulletin">Open current Bulletin prototype</button>
+                </div>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Testimonial shelf</h3>
+                <p>A curated archive of client appreciation and trust signals, searchable over time.</p>
+              </article>
+              <article class="tool-card landing-card">
+                <h3>Leadership pack</h3>
+                <p>Town halls, commentary and supporting material can connect naturally with Knowledge Hub assets.</p>
+                <div class="landing-actions">
+                  <button type="button" class="btn-ghost" data-switch-tab="knowledge">Open current Knowledge layer</button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <h3>Why this needs its own page</h3>
+              <p>Business communication should feel durable, credible and easy to revisit. It should not get lost inside a social feed.</p>
+            </div>
+          </aside>
+        </div>
       </section>
 
       <section class="panel" id="panel-bulletin">

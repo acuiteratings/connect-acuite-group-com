@@ -21,6 +21,126 @@ const COMPANY_DISPLAY_LABELS = {
   Acuite: "Acuité",
 };
 
+const HOME_PILLARS = [
+  {
+    kicker: "Community",
+    title: "Community Exchange",
+    copy: "The practical layer for housing help, internal exchange and life moments.",
+    bullets: [
+      "Marketplace posts",
+      "Roommate and stay notices",
+      "Personal milestones",
+    ],
+    tab: "community",
+  },
+  {
+    kicker: "Voice",
+    title: "Ideas & Voice",
+    copy: "A clearer home for employee ideas, CEO notes, CSR proposals and quick polls.",
+    bullets: [
+      "The Pitch",
+      "Leadership corner",
+      "CSR and pulse checks",
+    ],
+    tab: "ideas-voice",
+  },
+  {
+    kicker: "Recognition",
+    title: "Recognition & Rewards",
+    copy: "Appreciation, celebrations and the reward system that will power the brand store.",
+    bullets: [
+      "The Wall",
+      "Birthdays and anniversaries",
+      "Points and redemption",
+    ],
+    tab: "recognition",
+  },
+];
+
+const HOME_CORE_SPACES = [
+  {
+    id: "space-community",
+    title: "Community Exchange",
+    summary: "Buy, sell, barter, give away, ask for housing help and share important life updates.",
+    note: "Marketplace, stay board and personal milestones",
+    tab: "community",
+    initials: "CE",
+    gradient: "warm",
+    status: "pilot",
+  },
+  {
+    id: "space-learning",
+    title: "Clubs & Learning",
+    summary: "Book club requisitions, mentoring, training needs and peer-led learning.",
+    note: "Book catalog, training requests and mentoring",
+    tab: "clubs-learning",
+    initials: "CL",
+    gradient: "leaf",
+    status: "pilot",
+  },
+  {
+    id: "space-ideas",
+    title: "Ideas & Voice",
+    summary: "A single destination for employee ideas, CEO notes, CSR proposals and polls.",
+    note: "Ideas, leadership voice and company pulse",
+    tab: "ideas-voice",
+    initials: "IV",
+    gradient: "fire",
+    status: "pilot",
+  },
+  {
+    id: "space-recognition",
+    title: "Recognition & Rewards",
+    summary: "Public appreciation, celebrations and the future reward points engine.",
+    note: "Kudos, milestones and engagement value",
+    tab: "recognition",
+    initials: "RR",
+    gradient: "gold",
+    status: "pilot",
+  },
+  {
+    id: "space-store",
+    title: "Brand Store",
+    summary: "Acuité merchandise and memorabilia, ready for eventual point redemption.",
+    note: "Catalog, redemption and inventory rules",
+    tab: "store",
+    initials: "BS",
+    gradient: "ember",
+    status: "planned",
+  },
+  {
+    id: "space-business",
+    title: "Business Desk",
+    summary: "Business updates, client testimonials and leadership communication with durability.",
+    note: "Business signals, trust stories and high-signal notes",
+    tab: "business",
+    initials: "BD",
+    gradient: "cool",
+    status: "live",
+  },
+];
+
+const HOME_FOUNDATION_LAYERS = [
+  {
+    title: "People Directory",
+    label: "Find experts by company, city and department",
+    note: "This is the people layer behind almost every future workflow.",
+    tab: "directory",
+  },
+  {
+    title: "Tool Hub",
+    label: "Connect internal apps and workflow surfaces",
+    note: "This becomes the operating layer once modules start doing real work.",
+    tab: "tools",
+  },
+  {
+    title: "Knowledge Hub",
+    label: "Keep policies, templates and decks close to decisions",
+    note: "This is the memory layer that supports every business and people workflow.",
+    tab: "knowledge",
+  },
+];
+
 const appData = {
   currentUser: {
     name: "Rahul Mehta",
@@ -1180,19 +1300,19 @@ function renderProfile() {
 function renderHeroStats() {
   const stats = [
     {
-      label: "People directory",
-      value: String(appData.directory.length),
-      note: "Profiles mapped by expertise and city",
+      label: "Core spaces",
+      value: "6",
+      note: "Community, learning, voice, rewards, store and business",
     },
     {
-      label: "Tools in scope",
-      value: String(appData.quickTools.length),
-      note: "Live, pilot and planned workflow surfaces",
+      label: "Foundation layers",
+      value: "3",
+      note: "Directory, tools and knowledge support every module",
     },
     {
-      label: "Knowledge items",
-      value: String(appData.knowledgeItems.length),
-      note: "Policies, templates and learning resources",
+      label: "Vision items",
+      value: "14",
+      note: "The current feature list now has clear homes inside Connect",
     },
   ];
 
@@ -1206,78 +1326,30 @@ function renderHeroStats() {
 }
 
 function renderTodayPanel() {
-  document.getElementById("today-panel").innerHTML = `
-    <p class="widget-kicker">Today</p>
-    <h3>My day</h3>
-    <p class="muted-copy">A lightweight look at the day without leaving the feed.</p>
-    ${appData.agenda.length ? `
-      <ul class="mini-list">
-        ${appData.agenda.map((item) => `
-          <li>
-            <div>
-              <div class="mini-item-title">${escapeHtml(item.title)}</div>
-              <div class="mini-item-meta">${escapeHtml(item.meta)}</div>
-            </div>
-            <div class="mini-item-time">${escapeHtml(item.time)}</div>
-          </li>
-        `).join("")}
-      </ul>
-    ` : `<div class="empty-state">Your live schedule has not been connected yet.</div>`}
-  `;
+  renderHomePillar("today-panel", HOME_PILLARS[0]);
 }
 
 function renderTasksPanel() {
-  document.getElementById("tasks-panel").innerHTML = `
-    <p class="widget-kicker">Action queue</p>
-    <h3>What needs attention</h3>
-    <p class="muted-copy">A simple bridge between culture and work actions.</p>
-    ${appData.tasks.length ? `
-      <ul class="mini-list">
-        ${appData.tasks.map((item) => `
-          <li>
-            <div>
-              <div class="mini-item-title">${escapeHtml(item.title)}</div>
-              <div class="mini-item-meta">${escapeHtml(item.due)}</div>
-            </div>
-            <span class="task-badge ${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span>
-          </li>
-        `).join("")}
-      </ul>
-    ` : `<div class="empty-state">No live task feed is connected yet.</div>`}
-  `;
+  renderHomePillar("tasks-panel", HOME_PILLARS[1]);
 }
 
 function renderPulsePanel() {
-  document.getElementById("pulse-panel").innerHTML = `
-    <p class="widget-kicker">Pulse</p>
-    <h3>Connect snapshot</h3>
-    <p class="muted-copy">Useful signs that the platform is becoming more than a social feed.</p>
-    ${appData.pulse.length ? `
-      <div class="pulse-grid">
-        ${appData.pulse.map((item) => `
-          <article class="pulse-card">
-            <strong>${escapeHtml(item.value)}</strong>
-            <span>${escapeHtml(item.label)}</span>
-          </article>
-        `).join("")}
-      </div>
-    ` : `<div class="empty-state">Live usage metrics will appear here once activity begins.</div>`}
-  `;
+  renderHomePillar("pulse-panel", HOME_PILLARS[2]);
 }
 
 function renderHomeTools() {
-  document.getElementById("home-tools-grid").innerHTML = appData.quickTools.slice(0, 4).map(renderToolCard).join("");
+  document.getElementById("home-tools-grid").innerHTML = HOME_CORE_SPACES.map(renderHomeSpaceCard).join("");
 }
 
 function renderHomeFeed() {
-  const homeFeed = [
-    ...state.customBulletins.slice(0, 1).map(mapCustomBulletinToPost),
-    ...state.customKudos.slice(0, 1).map(mapCustomKudosToPost),
-    ...appData.homePosts,
-  ];
-  document.getElementById("home-feed").innerHTML = homeFeed.length
-    ? homeFeed.map(renderPost).join("")
-    : `<div class="empty-state">No live feed posts yet. The first internal updates will appear here.</div>`;
+  document.getElementById("home-feed").innerHTML = HOME_FOUNDATION_LAYERS.map((layer) => `
+    <article class="summary-card foundation-card">
+      <strong>${escapeHtml(layer.title)}</strong>
+      <span>${escapeHtml(layer.label)}</span>
+      <p>${escapeHtml(layer.note)}</p>
+      <button type="button" class="btn-link" data-switch-tab="${layer.tab}">Open</button>
+    </article>
+  `).join("");
 }
 
 function renderBulletinFeed() {
@@ -1734,6 +1806,41 @@ function renderToolCard(tool) {
         </button>
       </div>
     </article>
+  `;
+}
+
+function renderHomeSpaceCard(space) {
+  return `
+    <article class="tool-card module-card" id="${space.id}">
+      <div class="tool-card-head">
+        <div class="tool-icon" style="background:${gradientValue(space.gradient)}">${escapeHtml(space.initials)}</div>
+        <div>
+          <h3>${escapeHtml(space.title)}</h3>
+          <span class="tool-status ${space.status}">${escapeHtml(capitalize(space.status))}</span>
+        </div>
+      </div>
+      <p>${escapeHtml(space.summary)}</p>
+      <div class="tool-meta">
+        <span class="mini-item-meta">${escapeHtml(space.note)}</span>
+        <button type="button" class="tool-open" data-switch-tab="${space.tab}">Explore</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderHomePillar(elementId, pillar) {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    return;
+  }
+  element.innerHTML = `
+    <p class="widget-kicker">${escapeHtml(pillar.kicker)}</p>
+    <h3>${escapeHtml(pillar.title)}</h3>
+    <p class="muted-copy">${escapeHtml(pillar.copy)}</p>
+    <ul class="simple-list">
+      ${pillar.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("")}
+    </ul>
+    <button type="button" class="btn-link" data-switch-tab="${pillar.tab}">Open space</button>
   `;
 }
 
