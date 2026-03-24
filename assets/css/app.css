@@ -2235,11 +2235,46 @@ select {
 }
 
 .connect-auth-main {
-  max-width: 540px;
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 
 .auth-wrap {
   width: 100%;
+}
+
+.connect-story-panel {
+  width: 100%;
+}
+
+.connect-story-card {
+  padding: 34px 36px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(226, 208, 183, 0.72);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(8px);
+}
+
+.connect-story-card h2 {
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin-bottom: 18px;
+}
+
+.connect-story-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.connect-story-copy p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--text2);
 }
 
 .connect-auth-card {
@@ -2618,5 +2653,19 @@ select {
 
   .connect-auth-card {
     padding: 22px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .connect-auth-main {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-story-card {
+    padding: 26px 24px;
+  }
+
+  .connect-story-card h2 {
+    font-size: 32px;
   }
 }
