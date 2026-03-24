@@ -1,6 +1,8 @@
+import logging
 import random
 from datetime import timedelta
 from secrets import compare_digest
+from threading import Thread
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
@@ -15,6 +17,7 @@ from .models import LoginChallenge, TrustedAppLoginGrant, User
 
 
 SESSION_AUTH_BACKEND = "django.contrib.auth.backends.ModelBackend"
+logger = logging.getLogger(__name__)
 
 
 class AuthFlowError(Exception):
@@ -89,6 +92,21 @@ def _email_delivery_configured():
     return bool(getattr(settings, "EMAIL_HOST", "").strip())
 
 
+def _deliver_email_safely(send_fn, *args):
+    try:
+        send_fn(*args)
+    except Exception:
+        logger.exception("Email delivery failed for Acuite Connect auth flow.")
+
+
+def _send_email(send_fn, *args):
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if "smtp.EmailBackend" in backend:
+        Thread(target=_deliver_email_safely, args=(send_fn, *args), daemon=True).start()
+        return
+    send_fn(*args)
+
+
 def _send_login_otp_email(user, code):
     subject = "Your Acuite Connect login OTP"
     message = (
@@ -159,7 +177,7 @@ def start_login_challenge(email):
 
     preview_code = None
     if _email_delivery_configured():
-        _send_login_otp_email(user, code)
+        _send_email(_send_login_otp_email, user, code)
     elif settings.AUTH_DEBUG_OTP_PREVIEW:
         preview_code = code
     else:
@@ -216,7 +234,7 @@ def reset_password_to_first_time_password(email):
             user.must_change_password = True
             user.password_changed_at = None
             user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
-            _send_first_time_password_email(user, temporary_password)
+            _send_email(_send_first_time_password_email, user, temporary_password)
     except Exception as exc:
         raise AuthFlowError(
             "We couldn't send the reset email right now. Please try again in a moment.",

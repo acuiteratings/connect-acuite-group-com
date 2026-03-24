@@ -115,7 +115,7 @@ def request_login_otp(request):
         request=request,
     )
     response = {
-        "detail": f"OTP sent to {challenge.masked_email}.",
+        "detail": f"OTP is on its way to {challenge.masked_email}.",
         "challenge_token": str(challenge.public_id),
         "masked_email": challenge.masked_email,
         "next_step": "otp",

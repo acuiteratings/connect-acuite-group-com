@@ -91,6 +91,7 @@ async function handleAccessForm(event) {
   }
 
   if (action === "send_code") {
+    showStatus("Sending OTP...", "info");
     await withButtonBusy(submitter, async () => {
       const response = await window.AcuiteConnectAuth.apiRequest(
         "/api/accounts/auth/request-otp/",
