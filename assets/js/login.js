@@ -8,17 +8,23 @@ document.addEventListener("DOMContentLoaded", () => {
   void initLoginPage();
 });
 
-function getPostLoginTarget() {
+function getDefaultPostLoginTarget(user) {
+  const accessRights = user && user.access_rights ? user.access_rights : {};
+  return accessRights.can_administer ? "/admin-console.html" : "/";
+}
+
+function getPostLoginTarget(user) {
   const params = new URLSearchParams(window.location.search);
-  const next = params.get("next") || "/";
+  const fallbackPath = getDefaultPostLoginTarget(user);
+  const next = params.get("next") || fallbackPath;
   try {
     const target = new URL(next, window.location.origin);
     if (target.origin !== window.location.origin) {
-      return "/";
+      return fallbackPath;
     }
     return `${target.pathname}${target.search}${target.hash}`;
   } catch (error) {
-    return "/";
+    return fallbackPath;
   }
 }
 
@@ -30,7 +36,7 @@ async function initLoginPage() {
 
   const session = await auth.fetchCurrentSession({ forceRefresh: true });
   if (session.authenticated) {
-    window.location.href = getPostLoginTarget();
+    window.location.href = getPostLoginTarget(session.user);
     return;
   }
 
@@ -181,7 +187,7 @@ async function handlePasswordForm(event) {
 
     showStatus("Login successful. Redirecting to Acuité Connect...", "success");
     window.setTimeout(() => {
-      window.location.href = getPostLoginTarget();
+      window.location.href = getPostLoginTarget(response.user);
     }, 350);
   }, "password-error");
 }
@@ -247,7 +253,7 @@ async function handlePasswordChangeForm(event) {
     showStatus("Password updated. Redirecting to Acuité Connect...", "success");
     updateStep("Access granted", "Your password has been updated and your session is now active.");
     window.setTimeout(() => {
-      window.location.href = getPostLoginTarget();
+      window.location.href = getPostLoginTarget(window.AcuiteConnectAuth.getAuthenticatedUser());
     }, 450);
   }, "new-password-error", "confirm-password-error");
 }
