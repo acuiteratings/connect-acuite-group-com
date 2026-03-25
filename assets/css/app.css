@@ -61,8 +61,10 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
+body.connect-app-loading .topnav,
 body.connect-app-loading .layout {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -417,6 +419,12 @@ select {
 
 .sidebar-left .tab.active svg {
   color: var(--orange);
+}
+
+.sidebar-left .tab.admin-tab {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .sidebar-left .sep {

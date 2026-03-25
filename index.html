@@ -53,7 +53,7 @@
           aria-haspopup="menu"
           title="Open profile menu"
         >
-          RM
+          --
         </button>
         <div class="profile-menu" id="profile-menu" hidden>
           <button type="button" id="profile-menu-admin-link" data-action="open-admin-console" hidden>Admin Console</button>
@@ -107,6 +107,12 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm5-3h6a2 2 0 012 2v1H7V6a2 2 0 012-2z"></path>
         </svg>
         Business Desk
+      </button>
+      <button type="button" class="tab admin-tab" id="admin-sidebar-tab" data-action="open-admin-console" hidden>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4zm0 6v4m0 4h.01"></path>
+        </svg>
+        ADMIN
       </button>
       <div class="sep"></div>
 
@@ -746,20 +752,20 @@
 
     <aside class="sidebar-right">
       <div class="widget profile-widget">
-        <div class="avatar profile-avatar" id="profile-avatar">RM</div>
-        <div class="profile-name" id="profile-name">Rahul Mehta</div>
-        <div class="profile-role" id="profile-role">Senior Analyst - Ratings</div>
+        <div class="avatar profile-avatar" id="profile-avatar">--</div>
+        <div class="profile-name" id="profile-name"></div>
+        <div class="profile-role" id="profile-role"></div>
         <div class="profile-stats">
           <div>
-            <div class="num" id="profile-kudos">12</div>
+            <div class="num" id="profile-kudos">0</div>
             <div class="label">Kudos</div>
           </div>
           <div>
-            <div class="num" id="profile-clubs">4</div>
+            <div class="num" id="profile-clubs">0</div>
             <div class="label">Clubs</div>
           </div>
           <div>
-            <div class="num" id="profile-pitches">3</div>
+            <div class="num" id="profile-pitches">0</div>
             <div class="label">Pitches</div>
           </div>
         </div>

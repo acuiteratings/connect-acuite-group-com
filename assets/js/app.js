@@ -353,10 +353,10 @@ const FEATURED_HOME_ANNOUNCEMENT = {
 
 const appData = {
   currentUser: {
-    name: "Rahul Mehta",
-    initials: "RM",
-    role: "Senior Analyst - Ratings",
-    city: "Mumbai",
+    name: "",
+    initials: "",
+    role: "",
+    city: "",
     is_staff: false,
     accessLevel: "employee",
     accessRights: {
@@ -1341,6 +1341,14 @@ async function init() {
     profilePitches: document.getElementById("profile-pitches"),
   };
 
+  bindEvents();
+  renderPanels();
+  renderProfile();
+  renderProfileBuilder();
+  renderCommentsModal();
+  syncComposerAccess();
+  markAppReady();
+
   try {
     const bootTasks = [
       loadCurrentProfile(),
@@ -1352,15 +1360,11 @@ async function init() {
       loadLearningData(),
       loadBulletinPosts(),
     ];
-    await Promise.all(bootTasks);
-    bindEvents();
+    await Promise.allSettled(bootTasks);
     renderAll();
   } catch (error) {
     console.error("Could not complete the initial Connect render.", error);
-    bindEvents();
     renderAll();
-  } finally {
-    markAppReady();
   }
 }
 
