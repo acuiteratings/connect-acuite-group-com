@@ -14,7 +14,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post
 from operations.models import AnalyticsEvent, AuditLog, ErrorEvent
 
-from .models import LoginChallenge, TrustedAppLoginGrant, User
+from .models import ExitProcess, LoginChallenge, TrustedAppLoginGrant, User
 
 
 @override_settings(
@@ -322,6 +322,78 @@ class AuthApiTests(TestCase):
         self.assertEqual(self.user.location, "Ahmedabad")
         self.assertEqual(self.user.employment_status, User.EmploymentStatus.SUSPENDED)
         self.assertFalse(self.user.is_active)
+
+    def test_admin_can_create_exit_process(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/accounts/access/exit-processes/",
+            data=json.dumps(
+                {
+                    "employee_id": self.user.id,
+                    "resignation_date": "2026-03-25",
+                    "last_working_day": "2026-04-30",
+                    "stage": "knowledge_transfer",
+                    "resignation_acknowledged": True,
+                    "knowledge_transfer_completed": False,
+                    "assets_returned": False,
+                    "access_review_completed": False,
+                    "notes": "Manager accepted resignation.",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["exit_process"]["employee"]["id"], self.user.id)
+        self.assertEqual(payload["exit_process"]["stage"], "knowledge_transfer")
+        self.assertEqual(payload["exit_process"]["notes"], "Manager accepted resignation.")
+        self.assertEqual(ExitProcess.objects.count(), 1)
+
+    def test_admin_can_finalize_exit_process_and_convert_employee_to_alumni(self):
+        self.client.force_login(self.admin_user)
+        DirectoryProfile.objects.create(
+            user=self.user,
+            company_name="Acuite",
+            office_location="Mumbai",
+            is_visible=True,
+        )
+
+        response = self.client.post(
+            "/api/accounts/access/exit-processes/",
+            data=json.dumps(
+                {
+                    "employee_id": self.user.id,
+                    "resignation_date": "2026-03-25",
+                    "last_working_day": "2026-04-30",
+                    "stage": "completed",
+                    "resignation_acknowledged": True,
+                    "knowledge_transfer_completed": True,
+                    "assets_returned": True,
+                    "access_review_completed": True,
+                    "notes": "All exit steps completed.",
+                    "finalize": True,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.employment_status, User.EmploymentStatus.ALUMNI)
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.can_post_in_connect)
+        self.assertFalse(self.user.is_directory_visible)
+        self.assertEqual(self.user.access_level, User.AccessLevel.EMPLOYEE)
+
+        self.user.directory_profile.refresh_from_db()
+        self.assertFalse(self.user.directory_profile.is_visible)
+
+        process = ExitProcess.objects.get(employee=self.user)
+        self.assertEqual(process.stage, ExitProcess.Stage.COMPLETED)
+        self.assertTrue(process.alumni_transition_completed)
+        self.assertIsNotNone(process.completed_at)
 
     def test_employee_cannot_assign_access_rights(self):
         self.client.force_login(self.user)

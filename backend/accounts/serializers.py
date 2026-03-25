@@ -33,3 +33,23 @@ def serialize_user(user):
         "last_seen_at": user.last_seen_at.isoformat() if user.last_seen_at else None,
         "date_joined": user.date_joined.isoformat() if user.date_joined else None,
     }
+
+
+def serialize_exit_process(process):
+    return {
+        "id": process.id,
+        "employee": serialize_user(process.employee),
+        "stage": process.stage,
+        "resignation_date": process.resignation_date.isoformat() if process.resignation_date else None,
+        "last_working_day": process.last_working_day.isoformat() if process.last_working_day else None,
+        "resignation_acknowledged": process.resignation_acknowledged,
+        "knowledge_transfer_completed": process.knowledge_transfer_completed,
+        "assets_returned": process.assets_returned,
+        "access_review_completed": process.access_review_completed,
+        "alumni_transition_completed": process.alumni_transition_completed,
+        "can_finalize": process.can_finalize,
+        "notes": process.notes,
+        "completed_at": process.completed_at.isoformat() if process.completed_at else None,
+        "created_at": process.created_at.isoformat(),
+        "updated_at": process.updated_at.isoformat(),
+    }

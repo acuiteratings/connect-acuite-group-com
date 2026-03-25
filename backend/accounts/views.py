@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -10,14 +11,15 @@ from django.db import models
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from directory.models import DirectoryProfile
 from operations.services import record_analytics_event, record_audit_event
 
-from .models import User
+from .models import ExitProcess, User
 from .session import ensure_session_deadline
-from .serializers import serialize_user
+from .serializers import serialize_exit_process, serialize_user
 from .services import (
     AuthFlowError,
     SESSION_AUTH_BACKEND,
@@ -137,6 +139,60 @@ def _password_change_reason(user):
     if user.must_change_password or not user.password_changed_at:
         return "first_login"
     return "expired"
+
+
+def _parse_iso_date(value, field_label):
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        raise AuthFlowError(f"{field_label} is required.", status=400, code="missing_date")
+    try:
+        return date.fromisoformat(raw_value)
+    except ValueError as exc:
+        raise AuthFlowError(
+            f"{field_label} must be a valid date in YYYY-MM-DD format.",
+            status=400,
+            code="invalid_date",
+        ) from exc
+
+
+def _apply_alumni_transition(process, actor):
+    employee = process.employee
+    user_update_fields = []
+    if employee.employment_status != User.EmploymentStatus.ALUMNI:
+        employee.employment_status = User.EmploymentStatus.ALUMNI
+        user_update_fields.append("employment_status")
+    if employee.is_active:
+        employee.is_active = False
+        user_update_fields.append("is_active")
+    if employee.can_post_in_connect:
+        employee.can_post_in_connect = False
+        user_update_fields.append("can_post_in_connect")
+    if employee.is_directory_visible:
+        employee.is_directory_visible = False
+        user_update_fields.append("is_directory_visible")
+    if employee.access_level != User.AccessLevel.EMPLOYEE:
+        employee.access_level = User.AccessLevel.EMPLOYEE
+        user_update_fields.append("access_level")
+    if user_update_fields:
+        employee.save(update_fields=[*user_update_fields, "updated_at"])
+
+    if hasattr(employee, "directory_profile"):
+        directory_profile = employee.directory_profile
+        if directory_profile.is_visible:
+            directory_profile.is_visible = False
+            directory_profile.save(update_fields=["is_visible", "updated_at"])
+
+    process.updated_by = actor
+    process.mark_completed()
+    process.save(
+        update_fields=[
+            "updated_by",
+            "stage",
+            "alumni_transition_completed",
+            "completed_at",
+            "updated_at",
+        ]
+    )
 
 
 def _authenticated_payload(request, *, password_changed=False):
@@ -420,6 +476,187 @@ def access_user_detail(request, user_id):
         {
             "detail": "Employee account updated successfully.",
             "user": serialize_user(user),
+        }
+    )
+
+
+@csrf_exempt
+def exit_process_collection(request):
+    if not _is_access_admin(request.user):
+        return _admin_forbidden()
+
+    if request.method == "POST":
+        try:
+            payload = _parse_json_body(request)
+        except AuthFlowError as exc:
+            return _error_response(exc)
+
+        employee_id = int(payload.get("employee_id") or 0)
+        if not employee_id:
+            return JsonResponse({"detail": "Employee selection is required."}, status=400)
+
+        employee = get_object_or_404(User, pk=employee_id)
+        if employee.is_superuser and not request.user.is_superuser:
+            return _admin_forbidden("Only a superuser can start an exit process for this account.")
+
+        try:
+            resignation_date = _parse_iso_date(payload.get("resignation_date"), "Resignation date")
+            last_working_day = _parse_iso_date(payload.get("last_working_day"), "Last working day")
+        except AuthFlowError as exc:
+            return _error_response(exc)
+
+        if last_working_day < resignation_date:
+            return JsonResponse(
+                {"detail": "Last working day cannot be earlier than the resignation date."},
+                status=400,
+            )
+
+        requested_stage = str(
+            payload.get("stage") or ExitProcess.Stage.NOTICE_RECEIVED
+        ).strip().lower()
+        if requested_stage not in set(ExitProcess.Stage.values):
+            return JsonResponse({"detail": "Invalid exit stage supplied."}, status=400)
+
+        process, created = ExitProcess.objects.get_or_create(
+            employee=employee,
+            defaults={
+                "initiated_by": request.user,
+                "updated_by": request.user,
+                "resignation_date": resignation_date,
+                "last_working_day": last_working_day,
+                "stage": requested_stage,
+                "resignation_acknowledged": _coerce_bool(payload.get("resignation_acknowledged")),
+                "knowledge_transfer_completed": _coerce_bool(payload.get("knowledge_transfer_completed")),
+                "assets_returned": _coerce_bool(payload.get("assets_returned")),
+                "access_review_completed": _coerce_bool(payload.get("access_review_completed")),
+                "alumni_transition_completed": False,
+                "notes": str(payload.get("notes") or "").strip(),
+            },
+        )
+
+        changes = {}
+        update_fields = []
+        field_map = {
+            "resignation_date": resignation_date,
+            "last_working_day": last_working_day,
+            "stage": requested_stage,
+            "resignation_acknowledged": _coerce_bool(payload.get("resignation_acknowledged")),
+            "knowledge_transfer_completed": _coerce_bool(payload.get("knowledge_transfer_completed")),
+            "assets_returned": _coerce_bool(payload.get("assets_returned")),
+            "access_review_completed": _coerce_bool(payload.get("access_review_completed")),
+            "notes": str(payload.get("notes") or "").strip(),
+        }
+
+        if not created:
+            for field_name, new_value in field_map.items():
+                current_value = getattr(process, field_name)
+                if current_value != new_value:
+                    changes[field_name] = {"from": current_value, "to": new_value}
+                    setattr(process, field_name, new_value)
+                    update_fields.append(field_name)
+
+            if update_fields:
+                process.updated_by = request.user
+                update_fields.extend(["updated_by", "updated_at"])
+                process.save(update_fields=list(dict.fromkeys(update_fields)))
+
+        finalize = _coerce_bool(payload.get("finalize")) or requested_stage == ExitProcess.Stage.COMPLETED
+        if finalize:
+            if not process.can_finalize:
+                return JsonResponse(
+                    {
+                        "detail": (
+                            "Complete resignation acknowledgement, knowledge transfer, asset return "
+                            "and access review before converting the employee to alumni state."
+                        )
+                    },
+                    status=400,
+                )
+            _apply_alumni_transition(process, request.user)
+
+        record_audit_event(
+            action=(
+                "accounts.exit_process.completed"
+                if finalize
+                else "accounts.exit_process.created" if created else "accounts.exit_process.updated"
+            ),
+            actor=request.user,
+            target=employee,
+            summary=(
+                f"Completed exit process for {employee.email}"
+                if finalize
+                else f"Started exit process for {employee.email}"
+                if created
+                else f"Updated exit process for {employee.email}"
+            ),
+            metadata={
+                "exit_process_id": process.id,
+                "stage": process.stage,
+                "changes": changes,
+                "finalized": finalize,
+            },
+            request=request,
+        )
+        record_analytics_event(
+            "accounts",
+            "exit_process_saved",
+            actor=request.user,
+            metadata={
+                "exit_process_id": process.id,
+                "employee_user_id": employee.id,
+                "stage": process.stage,
+                "created": created,
+                "finalized": finalize,
+            },
+            request=request,
+        )
+        return JsonResponse(
+            {
+                "detail": (
+                    "Employee converted to alumni state."
+                    if finalize
+                    else "Exit process created."
+                    if created
+                    else "Exit process updated."
+                ),
+                "exit_process": serialize_exit_process(process),
+            },
+            status=201 if created else 200,
+        )
+
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    query = str(request.GET.get("q", "")).strip()
+    status_filter = str(request.GET.get("status") or "open").strip().lower()
+    queryset = ExitProcess.objects.select_related("employee").order_by("-updated_at", "-created_at")
+    if status_filter == "open":
+        queryset = queryset.exclude(stage=ExitProcess.Stage.COMPLETED)
+    elif status_filter == "completed":
+        queryset = queryset.filter(stage=ExitProcess.Stage.COMPLETED)
+
+    if query:
+        queryset = queryset.filter(
+            models.Q(employee__email__icontains=query)
+            | models.Q(employee__first_name__icontains=query)
+            | models.Q(employee__last_name__icontains=query)
+            | models.Q(employee__display_name__icontains=query)
+            | models.Q(employee__employee_code__icontains=query)
+            | models.Q(notes__icontains=query)
+        )
+
+    results = [serialize_exit_process(process) for process in queryset[:100]]
+    return JsonResponse(
+        {
+            "count": len(results),
+            "results": results,
+            "stages": [
+                ExitProcess.Stage.NOTICE_RECEIVED,
+                ExitProcess.Stage.KNOWLEDGE_TRANSFER,
+                ExitProcess.Stage.CLEARANCE,
+                ExitProcess.Stage.ALUMNI_CONVERSION,
+                ExitProcess.Stage.COMPLETED,
+            ],
         }
     )
 

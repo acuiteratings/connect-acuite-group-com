@@ -1234,6 +1234,10 @@ let adminUsersLoadError = "";
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
 let profileMenuOpen = false;
+let activeCommentsPostId = 0;
+let liveComments = [];
+let liveCommentsError = "";
+let liveCommentsLoading = false;
 let selectedAdminUserId = null;
 let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
 
@@ -1311,7 +1315,14 @@ async function init() {
     pitchForm: document.getElementById("pitch-form"),
     profileBuilderForm: document.getElementById("profile-builder-form"),
     profileMenu: document.getElementById("profile-menu"),
+    profileMenuAdminLink: document.getElementById("profile-menu-admin-link"),
     profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
+    commentsModalBackdrop: document.getElementById("comments-modal-backdrop"),
+    commentsModalList: document.getElementById("comments-modal-list"),
+    commentsModalMeta: document.getElementById("comments-modal-meta"),
+    commentsModalForm: document.getElementById("comments-modal-form"),
+    commentsModalInput: document.getElementById("comments-modal-input"),
+    commentsModalStatus: document.getElementById("comments-modal-status"),
     profilePhotoInputOne: document.getElementById("profile-photo-input-1"),
     profilePhotoInputTwo: document.getElementById("profile-photo-input-2"),
     profilePhotoPreviewGrid: document.getElementById("profile-photo-preview-grid"),
@@ -1341,9 +1352,6 @@ async function init() {
       loadLearningData(),
       loadBulletinPosts(),
     ];
-    if (currentUserCanAdministerConnect()) {
-      bootTasks.push(loadAdminUsers());
-    }
     await Promise.all(bootTasks);
     bindEvents();
     renderAll();
@@ -1731,8 +1739,24 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "open-admin-console") {
+      closeProfileMenu();
+      window.location.href = "/admin-console.html";
+      return;
+    }
+
     if (actionName === "close-profile-builder") {
       closeProfileBuilder();
+      return;
+    }
+
+    if (actionName === "open-live-comments") {
+      await openLiveComments(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "close-live-comments") {
+      closeLiveComments();
       return;
     }
 
@@ -1861,6 +1885,20 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "open-bulletin-cta") {
+      const target = String(action.dataset.target || "").trim();
+      if (!target) {
+        showToast("This action is not available yet.");
+        return;
+      }
+      if (target.startsWith("mailto:")) {
+        window.location.href = target;
+        return;
+      }
+      window.open(target, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     if (actionName === "placeholder-comment") {
       showToast("Comments can be attached once the backend layer is in place.");
       return;
@@ -1901,6 +1939,10 @@ async function handleDocumentClick(event) {
 
   if (elements.profileModalBackdrop && event.target === elements.profileModalBackdrop) {
     closeProfileBuilder();
+  }
+
+  if (elements.commentsModalBackdrop && event.target === elements.commentsModalBackdrop) {
+    closeLiveComments();
   }
 
   if (!event.target.closest(".profile-menu-shell")) {
@@ -1964,6 +2006,12 @@ function handleSubmit(event) {
   if (event.target === elements.profileBuilderForm) {
     event.preventDefault();
     void saveProfileBuilder();
+    return;
+  }
+
+  if (event.target === elements.commentsModalForm) {
+    event.preventDefault();
+    void submitLiveComment();
   }
 }
 
@@ -1983,6 +2031,7 @@ function renderAll() {
   renderPanels();
   renderProfile();
   renderProfileBuilder();
+  renderCommentsModal();
   syncComposerAccess();
   renderHomeAnnouncement();
   renderTodayPanel();
@@ -2043,7 +2092,7 @@ function currentUserCanAdministerConnect() {
 
 function renderPanels() {
   const canAdminister = currentUserCanAdministerConnect();
-  if (!canAdminister && state.activeTab === "admin") {
+  if (state.activeTab === "admin") {
     state.activeTab = "home";
     saveState();
   }
@@ -2067,6 +2116,7 @@ function renderPanels() {
 }
 
 function renderProfile() {
+  const canAdminister = currentUserCanAdministerConnect();
   const receivedKudos = state.customKudos.filter((item) => item.recipient.toLowerCase() === appData.currentUser.name.toLowerCase()).length
     + appData.recognitionPosts.filter((item) => item.topic === "kudos" && item.recipientUserId === appData.currentUser.id).length;
   const joinedClubs = state.joinedClubIds.length;
@@ -2093,6 +2143,9 @@ function renderProfile() {
   elements.profilePitches.textContent = String(pitchesByRahul);
   if (elements.profileMenu) {
     elements.profileMenu.hidden = !profileMenuOpen;
+  }
+  if (elements.profileMenuAdminLink) {
+    elements.profileMenuAdminLink.hidden = !canAdminister;
   }
 }
 
@@ -2149,6 +2202,161 @@ function renderProfileBuilder() {
     elements.profileBuilderStatus.textContent = profileBuilderLoadError
       ? profileBuilderLoadError
       : "Add up to 2 photos, choose up to 10 skills, and tell colleagues what you enjoy.";
+  }
+}
+
+function findLivePostById(postId) {
+  const targetId = Number(postId || 0);
+  if (!targetId) {
+    return null;
+  }
+  const allPosts = [
+    ...appData.communityPosts,
+    ...appData.voicePosts,
+    ...appData.recognitionPosts,
+    ...appData.bulletinPosts,
+  ];
+  return allPosts.find((post) => Number(post.sourceId) === targetId) || null;
+}
+
+async function openLiveComments(postId) {
+  const numericPostId = Number(postId || 0);
+  if (!numericPostId || !window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    showToast("Comments are unavailable right now.");
+    return;
+  }
+
+  activeCommentsPostId = numericPostId;
+  liveCommentsLoading = true;
+  liveCommentsError = "";
+  liveComments = [];
+  renderCommentsModal();
+
+  if (elements.commentsModalBackdrop) {
+    elements.commentsModalBackdrop.hidden = false;
+  }
+  document.body.classList.add("modal-open");
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${numericPostId}/comments/`);
+    liveComments = Array.isArray(payload.results) ? payload.results : [];
+  } catch (error) {
+    liveCommentsError = error.message || "Could not load comments for this post.";
+  } finally {
+    liveCommentsLoading = false;
+    renderCommentsModal();
+  }
+}
+
+function closeLiveComments() {
+  activeCommentsPostId = 0;
+  liveComments = [];
+  liveCommentsError = "";
+  liveCommentsLoading = false;
+  if (elements.commentsModalBackdrop) {
+    elements.commentsModalBackdrop.hidden = true;
+  }
+  document.body.classList.remove("modal-open");
+}
+
+function renderCommentsModal() {
+  if (!elements.commentsModalBackdrop || !elements.commentsModalList || !elements.commentsModalMeta) {
+    return;
+  }
+
+  if (!activeCommentsPostId) {
+    elements.commentsModalBackdrop.hidden = true;
+    return;
+  }
+
+  const post = findLivePostById(activeCommentsPostId);
+  elements.commentsModalBackdrop.hidden = false;
+  elements.commentsModalMeta.textContent = post
+    ? `${post.title} | ${post.authorName}`
+    : "Loading discussion...";
+  const commentingAllowed = currentUserAccessRights().can_comment && Boolean(post?.allowComments ?? true);
+
+  if (elements.commentsModalStatus) {
+    elements.commentsModalStatus.textContent = !currentUserAccessRights().can_comment
+      ? "Commenting is disabled for this account."
+      : !Boolean(post?.allowComments ?? true)
+        ? "Comments are disabled for this post."
+        : "Comments are posted live for colleagues.";
+  }
+  if (elements.commentsModalInput) {
+    elements.commentsModalInput.disabled = !commentingAllowed;
+  }
+  const submitButton = elements.commentsModalForm?.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = !commentingAllowed;
+  }
+
+  if (liveCommentsLoading) {
+    elements.commentsModalList.innerHTML = '<div class="empty-state">Loading comments...</div>';
+    return;
+  }
+
+  if (liveCommentsError) {
+    elements.commentsModalList.innerHTML = `<div class="empty-state">${escapeHtml(liveCommentsError)}</div>`;
+    return;
+  }
+
+  if (!liveComments.length) {
+    elements.commentsModalList.innerHTML = '<div class="empty-state">No comments yet. Be the first to respond.</div>';
+    return;
+  }
+
+  elements.commentsModalList.innerHTML = liveComments.map((comment) => `
+    <article class="comments-modal-item">
+      <div class="comments-modal-item-head">
+        <strong>${escapeHtml(comment.author?.name || comment.author?.email || "Employee")}</strong>
+        <span>${escapeHtml(formatRelativeTime(comment.created_at))}</span>
+      </div>
+      <div class="comments-modal-item-meta">${escapeHtml([comment.author?.title, comment.author?.location].filter(Boolean).join(" | "))}</div>
+      <p>${escapeHtml(comment.body || "")}</p>
+    </article>
+  `).join("");
+}
+
+async function submitLiveComment() {
+  if (!activeCommentsPostId) {
+    showToast("Open a post before submitting a comment.");
+    return;
+  }
+  const livePost = findLivePostById(activeCommentsPostId);
+  if (!currentUserAccessRights().can_comment) {
+    showToast("Commenting is disabled for this account.");
+    return;
+  }
+  if (livePost && livePost.allowComments === false) {
+    showToast("Comments are disabled for this post.");
+    return;
+  }
+  const body = String(elements.commentsModalInput?.value || "").trim();
+  if (!body) {
+    showToast("Write a comment before posting.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${activeCommentsPostId}/comments/`, {
+      method: "POST",
+      body: { body },
+    });
+    if (elements.commentsModalInput) {
+      elements.commentsModalInput.value = "";
+    }
+    if (payload.comment) {
+      liveComments.push(payload.comment);
+    }
+    if (livePost) {
+      livePost.commentCount += 1;
+    }
+    renderCommentsModal();
+    renderAll();
+    showToast("Comment posted.");
+  } catch (error) {
+    showToast(error.message || "Could not post the comment.");
   }
 }
 
@@ -3907,7 +4115,7 @@ function renderCommunityPostCard(post) {
         >
           ${likeIcon()}${escapeHtml(String(post.reactionCount))}
         </button>
-        <button type="button" class="action-btn" data-action="placeholder-comment">
+        <button type="button" class="action-btn" data-action="open-live-comments" data-id="${post.sourceId}">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
@@ -4671,6 +4879,7 @@ function mapCommunityPost(post) {
     city: metadata.city || "",
     metaLine: metadata.meta_line || "",
     metaLabel: boardConfig.metaLabel,
+    allowComments: Boolean(post.allow_comments),
     commentCount: post.comment_count || 0,
     authorName: author.name || "Acuité employee",
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || author.email || "Employee",
@@ -4700,6 +4909,7 @@ function mapVoicePost(post) {
     topicLabel: topicConfig.label,
     topicKicker: topicConfig.kicker,
     summary: topicConfig.summary,
+    allowComments: Boolean(post.allow_comments),
     commentCount: post.comment_count || 0,
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || author.email || "Employee",
@@ -4741,6 +4951,7 @@ function mapRecognitionPost(post) {
     avatar: gradientKeyFromText(`${authorName}-${topic}-${metadata.recipient_name || ""}`),
     postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
     createdAt: post.created_at || "",
+    allowComments: Boolean(post.allow_comments),
     commentCount: post.comment_count || 0,
     reactionCount: post.reaction_count || 0,
     currentUserHasReacted: Boolean(post.current_user_has_reacted),
@@ -4763,12 +4974,18 @@ function mapBulletinPost(post) {
     category,
     categoryLabel: BULLETIN_CATEGORY_LABELS[category] || capitalize(category),
     templateKey: metadata.bulletin_template || "",
+    metaLines: Array.isArray(metadata.bulletin_meta_lines)
+      ? metadata.bulletin_meta_lines.filter((line) => typeof line === "string" && line.trim())
+      : [],
+    ctaLabel: String(metadata.bulletin_cta_label || "").trim(),
+    ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
     initials: author.initials || initialsFromName(authorName),
     avatar: gradientKeyFromText(`${authorName}-${category}`),
     postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
     createdAt: post.created_at || "",
+    allowComments: Boolean(post.allow_comments),
     commentCount: post.comment_count || 0,
     reactionCount: post.reaction_count || 0,
     currentUserHasReacted: Boolean(post.current_user_has_reacted),
@@ -5706,7 +5923,7 @@ function renderVoicePostCard(post) {
         >
           ${likeIcon()}${escapeHtml(String(post.reactionCount))}
         </button>
-        <button type="button" class="action-btn" data-action="placeholder-comment">
+        <button type="button" class="action-btn" data-action="open-live-comments" data-id="${post.sourceId}">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
@@ -5761,7 +5978,7 @@ function renderRecognitionPostCard(post) {
         >
           ${likeIcon()}${escapeHtml(String(post.reactionCount))}
         </button>
-        <button type="button" class="action-btn" data-action="placeholder-comment">
+        <button type="button" class="action-btn" data-action="open-live-comments" data-id="${post.sourceId}">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
@@ -5800,6 +6017,13 @@ function renderBulletinPostCard(post) {
         <div class="card-title">${escapeHtml(post.title)}</div>
         ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
       </div>
+      ${
+        post.metaLines.length
+          ? `<div class="bulletin-meta-lines">
+              ${post.metaLines.map((line) => `<span class="mini-chip">${escapeHtml(line)}</span>`).join("")}
+            </div>`
+          : ""
+      }
       <div class="card-actions">
         <button
           type="button"
@@ -5809,10 +6033,24 @@ function renderBulletinPostCard(post) {
         >
           ${likeIcon()}${escapeHtml(String(post.reactionCount))}
         </button>
-        <button type="button" class="action-btn" data-action="placeholder-comment">
+        <button type="button" class="action-btn" data-action="open-live-comments" data-id="${post.sourceId}">
           ${commentIcon()}${escapeHtml(String(post.commentCount))}
         </button>
         <div class="spacer"></div>
+        ${
+          post.ctaLabel && post.ctaTarget
+            ? `
+              <button
+                type="button"
+                class="btn-outline"
+                data-action="open-bulletin-cta"
+                data-target="${escapeHtml(post.ctaTarget)}"
+              >
+                ${escapeHtml(post.ctaLabel)}
+              </button>
+            `
+            : ""
+        }
         ${renderDeleteLivePostButton(post, "general")}
       </div>
     </article>

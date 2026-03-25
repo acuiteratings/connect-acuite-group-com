@@ -209,6 +209,74 @@ class User(AbstractBaseUser, PermissionsMixin):
         )
 
 
+class ExitProcess(models.Model):
+    class Stage(models.TextChoices):
+        NOTICE_RECEIVED = "notice_received", "Notice received"
+        KNOWLEDGE_TRANSFER = "knowledge_transfer", "Knowledge transfer"
+        CLEARANCE = "clearance", "Clearance"
+        ALUMNI_CONVERSION = "alumni_conversion", "Alumni conversion"
+        COMPLETED = "completed", "Completed"
+
+    employee = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="exit_process",
+    )
+    initiated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="initiated_exit_processes",
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="updated_exit_processes",
+        null=True,
+        blank=True,
+    )
+    resignation_date = models.DateField()
+    last_working_day = models.DateField()
+    stage = models.CharField(
+        max_length=32,
+        choices=Stage.choices,
+        default=Stage.NOTICE_RECEIVED,
+    )
+    resignation_acknowledged = models.BooleanField(default=False)
+    knowledge_transfer_completed = models.BooleanField(default=False)
+    assets_returned = models.BooleanField(default=False)
+    access_review_completed = models.BooleanField(default=False)
+    alumni_transition_completed = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-updated_at", "-created_at")
+        permissions = [
+            ("manage_exit_process", "Can manage employee exit processes"),
+        ]
+
+    def __str__(self):
+        return f"Exit process for {self.employee.full_name}"
+
+    @property
+    def can_finalize(self):
+        return (
+            self.resignation_acknowledged
+            and self.knowledge_transfer_completed
+            and self.assets_returned
+            and self.access_review_completed
+        )
+
+    def mark_completed(self):
+        self.stage = self.Stage.COMPLETED
+        self.alumni_transition_completed = True
+        self.completed_at = timezone.now()
+
+
 class LoginChallenge(models.Model):
     class Purpose(models.TextChoices):
         LOGIN = "login", "Login"

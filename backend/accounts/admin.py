@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import LoginChallenge, User
+from .models import ExitProcess, LoginChallenge, User
 
 
 @admin.action(description="Require password change on next login")
@@ -161,4 +161,33 @@ class LoginChallengeAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-# Register your models here.
+@admin.register(ExitProcess)
+class ExitProcessAdmin(admin.ModelAdmin):
+    list_display = (
+        "employee",
+        "stage",
+        "resignation_date",
+        "last_working_day",
+        "resignation_acknowledged",
+        "knowledge_transfer_completed",
+        "assets_returned",
+        "access_review_completed",
+        "alumni_transition_completed",
+        "completed_at",
+    )
+    list_filter = (
+        "stage",
+        "resignation_acknowledged",
+        "knowledge_transfer_completed",
+        "assets_returned",
+        "access_review_completed",
+        "alumni_transition_completed",
+    )
+    search_fields = (
+        "employee__email",
+        "employee__display_name",
+        "employee__first_name",
+        "employee__last_name",
+        "notes",
+    )
+    readonly_fields = ("created_at", "updated_at", "completed_at")

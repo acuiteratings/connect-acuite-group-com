@@ -56,6 +56,7 @@
           RM
         </button>
         <div class="profile-menu" id="profile-menu" hidden>
+          <button type="button" id="profile-menu-admin-link" data-action="open-admin-console" hidden>Admin Console</button>
           <button type="button" data-action="open-profile-builder">My Profile</button>
           <button type="button" data-action="logout">Logout</button>
         </div>
@@ -107,13 +108,6 @@
         </svg>
         Business Desk
       </button>
-      <button type="button" class="tab" data-switch-tab="admin" id="admin-sidebar-tab" hidden>
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 20.055a12.083 12.083 0 01-6.16-9.477L12 14zm0 0v6"></path>
-        </svg>
-        Admin
-      </button>
-
       <div class="sep"></div>
 
       <button type="button" class="tab" data-switch-tab="directory">
@@ -521,7 +515,7 @@
                 <h2>Company notices and internal announcements</h2>
                 <div class="mini-item-meta" id="bulletin-results-meta">Loading the company bulletin board...</div>
               </div>
-              <button type="button" class="btn-ghost" data-switch-tab="admin" id="bulletin-admin-open-btn" hidden>Open Admin Studio</button>
+              <button type="button" class="btn-ghost" data-action="open-admin-console" id="bulletin-admin-open-btn" hidden>Open Admin Console</button>
             </div>
             <div id="bulletin-feed"></div>
           </section>
@@ -535,209 +529,6 @@
                 <li>Cybersecurity warnings and urgent internal notices</li>
                 <li>Picnics, office parties, offsites and key workplace updates</li>
               </ul>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <section class="panel" id="panel-admin" hidden>
-        <div class="section-head">
-          <div>
-            <h2>Admin Studio</h2>
-            <p>Create accounts, edit access rights and publish company bulletins from one place.</p>
-          </div>
-        </div>
-
-        <div class="two-column-layout admin-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Accounts</p>
-                <h2>Create and edit employee access</h2>
-                <div class="mini-item-meta" id="admin-user-results-meta">Admin account tools are loading...</div>
-              </div>
-            </div>
-
-            <div class="admin-account-grid">
-              <form class="story-form compact-form" id="admin-create-user-form">
-                <p class="widget-kicker">Create account</p>
-                <h3>Add a new employee</h3>
-                <div class="story-form-grid split">
-                  <label class="field">
-                    <span>Employee name</span>
-                    <input type="text" name="display_name" maxlength="120" placeholder="Full name" required>
-                  </label>
-                  <label class="field">
-                    <span>Email</span>
-                    <input type="email" name="email" maxlength="160" placeholder="employee@acuite.in" required>
-                  </label>
-                </div>
-                <div class="story-form-grid split">
-                  <label class="field">
-                    <span>Title</span>
-                    <input type="text" name="title" maxlength="150" placeholder="Associate / Analyst / Manager">
-                  </label>
-                  <label class="field">
-                    <span>Department</span>
-                    <input type="text" name="department" maxlength="150" placeholder="Technology / Compliance / Ratings">
-                  </label>
-                </div>
-                <div class="story-form-grid split">
-                  <label class="field">
-                    <span>Location</span>
-                    <input type="text" name="location" maxlength="120" placeholder="Mumbai / Kolkata / Ahmedabad">
-                  </label>
-                  <label class="field">
-                    <span>Employee code</span>
-                    <input type="text" name="employee_code" maxlength="32" placeholder="Optional">
-                  </label>
-                </div>
-                <div class="story-form-grid split">
-                  <label class="field">
-                    <span>Access level</span>
-                    <select name="access_level">
-                      <option value="employee">Employee</option>
-                      <option value="moderator">Moderator</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </label>
-                  <label class="checkbox-field">
-                    <input type="checkbox" name="can_post_in_connect" checked>
-                    <span>Allow posting in Connect</span>
-                  </label>
-                </div>
-                <div class="form-actions">
-                  <p>New accounts start with the first-time password and must change it after login.</p>
-                  <button type="submit" class="btn-warm">Create account</button>
-                </div>
-              </form>
-
-              <div class="section-card nested-card admin-editor-shell">
-                <div class="section-card-head">
-                  <div>
-                    <p class="widget-kicker">Edit account</p>
-                    <h3>Search and update an employee</h3>
-                  </div>
-                </div>
-                <label class="field admin-search-field">
-                  <span>Find employee</span>
-                  <input type="text" id="admin-user-search" placeholder="Search by name, email, title, code or department">
-                </label>
-                <div class="admin-user-list" id="admin-user-list"></div>
-                <form class="story-form compact-form" id="admin-edit-user-form">
-                  <input type="hidden" name="user_id" id="admin-edit-user-id">
-                  <div class="story-form-grid split">
-                    <label class="field">
-                      <span>Employee name</span>
-                      <input type="text" name="display_name" id="admin-edit-display-name" maxlength="120" placeholder="Select an employee first" disabled>
-                    </label>
-                    <label class="field">
-                      <span>Email</span>
-                      <input type="email" name="email" id="admin-edit-email" readonly disabled>
-                    </label>
-                  </div>
-                  <div class="story-form-grid split">
-                    <label class="field">
-                      <span>Title</span>
-                      <input type="text" name="title" id="admin-edit-title" maxlength="150" disabled>
-                    </label>
-                    <label class="field">
-                      <span>Department</span>
-                      <input type="text" name="department" id="admin-edit-department" maxlength="150" disabled>
-                    </label>
-                  </div>
-                  <div class="story-form-grid split">
-                    <label class="field">
-                      <span>Location</span>
-                      <input type="text" name="location" id="admin-edit-location" maxlength="120" disabled>
-                    </label>
-                    <label class="field">
-                      <span>Employee code</span>
-                      <input type="text" name="employee_code" id="admin-edit-code" maxlength="32" disabled>
-                    </label>
-                  </div>
-                  <div class="story-form-grid split">
-                    <label class="field">
-                      <span>Access level</span>
-                      <select name="access_level" id="admin-edit-access-level" disabled>
-                        <option value="employee">Employee</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </label>
-                    <label class="field">
-                      <span>Employment status</span>
-                      <select name="employment_status" id="admin-edit-employment-status" disabled>
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="alumni">Alumni</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="story-form-grid split">
-                    <label class="checkbox-field">
-                      <input type="checkbox" name="can_post_in_connect" id="admin-edit-can-post" disabled>
-                      <span>Allow posting in Connect</span>
-                    </label>
-                    <label class="checkbox-field">
-                      <input type="checkbox" name="is_active" id="admin-edit-is-active" disabled>
-                      <span>Account can log in</span>
-                    </label>
-                  </div>
-                  <div class="form-actions">
-                    <p id="admin-edit-status">Select an employee to edit their account.</p>
-                    <button type="submit" class="btn-warm" id="admin-edit-submit" disabled>Save changes</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </section>
-
-          <aside class="stack-side">
-            <form class="story-form" id="admin-bulletin-form">
-              <p class="widget-kicker">Bulletin templates</p>
-              <h3>Post a company announcement</h3>
-              <div class="admin-template-grid" id="admin-bulletin-templates"></div>
-              <div class="story-form-grid split">
-                <label class="field">
-                  <span>Headline</span>
-                  <input type="text" name="title" maxlength="160" placeholder="Announcement headline" required>
-                </label>
-                <label class="field">
-                  <span>Category</span>
-                  <select name="category">
-                    <option value="announcements">Announcements</option>
-                    <option value="hr">HR</option>
-                    <option value="events">Events</option>
-                    <option value="security">Security</option>
-                  </select>
-                </label>
-              </div>
-              <label class="field">
-                <span>Message</span>
-                <textarea name="body" rows="8" maxlength="1200" placeholder="Use the template or write a custom company post." required></textarea>
-              </label>
-              <div class="story-form-grid split">
-                <label class="checkbox-field">
-                  <input type="checkbox" name="allow_comments" checked>
-                  <span>Allow comments</span>
-                </label>
-                <label class="checkbox-field">
-                  <input type="checkbox" name="pinned">
-                  <span>Pin this post</span>
-                </label>
-              </div>
-              <div class="form-actions">
-                <p>Posts from here appear on the Bulletin Board on behalf of the company.</p>
-                <button type="submit" class="btn-warm">Publish bulletin post</button>
-              </div>
-            </form>
-
-            <div class="widget-card">
-              <p class="widget-kicker">Template library</p>
-              <h3>Ready for more announcement types</h3>
-              <p>This starter set covers town halls, cybersecurity alerts, picnics, office parties and offsites. You can add more templates later without rebuilding the page structure.</p>
             </div>
           </aside>
         </div>
@@ -1051,6 +842,32 @@
   </div>
 
   <div class="toast" id="toast" aria-live="polite"></div>
+
+  <div class="profile-modal-backdrop" id="comments-modal-backdrop" hidden>
+    <div class="profile-modal comments-modal" role="dialog" aria-modal="true" aria-labelledby="comments-modal-title">
+      <div class="profile-modal-head">
+        <div>
+          <p class="widget-kicker">Discussion</p>
+          <h2 id="comments-modal-title">Comments</h2>
+        </div>
+        <button type="button" class="profile-modal-close" data-action="close-live-comments" aria-label="Close comments">
+          ×
+        </button>
+      </div>
+      <div class="comments-modal-meta" id="comments-modal-meta">Loading comments...</div>
+      <div class="comments-modal-list" id="comments-modal-list"></div>
+      <form id="comments-modal-form" class="comments-modal-form">
+        <label class="field">
+          <span>Add a comment</span>
+          <textarea id="comments-modal-input" rows="3" maxlength="500" placeholder="Write a comment for colleagues to see."></textarea>
+        </label>
+        <div class="form-actions profile-builder-actions">
+          <p id="comments-modal-status">Comments on bulletin and live posts will appear here.</p>
+          <button type="submit" class="btn-warm">Post comment</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script src="{% static 'js/auth.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
