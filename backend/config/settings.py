@@ -97,7 +97,6 @@ if trusted_sso_karma_secret and trusted_sso_karma_redirect_uris:
         "redirect_uris": trusted_sso_karma_redirect_uris,
         "name": "Acuité Karma",
     }
-
 if SENTRY_ENABLED:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -116,6 +115,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "accounts",
+    "battleship",
     "directory",
     "feed",
     "learning",
@@ -212,6 +212,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Asia/Kolkata")
+BATTLESHIP_TIMEZONE = os.getenv("BATTLESHIP_TIMEZONE", TIME_ZONE)
+BATTLESHIP_INVITE_TTL_MINUTES = int(os.getenv("BATTLESHIP_INVITE_TTL_MINUTES", "120"))
+BATTLESHIP_INACTIVITY_TIMEOUT_MINUTES = int(
+    os.getenv("BATTLESHIP_INACTIVITY_TIMEOUT_MINUTES", "30")
+)
+BATTLESHIP_POLL_INTERVAL_SECONDS = int(os.getenv("BATTLESHIP_POLL_INTERVAL_SECONDS", "4"))
+BATTLESHIP_BLOCK_WINDOWS = []
+for raw_window in env_list(
+    "BATTLESHIP_BLOCK_WINDOWS",
+    "10:00-13:00,14:00-18:30",
+):
+    if "-" not in raw_window:
+        continue
+    start, end = raw_window.split("-", 1)
+    if start.strip() and end.strip():
+        BATTLESHIP_BLOCK_WINDOWS.append((start.strip(), end.strip()))
+if not BATTLESHIP_BLOCK_WINDOWS:
+    BATTLESHIP_BLOCK_WINDOWS = [("10:00", "13:00"), ("14:00", "18:30")]
 
 USE_I18N = True
 

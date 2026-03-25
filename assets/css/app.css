@@ -3744,3 +3744,416 @@ select {
     font-size: 32px;
   }
 }
+
+.battleship-head-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.battleship-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.battleship-chip.success {
+  background: rgba(46, 173, 43, 0.12);
+  color: var(--green);
+}
+
+.battleship-chip.danger {
+  background: rgba(123, 36, 28, 0.12);
+  color: var(--maroon);
+}
+
+.battleship-layout {
+  align-items: start;
+}
+
+.battleship-stage-card,
+.battleship-card,
+.battleship-board-card {
+  background: linear-gradient(180deg, rgba(14, 24, 43, 0.98), rgba(19, 30, 52, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 40px rgba(10, 19, 34, 0.18);
+  color: #f3f5f8;
+}
+
+[data-theme="dark"] .battleship-stage-card,
+[data-theme="dark"] .battleship-card,
+[data-theme="dark"] .battleship-board-card {
+  background: linear-gradient(180deg, rgba(13, 18, 28, 0.98), rgba(18, 24, 37, 0.98));
+}
+
+.battleship-stage {
+  display: grid;
+  gap: 20px;
+}
+
+.battleship-stage-card .section-card-head h2,
+.battleship-stage-card .section-card-head .widget-kicker {
+  color: #fff;
+}
+
+.battleship-stage-card .section-card-head .mini-item-meta,
+.battleship-stage-card .section-card-head p {
+  color: rgba(243, 245, 248, 0.72);
+}
+
+.battleship-alert {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.battleship-alert.error {
+  background: rgba(123, 36, 28, 0.14);
+  border-color: rgba(123, 36, 28, 0.2);
+  color: #ffcabd;
+}
+
+.battleship-alert.info {
+  background: rgba(247, 148, 29, 0.14);
+  border-color: rgba(247, 148, 29, 0.22);
+  color: #ffd9ae;
+}
+
+.battleship-alert.success {
+  background: rgba(46, 173, 43, 0.14);
+  border-color: rgba(46, 173, 43, 0.22);
+  color: #d7f9d6;
+}
+
+.battleship-lobby,
+.battleship-placement,
+.battleship-battle {
+  display: grid;
+  gap: 20px;
+}
+
+.battleship-lobby-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 20px;
+}
+
+.battleship-card,
+.battleship-board-card {
+  border-radius: 24px;
+  padding: 24px;
+}
+
+.battleship-card h3,
+.battleship-board-card h3 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.08;
+}
+
+.battleship-card p,
+.battleship-board-card p,
+.battleship-card .muted-copy,
+.battleship-board-card .muted-copy,
+.battleship-inline-note {
+  color: rgba(243, 245, 248, 0.78);
+}
+
+.battleship-card-head,
+.battleship-board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.battleship-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.battleship-search-form input,
+.battleship-search-form button,
+.battleship-cell,
+.battleship-board-card button,
+.battleship-card button {
+  font: inherit;
+}
+
+.battleship-search-form input {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.battleship-search-form input::placeholder {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.battleship-candidate-list,
+.battleship-history-list,
+.battleship-invite-mini-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.battleship-candidate,
+.battleship-mini-match,
+.battleship-history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.battleship-candidate h4,
+.battleship-mini-match strong {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.battleship-invite-list-block + .battleship-invite-list-block {
+  margin-top: 18px;
+}
+
+.battleship-invite-list-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.battleship-slot-notice,
+.battleship-match-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.battleship-match-banner.active {
+  background: linear-gradient(135deg, rgba(247, 148, 29, 0.22), rgba(123, 36, 28, 0.14));
+}
+
+.battleship-match-banner.paused {
+  background: linear-gradient(135deg, rgba(123, 36, 28, 0.18), rgba(255, 199, 44, 0.12));
+}
+
+.battleship-match-banner.completed {
+  background: linear-gradient(135deg, rgba(46, 173, 43, 0.16), rgba(255, 199, 44, 0.12));
+}
+
+.battleship-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.battleship-meta-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.battleship-meta-list.compact {
+  margin: 14px 0 0;
+}
+
+.battleship-meta-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.battleship-meta-list span {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.battleship-meta-list strong {
+  color: #fff;
+  text-align: right;
+}
+
+.battleship-ship-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.battleship-ship-pill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.battleship-ship-pill.active {
+  border-color: rgba(247, 148, 29, 0.58);
+  background: rgba(247, 148, 29, 0.16);
+  color: #fff;
+}
+
+.battleship-ship-pill.placed {
+  box-shadow: inset 0 0 0 1px rgba(46, 173, 43, 0.28);
+}
+
+.battleship-board-shell {
+  overflow-x: auto;
+}
+
+.battleship-board-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.battleship-grid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(26px, 1fr));
+  gap: 6px;
+  min-width: 430px;
+}
+
+.battleship-grid-axis {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.battleship-grid-axis.corner {
+  background: transparent;
+}
+
+.battleship-cell {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+button.battleship-cell:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(247, 148, 29, 0.45);
+}
+
+.battleship-cell.ship {
+  background: rgba(247, 148, 29, 0.2);
+  border-color: rgba(247, 148, 29, 0.42);
+}
+
+.battleship-cell.ship.selected {
+  box-shadow: inset 0 0 0 2px rgba(255, 199, 44, 0.55);
+}
+
+.battleship-cell.targetable {
+  cursor: crosshair;
+}
+
+.battleship-cell.miss {
+  background: rgba(147, 155, 168, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.battleship-cell.hit {
+  background: rgba(247, 148, 29, 0.28);
+  border-color: rgba(247, 148, 29, 0.58);
+  color: #fff;
+}
+
+.battleship-cell.sunk {
+  background: rgba(123, 36, 28, 0.38);
+  border-color: rgba(255, 199, 44, 0.42);
+  color: #fff;
+}
+
+.battleship-history-summary {
+  font-weight: 600;
+  color: #fff;
+}
+
+.battleship-history-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.battleship-rules-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.battleship-rules-list li {
+  line-height: 1.55;
+}
+
+@media (max-width: 1320px) {
+  .battleship-lobby-grid,
+  .battleship-board-duo {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .battleship-head-status,
+  .battleship-card-head,
+  .battleship-board-head,
+  .battleship-slot-notice,
+  .battleship-match-banner,
+  .battleship-candidate,
+  .battleship-mini-match,
+  .battleship-history-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .battleship-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .battleship-grid {
+    min-width: 360px;
+  }
+}

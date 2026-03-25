@@ -78,6 +78,12 @@
         </svg>
         Community
       </button>
+      <button type="button" class="tab" data-switch-tab="battleship">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 15h18M5 19h14M7 11h10M9 7h6M6 15l2-8h8l2 8"></path>
+        </svg>
+        Battleship
+      </button>
       <button type="button" class="tab" data-switch-tab="clubs-learning">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -229,6 +235,44 @@
 
             <div class="widget-card" id="community-guide-card"></div>
             <div class="widget-card" id="community-city-card"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-battleship">
+        <div class="section-head">
+          <div>
+            <h2>Battleship</h2>
+            <p>A restrained, turn-based 2-player game for off-peak hours inside Connect.</p>
+          </div>
+          <div class="battleship-head-status" id="battleship-head-status" aria-live="polite"></div>
+        </div>
+
+        <div class="dashboard-grid battleship-summary-grid">
+          <article class="mini-panel" id="battleship-office-summary"></article>
+          <article class="mini-panel" id="battleship-slot-summary"></article>
+          <article class="mini-panel" id="battleship-player-summary"></article>
+        </div>
+
+        <div class="two-column-layout battleship-layout">
+          <section class="section-card battleship-stage-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Turn-based match</p>
+                <h2 id="battleship-stage-title">Lobby</h2>
+                <div class="mini-item-meta" id="battleship-stage-meta">
+                  Invite a colleague, place your fleet, and play only outside office peak hours.
+                </div>
+              </div>
+            </div>
+            <div id="battleship-alert" class="battleship-alert" hidden></div>
+            <div id="battleship-stage" class="battleship-stage"></div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card" id="battleship-sidebar-card"></div>
+            <div class="widget-card" id="battleship-history-card"></div>
+            <div class="widget-card" id="battleship-rules-card"></div>
           </aside>
         </div>
       </section>
@@ -877,5 +921,6 @@
 
   <script src="{% static 'js/auth.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="{% static 'js/battleship.js' %}" defer></script>
 </body>
 </html>
