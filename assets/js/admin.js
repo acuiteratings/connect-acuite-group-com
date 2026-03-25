@@ -49,6 +49,11 @@
       anniversaryForm: document.getElementById("admin-anniversary-form"),
       internalJobForm: document.getElementById("admin-internal-job-form"),
       vacancyForm: document.getElementById("admin-vacancy-form"),
+      awardForm: document.getElementById("admin-award-form"),
+      contestForm: document.getElementById("admin-contest-form"),
+      sportsForm: document.getElementById("admin-sports-form"),
+      quizForm: document.getElementById("admin-quiz-form"),
+      debateForm: document.getElementById("admin-debate-form"),
     };
   }
 
@@ -152,6 +157,36 @@
     if (event.target === elements.vacancyForm) {
       event.preventDefault();
       void submitVacancy();
+      return;
+    }
+
+    if (event.target === elements.awardForm) {
+      event.preventDefault();
+      void submitAwardAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.contestForm) {
+      event.preventDefault();
+      void submitContestAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.sportsForm) {
+      event.preventDefault();
+      void submitSportsAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.quizForm) {
+      event.preventDefault();
+      void submitQuizAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.debateForm) {
+      event.preventDefault();
+      void submitDebateAnnouncement();
     }
   }
 
@@ -446,6 +481,109 @@
         bulletin_cta_target: normalizeActionTarget(ctaTarget),
       },
       successMessage: "Vacancy post published to the bulletin board.",
+    });
+  }
+
+  async function submitAwardAnnouncement() {
+    const formData = new FormData(elements.awardForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const subjectName = String(formData.get("subject_name") || "").trim();
+    const eventDate = String(formData.get("event_date") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !subjectName || !note) {
+      showToast("Award title, awardee, and message are required.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.awardForm,
+      title: `Award | ${headline}`,
+      body: `${subjectName} has been announced for ${headline}.\n\n${note}`,
+      category: "celebration",
+      templateKey: "award",
+      metadata: {
+        bulletin_meta_lines: [subjectName, eventDate ? `Award date: ${formatDateLabel(eventDate)}` : ""].filter(Boolean),
+      },
+      successMessage: "Award announcement published to the bulletin board.",
+    });
+  }
+
+  async function submitContestAnnouncement() {
+    await submitActionAnnouncement({
+      form: elements.contestForm,
+      prefix: "Contest",
+      category: "engagement",
+      templateKey: "contest",
+      defaultActionLabel: "Join contest",
+      successMessage: "Contest announcement published to the bulletin board.",
+    });
+  }
+
+  async function submitSportsAnnouncement() {
+    await submitActionAnnouncement({
+      form: elements.sportsForm,
+      prefix: "Sports event",
+      category: "engagement",
+      templateKey: "sports_event",
+      defaultActionLabel: "Book a slot",
+      successMessage: "Sports event published to the bulletin board.",
+    });
+  }
+
+  async function submitQuizAnnouncement() {
+    await submitActionAnnouncement({
+      form: elements.quizForm,
+      prefix: "Quiz",
+      category: "engagement",
+      templateKey: "quiz",
+      defaultActionLabel: "Register now",
+      successMessage: "Quiz announcement published to the bulletin board.",
+    });
+  }
+
+  async function submitDebateAnnouncement() {
+    await submitActionAnnouncement({
+      form: elements.debateForm,
+      prefix: "Debate",
+      category: "engagement",
+      templateKey: "debate",
+      defaultActionLabel: "Join debate",
+      successMessage: "Debate announcement published to the bulletin board.",
+    });
+  }
+
+  async function submitActionAnnouncement({
+    form,
+    prefix,
+    category,
+    templateKey,
+    defaultActionLabel,
+    successMessage,
+  }) {
+    const formData = new FormData(form);
+    const headline = String(formData.get("headline") || "").trim();
+    const hostLabel = String(formData.get("host_label") || formData.get("location") || "").trim();
+    const eventDate = String(formData.get("event_date") || "").trim();
+    const ctaTarget = String(formData.get("cta_target") || "").trim();
+    const ctaLabel = String(formData.get("cta_label") || defaultActionLabel).trim() || defaultActionLabel;
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !ctaTarget || !note) {
+      showToast("Headline, action target, and message are required.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form,
+      title: `${prefix} | ${headline}`,
+      body: note,
+      category,
+      templateKey,
+      metadata: {
+        bulletin_meta_lines: [hostLabel, eventDate ? `Date: ${formatDateLabel(eventDate)}` : ""].filter(Boolean),
+        bulletin_cta_label: ctaLabel,
+        bulletin_cta_target: normalizeActionTarget(ctaTarget),
+      },
+      successMessage,
     });
   }
 

@@ -350,6 +350,7 @@ const FEATURED_HOME_ANNOUNCEMENT = {
     end: "2026-03-27T17:30:00+05:30",
   },
 };
+const CONNECT_BOOT_USER_KEY = "acuite-connect-boot-user";
 
 const appData = {
   currentUser: {
@@ -1249,26 +1250,70 @@ function markAppReady() {
   document.body.classList.remove("connect-app-loading");
 }
 
-async function init() {
-  const authenticatedUser = window.AcuiteConnectAuth && window.AcuiteConnectAuth.requireAuth
-    ? await window.AcuiteConnectAuth.requireAuth({ loginPath: "/login.html" })
-    : null;
-  if (window.AcuiteConnectAuth && !authenticatedUser) {
+function mergeAuthenticatedUser(user) {
+  if (!user) {
     return;
   }
-  if (authenticatedUser) {
-    appData.currentUser = {
-      ...appData.currentUser,
-      ...authenticatedUser,
-      role: authenticatedUser.title || appData.currentUser.role,
-      city: authenticatedUser.location || appData.currentUser.city,
-      is_staff: Boolean(authenticatedUser.is_staff),
-      accessLevel: authenticatedUser.access_level || appData.currentUser.accessLevel,
-      accessRights: {
-        ...appData.currentUser.accessRights,
-        ...(authenticatedUser.access_rights || {}),
-      },
-    };
+  appData.currentUser = {
+    ...appData.currentUser,
+    ...user,
+    role: user.title || appData.currentUser.role,
+    city: user.location || appData.currentUser.city,
+    is_staff: Boolean(user.is_staff),
+    accessLevel: user.access_level || appData.currentUser.accessLevel,
+    accessRights: {
+      ...appData.currentUser.accessRights,
+      ...(user.access_rights || {}),
+    },
+  };
+  if (!appData.currentUser.initials && appData.currentUser.name) {
+    appData.currentUser.initials = initialsFromName(appData.currentUser.name);
+  }
+}
+
+function consumeBootUser() {
+  try {
+    const raw = window.sessionStorage.getItem(CONNECT_BOOT_USER_KEY);
+    if (!raw) {
+      return null;
+    }
+    window.sessionStorage.removeItem(CONNECT_BOOT_USER_KEY);
+    const payload = JSON.parse(raw);
+    if (!payload || !payload.user || !payload.created_at) {
+      return null;
+    }
+    if (Date.now() - Number(payload.created_at) > 120000) {
+      return null;
+    }
+    return payload.user;
+  } catch (error) {
+    return null;
+  }
+}
+
+function renderShell() {
+  renderPanels();
+  renderProfile();
+  renderProfileBuilder();
+  renderCommentsModal();
+  syncComposerAccess();
+  renderHomeAnnouncement();
+  renderTodayPanel();
+  renderTasksPanel();
+  renderPulsePanel();
+  renderHomeTools();
+  renderHomeFeed();
+  renderBirthdays();
+  renderAnniversaries();
+  renderUpcoming();
+  renderPoll();
+  renderSavedResources();
+}
+
+async function init() {
+  const bootUser = consumeBootUser();
+  if (bootUser) {
+    mergeAuthenticatedUser(bootUser);
   }
 
   elements = {
@@ -1340,28 +1385,39 @@ async function init() {
     profileClubs: document.getElementById("profile-clubs"),
     profilePitches: document.getElementById("profile-pitches"),
   };
-
   bindEvents();
-  renderPanels();
-  renderProfile();
-  renderProfileBuilder();
-  renderCommentsModal();
-  syncComposerAccess();
+  renderShell();
+  if (bootUser) {
+    markAppReady();
+  }
+
+  const authenticatedUser = window.AcuiteConnectAuth && window.AcuiteConnectAuth.requireAuth
+    ? await window.AcuiteConnectAuth.requireAuth({ loginPath: "/login.html" })
+    : null;
+  if (window.AcuiteConnectAuth && !authenticatedUser) {
+    return;
+  }
+  mergeAuthenticatedUser(authenticatedUser);
+  renderShell();
   markAppReady();
 
   try {
-    const bootTasks = [
+    const criticalTasks = [
       loadCurrentProfile(),
-      loadDirectoryData(),
-      loadCommunityPosts(),
       loadVoiceData(),
       loadRecognitionData(),
-      loadStoreData(),
-      loadLearningData(),
       loadBulletinPosts(),
     ];
-    await Promise.allSettled(bootTasks);
+    await Promise.allSettled(criticalTasks);
     renderAll();
+    void Promise.allSettled([
+      loadDirectoryData(),
+      loadCommunityPosts(),
+      loadStoreData(),
+      loadLearningData(),
+    ]).then(() => {
+      renderAll();
+    });
   } catch (error) {
     console.error("Could not complete the initial Connect render.", error);
     renderAll();

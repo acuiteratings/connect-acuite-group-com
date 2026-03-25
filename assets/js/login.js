@@ -3,6 +3,7 @@ const authFlow = {
   email: "",
   authPolicy: null,
 };
+const CONNECT_BOOT_USER_KEY = "acuite-connect-boot-user";
 
 document.addEventListener("DOMContentLoaded", () => {
   void initLoginPage();
@@ -11,6 +12,23 @@ document.addEventListener("DOMContentLoaded", () => {
 function getDefaultPostLoginTarget(user) {
   const accessRights = user && user.access_rights ? user.access_rights : {};
   return accessRights.can_administer ? "/admin-console.html" : "/";
+}
+
+function primeConnectBootUser(user) {
+  if (!user || getDefaultPostLoginTarget(user) !== "/") {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(
+      CONNECT_BOOT_USER_KEY,
+      JSON.stringify({
+        created_at: Date.now(),
+        user,
+      })
+    );
+  } catch (error) {
+    // Ignore sessionStorage issues and continue with the normal redirect.
+  }
 }
 
 function getPostLoginTarget(user) {
@@ -36,6 +54,7 @@ async function initLoginPage() {
 
   const session = await auth.fetchCurrentSession({ forceRefresh: true });
   if (session.authenticated) {
+    primeConnectBootUser(session.user);
     window.location.href = getPostLoginTarget(session.user);
     return;
   }
@@ -186,6 +205,7 @@ async function handlePasswordForm(event) {
     }
 
     showStatus("Login successful. Redirecting to Acuité Connect...", "success");
+    primeConnectBootUser(response.user);
     window.setTimeout(() => {
       window.location.href = getPostLoginTarget(response.user);
     }, 350);
@@ -252,6 +272,7 @@ async function handlePasswordChangeForm(event) {
 
     showStatus("Password updated. Redirecting to Acuité Connect...", "success");
     updateStep("Access granted", "Your password has been updated and your session is now active.");
+    primeConnectBootUser(window.AcuiteConnectAuth.getAuthenticatedUser());
     window.setTimeout(() => {
       window.location.href = getPostLoginTarget(window.AcuiteConnectAuth.getAuthenticatedUser());
     }, 450);

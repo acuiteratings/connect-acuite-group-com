@@ -336,6 +336,216 @@
         </div>
       </form>
     </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">07</span>
+          <h2>Announce Award</h2>
+          <p>Publish an award announcement so employees can celebrate, like and comment.</p>
+        </div>
+      </div>
+      <form id="admin-award-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Award title</span>
+            <input type="text" name="headline" maxlength="140" placeholder="Chairman's Award / Star Performer" required>
+          </label>
+          <label class="admin-field">
+            <span>Awardee / team</span>
+            <input type="text" name="subject_name" maxlength="160" placeholder="Person or team being recognized" required>
+          </label>
+          <label class="admin-field">
+            <span>Award date</span>
+            <input type="date" name="event_date">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Share why this award matters and why the employee or team is being recognized." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This will publish to the bulletin board as a company celebration post with likes and comments enabled.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish award announcement</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">08</span>
+          <h2>Announce Contest</h2>
+          <p>Publish a contest with an action button so employees can register or show interest.</p>
+        </div>
+      </div>
+      <form id="admin-contest-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Contest title</span>
+            <input type="text" name="headline" maxlength="140" placeholder="Idea Sprint / Photography Contest" required>
+          </label>
+          <label class="admin-field">
+            <span>Host / team</span>
+            <input type="text" name="host_label" maxlength="140" placeholder="HR / CSR / Branding">
+          </label>
+          <label class="admin-field">
+            <span>Contest date</span>
+            <input type="date" name="event_date">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="forms link or email" required>
+          </label>
+          <label class="admin-field">
+            <span>Response button</span>
+            <input type="text" name="cta_label" maxlength="60" placeholder="Join contest" value="Join contest">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Explain the contest format, who should participate, and what is at stake." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>The bulletin card will carry an action button while keeping likes and comments active.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish contest announcement</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">09</span>
+          <h2>Announce Sports Event</h2>
+          <p>Publish a sports event with an action button so employees can book a slot or block the time.</p>
+        </div>
+      </div>
+      <form id="admin-sports-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Event title</span>
+            <input type="text" name="headline" maxlength="140" placeholder="Cricket League / Badminton Ladder" required>
+          </label>
+          <label class="admin-field">
+            <span>Venue / city</span>
+            <input type="text" name="location" maxlength="140" placeholder="Mumbai / Company ground / Indoor arena">
+          </label>
+          <label class="admin-field">
+            <span>Event date</span>
+            <input type="date" name="event_date">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="registration form or email" required>
+          </label>
+          <label class="admin-field">
+            <span>Response button</span>
+            <input type="text" name="cta_label" maxlength="60" placeholder="Book a slot" value="Book a slot">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Share the format, who can join, and anything employees need to know before signing up." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>The bulletin card will carry an action button while keeping likes and comments active.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish sports event</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">10</span>
+          <h2>Announce Quiz</h2>
+          <p>Publish a quiz announcement with a join action so employees can register quickly.</p>
+        </div>
+      </div>
+      <form id="admin-quiz-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Quiz title</span>
+            <input type="text" name="headline" maxlength="140" placeholder="Market Pulse Quiz / Finance Friday" required>
+          </label>
+          <label class="admin-field">
+            <span>Theme / host</span>
+            <input type="text" name="host_label" maxlength="140" placeholder="Knowledge team / CSR / HR">
+          </label>
+          <label class="admin-field">
+            <span>Quiz date</span>
+            <input type="date" name="event_date">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="forms link or email" required>
+          </label>
+          <label class="admin-field">
+            <span>Response button</span>
+            <input type="text" name="cta_label" maxlength="60" placeholder="Register now" value="Register now">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Share the quiz format, participation rules, and why people should join." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>The bulletin card will carry an action button while keeping likes and comments active.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish quiz announcement</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">11</span>
+          <h2>Announce Debate</h2>
+          <p>Publish a debate session so employees can register, like and discuss around the post.</p>
+        </div>
+      </div>
+      <form id="admin-debate-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Debate title</span>
+            <input type="text" name="headline" maxlength="140" placeholder="Should ratings explain more? / Office vs hybrid" required>
+          </label>
+          <label class="admin-field">
+            <span>Host / team</span>
+            <input type="text" name="host_label" maxlength="140" placeholder="Learning team / HR / CEO office">
+          </label>
+          <label class="admin-field">
+            <span>Debate date</span>
+            <input type="date" name="event_date">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="forms link or email" required>
+          </label>
+          <label class="admin-field">
+            <span>Response button</span>
+            <input type="text" name="cta_label" maxlength="60" placeholder="Join debate" value="Join debate">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Explain the motion, the format, and who should participate." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>The bulletin card will carry an action button while keeping likes and comments active.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish debate announcement</button>
+        </div>
+      </form>
+    </section>
   </main>
 
   <footer class="admin-console-footer">
