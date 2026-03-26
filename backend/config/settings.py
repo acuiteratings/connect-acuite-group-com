@@ -89,14 +89,21 @@ AUTH_DEBUG_OTP_PREVIEW = (
 )
 TRUSTED_SSO_CODE_TTL_SECONDS = int(os.getenv("TRUSTED_SSO_CODE_TTL_SECONDS", "120"))
 TRUSTED_SSO_CLIENTS = {}
-trusted_sso_karma_secret = os.getenv("TRUSTED_SSO_KARMA_CLIENT_SECRET", "").strip()
-trusted_sso_karma_redirect_uris = env_list("TRUSTED_SSO_KARMA_REDIRECT_URIS", "")
-if trusted_sso_karma_secret and trusted_sso_karma_redirect_uris:
-    TRUSTED_SSO_CLIENTS["karma"] = {
-        "client_secret": trusted_sso_karma_secret,
-        "redirect_uris": trusted_sso_karma_redirect_uris,
-        "name": "Acuité Karma",
-    }
+
+
+def register_trusted_sso_client(client_id, env_prefix, default_name):
+    client_secret = os.getenv(f"TRUSTED_SSO_{env_prefix}_CLIENT_SECRET", "").strip()
+    redirect_uris = env_list(f"TRUSTED_SSO_{env_prefix}_REDIRECT_URIS", "")
+    if client_secret and redirect_uris:
+        TRUSTED_SSO_CLIENTS[client_id] = {
+            "client_secret": client_secret,
+            "redirect_uris": redirect_uris,
+            "name": default_name,
+        }
+
+
+register_trusted_sso_client("karma", "KARMA", "Acuité Karma")
+register_trusted_sso_client("bhaskara", "BHASKARA", "Bhaskara")
 if SENTRY_ENABLED:
     sentry_sdk.init(
         dsn=SENTRY_DSN,

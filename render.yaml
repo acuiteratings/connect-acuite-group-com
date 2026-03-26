@@ -82,3 +82,7 @@ services:
         sync: false
       - key: TRUSTED_SSO_KARMA_REDIRECT_URIS
         value: https://karma.acuite-group.com/accounts/connect/callback/
+      - key: TRUSTED_SSO_BHASKARA_CLIENT_SECRET
+        sync: false
+      - key: TRUSTED_SSO_BHASKARA_REDIRECT_URIS
+        value: https://bhaskara.acuite-group.com/accounts/connect/callback/
