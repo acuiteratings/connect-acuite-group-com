@@ -295,6 +295,12 @@ button {
   margin: 14px 0 18px;
 }
 
+.admin-search-help {
+  margin: 10px 0 0;
+  color: var(--admin-text-3);
+  font-size: 13px;
+}
+
 .admin-search-result,
 .admin-process-card {
   width: 100%;
@@ -310,6 +316,23 @@ button {
 .admin-process-card.active {
   border-color: var(--admin-accent);
   background: linear-gradient(180deg, rgba(232, 114, 42, 0.12), rgba(232, 114, 42, 0.04));
+}
+
+.admin-search-results[hidden] {
+  display: none;
+}
+
+.admin-search-result {
+  padding: 12px 14px;
+}
+
+.admin-search-empty {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--admin-border);
+  background: var(--admin-surface-2);
+  color: var(--admin-text-3);
+  font-size: 13px;
 }
 
 .admin-search-result-meta,

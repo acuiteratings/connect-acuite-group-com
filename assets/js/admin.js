@@ -39,6 +39,7 @@
       toast: document.getElementById("admin-toast"),
       onboardForm: document.getElementById("admin-onboard-form"),
       exitSearchInput: document.getElementById("admin-exit-search"),
+      exitSearchHelp: document.getElementById("admin-exit-search-help"),
       exitSearchResults: document.getElementById("admin-exit-search-results"),
       exitForm: document.getElementById("admin-exit-form"),
       exitEmployeeId: document.getElementById("admin-exit-employee-id"),
@@ -106,6 +107,10 @@
 
     if (action.dataset.action === "select-exit-employee") {
       state.selectedExitEmployeeId = Number(action.dataset.id || 0);
+      const selectedUser = state.users.find((user) => user.id === state.selectedExitEmployeeId);
+      if (selectedUser && elements.exitSearchInput) {
+        elements.exitSearchInput.value = selectedUser.name || selectedUser.email || "";
+      }
       syncExitForm();
       renderExitSearchResults();
       return;
@@ -195,12 +200,20 @@
       return;
     }
     const query = String(elements.exitSearchInput?.value || "").trim().toLowerCase();
+    if (elements.exitSearchHelp) {
+      elements.exitSearchHelp.textContent = query.length >= 2
+        ? "Select the right employee from the search results below."
+        : "Type at least 2 characters to search and select an employee.";
+    }
+    if (query.length < 2) {
+      elements.exitSearchResults.hidden = true;
+      elements.exitSearchResults.innerHTML = "";
+      return;
+    }
+
     const results = state.users
       .filter((user) => user.employment_status !== "alumni")
       .filter((user) => {
-        if (!query) {
-          return true;
-        }
         return [
           user.name,
           user.email,
@@ -214,13 +227,15 @@
           .toLowerCase()
           .includes(query);
       })
-      .slice(0, 12);
+      .slice(0, 8);
 
     if (!results.length) {
-      elements.exitSearchResults.innerHTML = '<div class="admin-selected-user">No matching employee found.</div>';
+      elements.exitSearchResults.hidden = false;
+      elements.exitSearchResults.innerHTML = '<div class="admin-search-empty">No matching employee found.</div>';
       return;
     }
 
+    elements.exitSearchResults.hidden = false;
     elements.exitSearchResults.innerHTML = results.map((user) => `
       <button
         type="button"
