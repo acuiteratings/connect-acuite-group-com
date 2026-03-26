@@ -196,12 +196,13 @@ def _apply_alumni_transition(process, actor):
 
 
 def _authenticated_payload(request, *, password_changed=False):
-    permissions = sorted(request.user.get_all_permissions())
     session_deadline = ensure_session_deadline(request)
     return {
         "authenticated": True,
         "user": serialize_user(request.user),
-        "permissions": permissions,
+        # Access decisions come from the serialized role flags; enumerating every
+        # Django permission here adds avoidable auth queries to the login path.
+        "permissions": [],
         "password_changed": password_changed,
         "auth_policy": _auth_policy_payload(),
         "session_expires_at": session_deadline.isoformat() if session_deadline else None,

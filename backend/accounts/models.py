@@ -180,20 +180,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     def can_moderate_connect(self):
         if self.is_superuser:
             return True
-        return self.has_employee_access and (
-            self.access_level in {self.AccessLevel.MODERATOR, self.AccessLevel.ADMIN}
-            or self.has_perm("feed.moderate_post")
-            or self.has_perm("feed.moderate_comment")
-        )
+        if not self.has_employee_access:
+            return False
+        if self.access_level in {self.AccessLevel.MODERATOR, self.AccessLevel.ADMIN}:
+            return True
+        if not self.is_staff:
+            return False
+        return self.has_perm("feed.moderate_post") or self.has_perm("feed.moderate_comment")
 
     @property
     def can_administer_connect(self):
         if self.is_superuser:
             return True
-        return self.has_employee_access and (
-            self.access_level == self.AccessLevel.ADMIN
-            or self.has_perm("accounts.manage_access_rights")
-        )
+        if not self.has_employee_access:
+            return False
+        if self.access_level == self.AccessLevel.ADMIN:
+            return True
+        if not self.is_staff:
+            return False
+        return self.has_perm("accounts.manage_access_rights")
 
     @property
     def can_manage_access_rights(self):
@@ -203,10 +208,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def can_post_as_company(self):
         if self.is_superuser:
             return True
-        return self.has_employee_access and (
-            self.access_level == self.AccessLevel.ADMIN
-            or self.has_perm("accounts.post_as_company")
-        )
+        if not self.has_employee_access:
+            return False
+        if self.access_level == self.AccessLevel.ADMIN:
+            return True
+        if not self.is_staff:
+            return False
+        return self.has_perm("accounts.post_as_company")
 
 
 class ExitProcess(models.Model):

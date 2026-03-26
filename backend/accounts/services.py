@@ -5,18 +5,20 @@ from secrets import compare_digest
 from threading import Thread
 
 from django.conf import settings
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.utils.crypto import salted_hmac
 from django.utils import timezone
 
 from .models import LoginChallenge, TrustedAppLoginGrant, User
 
 
 SESSION_AUTH_BACKEND = "django.contrib.auth.backends.ModelBackend"
+OTP_HASH_PREFIX = "hmac_sha256$"
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,20 @@ def normalize_email(email):
 def generate_otp_code():
     length = max(4, int(getattr(settings, "AUTH_OTP_CODE_LENGTH", 6)))
     return "".join(str(random.randint(0, 9)) for _ in range(length))
+
+
+def hash_otp_code(code):
+    normalized_code = str(code or "").strip()
+    digest = salted_hmac("acuite_connect.login_otp", normalized_code).hexdigest()
+    return f"{OTP_HASH_PREFIX}{digest}"
+
+
+def verify_otp_code(code, stored_hash):
+    stored_value = str(stored_hash or "")
+    if stored_value.startswith(OTP_HASH_PREFIX):
+        expected = hash_otp_code(code)
+        return compare_digest(expected, stored_value)
+    return check_password(str(code or "").strip(), stored_value)
 
 
 def get_login_user(email):
@@ -170,7 +186,7 @@ def start_login_challenge(email):
     challenge = LoginChallenge.objects.create(
         user=user,
         email=user.email,
-        code_hash=make_password(code),
+        code_hash=hash_otp_code(code),
         expires_at=now + timedelta(minutes=settings.AUTH_OTP_TTL_MINUTES),
         otp_sent_at=now,
     )
@@ -262,7 +278,7 @@ def verify_login_otp(public_id, code):
             code="otp_attempts_exceeded",
         )
 
-    if not check_password(str(code or "").strip(), challenge.code_hash):
+    if not verify_otp_code(code, challenge.code_hash):
         challenge.save(update_fields=["otp_attempts", "updated_at"])
         raise AuthFlowError("That OTP is not valid.", status=400, code="otp_invalid")
 

@@ -122,6 +122,15 @@
     clearSessionExpiryTimer();
   }
 
+  function hydrateSession(session) {
+    if (!session || !session.authenticated || !session.user) {
+      return false;
+    }
+    cachedSession = session;
+    scheduleSessionExpiry(session);
+    return true;
+  }
+
   async function fetchCurrentSession({ forceRefresh = false } = {}) {
     if (!forceRefresh && cachedSession) {
       return cachedSession;
@@ -149,7 +158,14 @@
 
   async function requireAuth(options = {}) {
     const loginPath = options.loginPath || "/login.html";
-    const session = await fetchCurrentSession({ forceRefresh: true });
+    let session = cachedSession;
+    if (!(session && session.authenticated && session.user)) {
+      session = await fetchCurrentSession();
+    }
+    if (session && session.authenticated && session.user) {
+      return session.user;
+    }
+    session = await fetchCurrentSession({ forceRefresh: true });
     if (session && session.authenticated && session.user) {
       return session.user;
     }
@@ -159,7 +175,15 @@
 
   async function redirectIfAuthenticated(options = {}) {
     const homePath = options.homePath || "/";
-    const session = await fetchCurrentSession({ forceRefresh: true });
+    let session = cachedSession;
+    if (!(session && session.authenticated && session.user)) {
+      session = await fetchCurrentSession();
+    }
+    if (session && session.authenticated && session.user) {
+      window.location.href = homePath;
+      return session.user;
+    }
+    session = await fetchCurrentSession({ forceRefresh: true });
     if (session && session.authenticated && session.user) {
       window.location.href = homePath;
       return session.user;
@@ -184,6 +208,7 @@
       return cachedSession && cachedSession.authenticated ? cachedSession.user : null;
     },
     getCsrfToken,
+    hydrateSession,
     isCompanyEmail,
     logout,
     redirectIfAuthenticated,

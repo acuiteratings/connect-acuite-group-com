@@ -1271,7 +1271,7 @@ function mergeAuthenticatedUser(user) {
   }
 }
 
-function consumeBootUser() {
+function consumeBootSession() {
   try {
     const raw = window.sessionStorage.getItem(CONNECT_BOOT_USER_KEY);
     if (!raw) {
@@ -1279,13 +1279,22 @@ function consumeBootUser() {
     }
     window.sessionStorage.removeItem(CONNECT_BOOT_USER_KEY);
     const payload = JSON.parse(raw);
-    if (!payload || !payload.user || !payload.created_at) {
+    if (!payload || !payload.created_at) {
       return null;
     }
     if (Date.now() - Number(payload.created_at) > 120000) {
       return null;
     }
-    return payload.user;
+    if (payload.session && payload.session.user) {
+      return payload.session;
+    }
+    if (payload.user) {
+      return {
+        authenticated: true,
+        user: payload.user,
+      };
+    }
+    return null;
   } catch (error) {
     return null;
   }
@@ -1311,9 +1320,13 @@ function renderShell() {
 }
 
 async function init() {
-  const bootUser = consumeBootUser();
+  const bootSession = consumeBootSession();
+  const bootUser = bootSession ? bootSession.user : null;
   if (bootUser) {
     mergeAuthenticatedUser(bootUser);
+    if (window.AcuiteConnectAuth && window.AcuiteConnectAuth.hydrateSession) {
+      window.AcuiteConnectAuth.hydrateSession(bootSession);
+    }
   }
 
   elements = {

@@ -1,7 +1,9 @@
 const authFlow = {
   challengeToken: "",
   email: "",
-  authPolicy: null,
+  authPolicy: {
+    password_max_age_days: 90,
+  },
 };
 const CONNECT_BOOT_USER_KEY = "acuite-connect-boot-user";
 
@@ -14,8 +16,11 @@ function getDefaultPostLoginTarget(user) {
   return accessRights.can_administer ? "/admin-console.html" : "/";
 }
 
-function primeConnectBootUser(user) {
-  if (!user || getDefaultPostLoginTarget(user) !== "/") {
+function primeConnectBootSession(session) {
+  if (!session || !session.authenticated || !session.user) {
+    return;
+  }
+  if (getDefaultPostLoginTarget(session.user) !== "/") {
     return;
   }
   try {
@@ -23,7 +28,12 @@ function primeConnectBootUser(user) {
       CONNECT_BOOT_USER_KEY,
       JSON.stringify({
         created_at: Date.now(),
-        user,
+        session: {
+          authenticated: true,
+          user: session.user,
+          session_expires_at: session.session_expires_at || null,
+          auth_policy: session.auth_policy || null,
+        },
       })
     );
   } catch (error) {
@@ -51,15 +61,6 @@ async function initLoginPage() {
   if (!auth) {
     return;
   }
-
-  const session = await auth.fetchCurrentSession({ forceRefresh: true });
-  if (session.authenticated) {
-    primeConnectBootUser(session.user);
-    window.location.href = getPostLoginTarget(session.user);
-    return;
-  }
-
-  authFlow.authPolicy = session.auth_policy || null;
   updatePolicyCopy();
   disablePasswordStep();
   hidePasswordResetStep();
@@ -82,6 +83,23 @@ async function initLoginPage() {
   bindToggle("password-toggle", "login-password");
   bindToggle("new-password-toggle", "new-password");
   bindToggle("confirm-password-toggle", "confirm-password");
+
+  void resolveExistingSession(auth);
+}
+
+async function resolveExistingSession(auth) {
+  try {
+    const session = await auth.fetchCurrentSession({ forceRefresh: true });
+    if (session.authenticated) {
+      primeConnectBootSession(session);
+      window.location.replace(getPostLoginTarget(session.user));
+      return;
+    }
+    authFlow.authPolicy = session.auth_policy || authFlow.authPolicy;
+    updatePolicyCopy();
+  } catch (error) {
+    // Leave the login form usable even if the session probe fails.
+  }
 }
 
 function bindToggle(buttonId, inputId) {
@@ -205,10 +223,8 @@ async function handlePasswordForm(event) {
     }
 
     showStatus("Login successful. Redirecting to Acuité Connect...", "success");
-    primeConnectBootUser(response.user);
-    window.setTimeout(() => {
-      window.location.href = getPostLoginTarget(response.user);
-    }, 350);
+    primeConnectBootSession(response);
+    window.location.replace(getPostLoginTarget(response.user));
   }, "password-error");
 }
 
@@ -261,7 +277,7 @@ async function handlePasswordChangeForm(event) {
   const confirmPassword = document.getElementById("confirm-password").value;
 
   await withButtonBusy(submitButton, async () => {
-    await window.AcuiteConnectAuth.apiRequest("/api/accounts/auth/change-password/", {
+    const response = await window.AcuiteConnectAuth.apiRequest("/api/accounts/auth/change-password/", {
       method: "POST",
       body: {
         challenge_token: authFlow.challengeToken,
@@ -272,10 +288,8 @@ async function handlePasswordChangeForm(event) {
 
     showStatus("Password updated. Redirecting to Acuité Connect...", "success");
     updateStep("Access granted", "Your password has been updated and your session is now active.");
-    primeConnectBootUser(window.AcuiteConnectAuth.getAuthenticatedUser());
-    window.setTimeout(() => {
-      window.location.href = getPostLoginTarget(window.AcuiteConnectAuth.getAuthenticatedUser());
-    }, 450);
+    primeConnectBootSession(response);
+    window.location.replace(getPostLoginTarget(response.user));
   }, "new-password-error", "confirm-password-error");
 }
 
