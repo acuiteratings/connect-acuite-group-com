@@ -63,6 +63,8 @@ class AuthApiTests(TestCase):
         self.assertEqual(LoginChallenge.objects.count(), 1)
         challenge = LoginChallenge.objects.get()
         self.assertTrue(challenge.code_hash.startswith("hmac_sha256$"))
+        self.assertRegex(mail.outbox[0].subject, r"Acuite Connect OTP: \d{6}")
+        self.assertIn("font-size: 500%", mail.outbox[0].alternatives[0][0])
 
     def test_forgot_password_emails_first_time_password_and_forces_change(self):
         response = self.client.post(

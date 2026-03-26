@@ -3,12 +3,13 @@ import random
 from datetime import timedelta
 from secrets import compare_digest
 from threading import Thread
+from threading import Lock
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.utils.crypto import salted_hmac
@@ -19,7 +20,11 @@ from .models import LoginChallenge, TrustedAppLoginGrant, User
 
 SESSION_AUTH_BACKEND = "django.contrib.auth.backends.ModelBackend"
 OTP_HASH_PREFIX = "hmac_sha256$"
+SMTP_IDLE_TIMEOUT_SECONDS = 300
 logger = logging.getLogger(__name__)
+_SMTP_CONNECTION = None
+_SMTP_CONNECTION_LAST_USED = None
+_SMTP_CONNECTION_LOCK = Lock()
 
 
 class AuthFlowError(Exception):
@@ -108,39 +113,110 @@ def _email_delivery_configured():
     return bool(getattr(settings, "EMAIL_HOST", "").strip())
 
 
-def _deliver_email_safely(send_fn, *args):
+def _smtp_backend_enabled():
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    return "smtp.EmailBackend" in backend
+
+
+def _close_cached_smtp_connection():
+    global _SMTP_CONNECTION, _SMTP_CONNECTION_LAST_USED
+    if _SMTP_CONNECTION is not None:
+        try:
+            _SMTP_CONNECTION.close()
+        except Exception:
+            logger.exception("Could not close cached SMTP connection cleanly.")
+    _SMTP_CONNECTION = None
+    _SMTP_CONNECTION_LAST_USED = None
+
+
+def _get_cached_smtp_connection():
+    global _SMTP_CONNECTION, _SMTP_CONNECTION_LAST_USED
+    now = timezone.now()
+    with _SMTP_CONNECTION_LOCK:
+        if (
+            _SMTP_CONNECTION is not None
+            and _SMTP_CONNECTION_LAST_USED is not None
+            and (now - _SMTP_CONNECTION_LAST_USED).total_seconds() > SMTP_IDLE_TIMEOUT_SECONDS
+        ):
+            _close_cached_smtp_connection()
+
+        if _SMTP_CONNECTION is None:
+            connection = get_connection(fail_silently=False)
+            connection.open()
+            _SMTP_CONNECTION = connection
+
+        _SMTP_CONNECTION_LAST_USED = now
+        return _SMTP_CONNECTION
+
+
+def _send_message(message):
+    if _smtp_backend_enabled():
+        try:
+            connection = _get_cached_smtp_connection()
+            with _SMTP_CONNECTION_LOCK:
+                connection.send_messages([message])
+                global _SMTP_CONNECTION_LAST_USED
+                _SMTP_CONNECTION_LAST_USED = timezone.now()
+            return
+        except Exception:
+            _close_cached_smtp_connection()
+            raise
+    message.send(fail_silently=False)
+
+
+def _deliver_email_safely(build_message_fn, *args):
     try:
-        send_fn(*args)
+        message = build_message_fn(*args)
+        _send_message(message)
     except Exception:
         logger.exception("Email delivery failed for Acuite Connect auth flow.")
 
 
-def _send_email(send_fn, *args):
-    backend = getattr(settings, "EMAIL_BACKEND", "")
-    if "smtp.EmailBackend" in backend:
-        Thread(target=_deliver_email_safely, args=(send_fn, *args), daemon=True).start()
+def _send_email(build_message_fn, *args):
+    if _smtp_backend_enabled():
+        Thread(target=_deliver_email_safely, args=(build_message_fn, *args), daemon=True).start()
         return
-    send_fn(*args)
+    message = build_message_fn(*args)
+    _send_message(message)
 
 
-def _send_login_otp_email(user, code):
-    subject = "Your Acuite Connect login OTP"
+def _build_login_otp_message(user, code):
+    subject = f"Acuite Connect OTP: {code}"
     message = (
         f"Hello {user.full_name},\n\n"
         f"Your Acuite Connect one-time password is {code}.\n"
         f"It expires in {settings.AUTH_OTP_TTL_MINUTES} minutes.\n\n"
         "If you did not request this code, please ignore this email."
     )
-    send_mail(
+    html_message = f"""
+    <div style="font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.5;">
+      <p style="margin: 0 0 16px;">Hello {user.full_name},</p>
+      <p style="margin: 0 0 20px;">Your Acuite Connect one-time password is:</p>
+      <div style="margin: 0 0 22px; text-align: center;">
+        <span style="display: inline-block; padding: 12px 20px; border-radius: 14px; background: #fff4ea; color: #8f1d1d; font-size: 500%; font-weight: 800; letter-spacing: 0.16em;">
+          {code}
+        </span>
+      </div>
+      <p style="margin: 0 0 14px;">It expires in {settings.AUTH_OTP_TTL_MINUTES} minutes.</p>
+      <p style="margin: 0; color: #666;">If you did not request this code, please ignore this email.</p>
+    </div>
+    """
+    email = EmailMultiAlternatives(
         subject,
         message,
         settings.DEFAULT_FROM_EMAIL,
         [user.email],
-        fail_silently=False,
+        headers={
+            "X-Priority": "1",
+            "X-MSMail-Priority": "High",
+            "Importance": "High",
+        },
     )
+    email.attach_alternative(html_message, "text/html")
+    return email
 
 
-def _send_first_time_password_email(user, temporary_password):
+def _build_first_time_password_message(user, temporary_password):
     subject = "Your Acuite Connect temporary password"
     message = (
         f"Hello {user.full_name},\n\n"
@@ -150,13 +226,33 @@ def _send_first_time_password_email(user, temporary_password):
         "You will be asked to choose a new password immediately.\n\n"
         "If you did not request this reset, please contact the internal admin team."
     )
-    send_mail(
+    html_message = f"""
+    <div style="font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.5;">
+      <p style="margin: 0 0 16px;">Hello {user.full_name},</p>
+      <p style="margin: 0 0 16px;">Your Acuite Connect password has been reset.</p>
+      <p style="margin: 0 0 8px;">Temporary password:</p>
+      <div style="margin: 0 0 20px; text-align: center;">
+        <span style="display: inline-block; padding: 12px 20px; border-radius: 14px; background: #fff4ea; color: #8f1d1d; font-size: 220%; font-weight: 800; letter-spacing: 0.08em;">
+          {temporary_password}
+        </span>
+      </div>
+      <p style="margin: 0 0 14px;">Use this password after requesting a fresh OTP. You will be asked to choose a new password immediately.</p>
+      <p style="margin: 0; color: #666;">If you did not request this reset, please contact the internal admin team.</p>
+    </div>
+    """
+    email = EmailMultiAlternatives(
         subject,
         message,
         settings.DEFAULT_FROM_EMAIL,
         [user.email],
-        fail_silently=False,
+        headers={
+            "X-Priority": "1",
+            "X-MSMail-Priority": "High",
+            "Importance": "High",
+        },
     )
+    email.attach_alternative(html_message, "text/html")
+    return email
 
 
 def start_login_challenge(email):
@@ -193,7 +289,7 @@ def start_login_challenge(email):
 
     preview_code = None
     if _email_delivery_configured():
-        _send_email(_send_login_otp_email, user, code)
+        _send_email(_build_login_otp_message, user, code)
     elif settings.AUTH_DEBUG_OTP_PREVIEW:
         preview_code = code
     else:
@@ -250,7 +346,7 @@ def reset_password_to_first_time_password(email):
             user.must_change_password = True
             user.password_changed_at = None
             user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
-            _send_email(_send_first_time_password_email, user, temporary_password)
+            _send_email(_build_first_time_password_message, user, temporary_password)
     except Exception as exc:
         raise AuthFlowError(
             "We couldn't send the reset email right now. Please try again in a moment.",
