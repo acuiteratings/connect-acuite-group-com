@@ -89,6 +89,22 @@ AUTH_DEBUG_OTP_PREVIEW = (
 )
 TRUSTED_SSO_CODE_TTL_SECONDS = int(os.getenv("TRUSTED_SSO_CODE_TTL_SECONDS", "120"))
 TRUSTED_SSO_CLIENTS = {}
+EMPLOYEE_SSO_BASE_URL = os.getenv("EMPLOYEE_SSO_BASE_URL", "https://sso.acuite-group.com").strip()
+EMPLOYEE_SSO_CLIENT_ID = os.getenv("EMPLOYEE_SSO_CLIENT_ID", "").strip()
+EMPLOYEE_SSO_CLIENT_SECRET = os.getenv("EMPLOYEE_SSO_CLIENT_SECRET", "").strip()
+EMPLOYEE_SSO_SCOPE = os.getenv("EMPLOYEE_SSO_SCOPE", "openid profile email").strip()
+EMPLOYEE_SSO_AUTHORIZE_URL = os.getenv("EMPLOYEE_SSO_AUTHORIZE_URL", "").strip()
+EMPLOYEE_SSO_TOKEN_URL = os.getenv("EMPLOYEE_SSO_TOKEN_URL", "").strip()
+EMPLOYEE_SSO_USERINFO_URL = os.getenv("EMPLOYEE_SSO_USERINFO_URL", "").strip()
+EMPLOYEE_SSO_LOGOUT_URL = os.getenv("EMPLOYEE_SSO_LOGOUT_URL", "").strip()
+EMPLOYEE_SSO_CALLBACK_URL = os.getenv(
+    "EMPLOYEE_SSO_CALLBACK_URL",
+    "http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+).strip()
+EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL = os.getenv(
+    "EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL",
+    "http://127.0.0.1:8240/login.html",
+).strip()
 
 
 def register_trusted_sso_client(client_id, env_prefix, default_name):

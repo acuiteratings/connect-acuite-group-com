@@ -2,6 +2,8 @@ import json
 import re
 from datetime import datetime
 from datetime import timedelta
+from io import StringIO
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
@@ -14,7 +16,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post
 from operations.models import AnalyticsEvent, AuditLog, ErrorEvent
 
-from .models import ExitProcess, LoginChallenge, TrustedAppLoginGrant, User
+from .models import EmployeeSSOIdentitySnapshot, ExitProcess, LoginChallenge, TrustedAppLoginGrant, User
 
 
 @override_settings(
@@ -47,7 +49,7 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertFalse(payload["authenticated"])
-        self.assertEqual(payload["auth_policy"]["mode"], "manual_accounts_with_email_otp_and_password")
+        self.assertEqual(payload["auth_policy"]["mode"], "employee_sso")
 
     def test_request_otp_creates_challenge_and_sends_email(self):
         response = self.client.post(
@@ -491,6 +493,203 @@ class AuthApiTests(TestCase):
         self.assertIsNotNone(match)
         return match.group(1)
 
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+    )
+    def test_employee_sso_start_redirects_to_central_sso(self):
+        response = self.client.get(
+            "/api/accounts/auth/employee-sso/start/",
+            {"next": "/directory.html?company=Acuite"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        redirect_url = urlparse(response["Location"])
+        self.assertEqual(
+            f"{redirect_url.scheme}://{redirect_url.netloc}{redirect_url.path}",
+            "https://sso.acuite-group.com/oauth/authorize",
+        )
+        params = parse_qs(redirect_url.query)
+        self.assertEqual(params["client_id"], ["connect-client"])
+        self.assertEqual(
+            params["redirect_uri"],
+            ["http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/"],
+        )
+        self.assertEqual(params["response_type"], ["code"])
+        self.assertTrue(params["state"][0])
+
+        session = self.client.session
+        self.assertEqual(
+            session["employee_sso_login_state"]["next_path"],
+            "/directory.html?company=Acuite",
+        )
+
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+        EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL="http://127.0.0.1:8240/login.html",
+    )
+    @mock.patch("accounts.services.urlopen")
+    def test_employee_sso_callback_creates_pending_user_and_redirects_to_access_denied(self, mock_urlopen):
+        self._prime_employee_sso_state(next_path="/")
+        mock_urlopen.side_effect = [
+            self._mock_sso_response({"access_token": "token-123"}),
+            self._mock_sso_response(
+                {
+                    "user_id": "sso-user-123",
+                    "email": "new.sso.user@acuite.in",
+                    "full_name": "New SSO User",
+                    "employee_id": "EMP-2001",
+                    "company": "Acuite",
+                    "employment_type": "Full Time",
+                }
+            ),
+        ]
+
+        response = self.client.get(
+            "/api/accounts/auth/employee-sso/callback/",
+            {"code": "code-123", "state": "state-123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/access-denied.html")
+
+        user = User.objects.get(email="new.sso.user@acuite.in")
+        self.assertEqual(user.employment_status, User.EmploymentStatus.PENDING)
+        self.assertFalse(user.can_post_in_connect)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.has_employee_access)
+
+        snapshot = EmployeeSSOIdentitySnapshot.objects.get(user=user)
+        self.assertEqual(snapshot.sso_user_id, "sso-user-123")
+        self.assertEqual(snapshot.employee_id, "EMP-2001")
+        self.assertEqual(snapshot.company, "Acuite")
+        self.assertEqual(snapshot.employment_type, "Full Time")
+
+        me_response = self.client.get("/api/accounts/me/")
+        self.assertEqual(me_response.status_code, 200)
+        self.assertTrue(me_response.json()["authenticated"])
+        self.assertFalse(me_response.json()["user"]["access_rights"]["can_employee"])
+
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+    )
+    @mock.patch("accounts.services.urlopen")
+    def test_employee_sso_callback_updates_existing_user_and_redirects_to_requested_page(self, mock_urlopen):
+        self.user.display_name = "Old Name"
+        self.user.employee_code = ""
+        self.user.save(update_fields=["display_name", "employee_code", "updated_at"])
+        self._prime_employee_sso_state(next_path="/admin-console.html")
+        mock_urlopen.side_effect = [
+            self._mock_sso_response(
+                {
+                    "access_token": "token-123",
+                    "user_id": "sso-user-999",
+                    "email": self.user.email,
+                    "full_name": "Employee One Prime",
+                    "employee_id": "EMP-999",
+                    "company": "Acuite",
+                    "employment_type": "Full Time",
+                }
+            ),
+        ]
+
+        response = self.client.get(
+            "/api/accounts/auth/employee-sso/callback/",
+            {"code": "code-123", "state": "state-123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/admin-console.html")
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.display_name, "Employee One Prime")
+        self.assertEqual(self.user.employee_code, "EMP-999")
+        snapshot = EmployeeSSOIdentitySnapshot.objects.get(user=self.user)
+        self.assertEqual(snapshot.sso_user_id, "sso-user-999")
+
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+        EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL="http://127.0.0.1:8240/login.html",
+    )
+    def test_logout_returns_employee_sso_redirect_url(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post("/api/accounts/auth/logout/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["redirect_url"],
+            "https://sso.acuite-group.com/logout?next=http%3A%2F%2F127.0.0.1%3A8240%2Flogin.html",
+        )
+
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+    )
+    @mock.patch("accounts.services.urlopen")
+    def test_employee_sso_callback_accepts_common_alternate_identity_keys(self, mock_urlopen):
+        self._prime_employee_sso_state(next_path="/")
+        mock_urlopen.side_effect = [
+            self._mock_sso_response({"access_token": "token-123"}),
+            self._mock_sso_response(
+                {
+                    "sub": "sso-sub-1",
+                    "mail": "alternate.keys@acuite.in",
+                    "name": "Alternate Keys",
+                }
+            ),
+        ]
+
+        response = self.client.get(
+            "/api/accounts/auth/employee-sso/callback/",
+            {"code": "code-123", "state": "state-123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/access-denied.html")
+
+        user = User.objects.get(email="alternate.keys@acuite.in")
+        snapshot = EmployeeSSOIdentitySnapshot.objects.get(user=user)
+        self.assertEqual(snapshot.sso_user_id, "sso-sub-1")
+        self.assertEqual(snapshot.full_name, "Alternate Keys")
+
+    def _prime_employee_sso_state(self, *, next_path="/"):
+        session = self.client.session
+        session["employee_sso_login_state"] = {
+            "state": "state-123",
+            "next_path": next_path,
+        }
+        session.save()
+
+    def _mock_sso_response(self, payload):
+        class _Response:
+            def __init__(self, body):
+                self.body = body
+
+            def read(self):
+                return self.body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        return _Response(json.dumps(payload).encode("utf-8"))
+
 
 class RemoveEmployeeAccountCommandTests(TestCase):
     def test_remove_employee_account_deletes_related_employee_data(self):
@@ -567,3 +766,98 @@ class SetConnectAccessCommandTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.access_level, User.AccessLevel.ADMIN)
         self.assertTrue(user.can_post_in_connect)
+
+
+class BackfillEmployeeSSOAccessCommandTests(TestCase):
+    def test_backfill_activates_linked_pending_user(self):
+        user = User.objects.create_user(
+            email="sso.linked@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.PENDING,
+            can_post_in_connect=False,
+            is_active=True,
+        )
+        EmployeeSSOIdentitySnapshot.objects.create(
+            user=user,
+            sso_user_id="sso-user-1",
+            email=user.email,
+            full_name="SSO Linked",
+            raw_payload={"sub": "sso-user-1", "email": user.email},
+        )
+
+        call_command("backfill_employee_sso_access", user.email)
+
+        user.refresh_from_db()
+        self.assertEqual(user.employment_status, User.EmploymentStatus.ACTIVE)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.can_post_in_connect)
+
+    def test_backfill_can_enable_posting_for_linked_user(self):
+        user = User.objects.create_user(
+            email="sso.posting@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.PENDING,
+            can_post_in_connect=False,
+        )
+        EmployeeSSOIdentitySnapshot.objects.create(
+            user=user,
+            sso_user_id="sso-user-2",
+            email=user.email,
+            full_name="Posting User",
+            raw_payload={"sub": "sso-user-2", "email": user.email},
+        )
+
+        call_command("backfill_employee_sso_access", user.email, "--enable-posting")
+
+        user.refresh_from_db()
+        self.assertEqual(user.employment_status, User.EmploymentStatus.ACTIVE)
+        self.assertTrue(user.can_post_in_connect)
+
+    def test_backfill_dry_run_does_not_save_changes(self):
+        user = User.objects.create_user(
+            email="sso.dryrun@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.PENDING,
+            can_post_in_connect=False,
+        )
+        EmployeeSSOIdentitySnapshot.objects.create(
+            user=user,
+            sso_user_id="sso-user-3",
+            email=user.email,
+            full_name="Dry Run User",
+            raw_payload={"sub": "sso-user-3", "email": user.email},
+        )
+
+        output = StringIO()
+        call_command("backfill_employee_sso_access", user.email, "--dry-run", stdout=output)
+
+        user.refresh_from_db()
+        self.assertEqual(user.employment_status, User.EmploymentStatus.PENDING)
+        self.assertIn("Dry run only", output.getvalue())
+
+    def test_backfill_all_users_activates_pending_users_but_skips_alumni_and_suspended(self):
+        pending_user = User.objects.create_user(
+            email="pending.user@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.PENDING,
+            can_post_in_connect=False,
+        )
+        suspended_user = User.objects.create_user(
+            email="suspended.user@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.SUSPENDED,
+        )
+        alumni_user = User.objects.create_user(
+            email="alumni.user@acuite.in",
+            password=None,
+            employment_status=User.EmploymentStatus.ALUMNI,
+        )
+
+        call_command("backfill_employee_sso_access", "--all-users")
+
+        pending_user.refresh_from_db()
+        suspended_user.refresh_from_db()
+        alumni_user.refresh_from_db()
+        self.assertEqual(pending_user.employment_status, User.EmploymentStatus.ACTIVE)
+        self.assertEqual(suspended_user.employment_status, User.EmploymentStatus.SUSPENDED)
+        self.assertEqual(alumni_user.employment_status, User.EmploymentStatus.ALUMNI)

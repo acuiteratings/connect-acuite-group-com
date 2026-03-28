@@ -2,8 +2,13 @@ import logging
 import random
 from datetime import timedelta
 from secrets import compare_digest
+import secrets
 from threading import Thread
 from threading import Lock
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+import json
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -15,7 +20,7 @@ from django.core.exceptions import ValidationError
 from django.utils.crypto import salted_hmac
 from django.utils import timezone
 
-from .models import LoginChallenge, TrustedAppLoginGrant, User
+from .models import EmployeeSSOIdentitySnapshot, LoginChallenge, TrustedAppLoginGrant, User
 
 
 SESSION_AUTH_BACKEND = "django.contrib.auth.backends.ModelBackend"
@@ -25,6 +30,7 @@ logger = logging.getLogger(__name__)
 _SMTP_CONNECTION = None
 _SMTP_CONNECTION_LAST_USED = None
 _SMTP_CONNECTION_LOCK = Lock()
+EMPLOYEE_SSO_STATE_SESSION_KEY = "employee_sso_login_state"
 
 
 class AuthFlowError(Exception):
@@ -38,6 +44,405 @@ class AuthFlowError(Exception):
 
 def normalize_email(email):
     return str(email or "").strip().lower()
+
+
+def _clean_url(value):
+    return str(value or "").strip().rstrip("/")
+
+
+def _employee_sso_base_url():
+    return _clean_url(getattr(settings, "EMPLOYEE_SSO_BASE_URL", ""))
+
+
+def employee_sso_enabled():
+    return bool(
+        _employee_sso_base_url()
+        and str(getattr(settings, "EMPLOYEE_SSO_CLIENT_ID", "")).strip()
+        and str(getattr(settings, "EMPLOYEE_SSO_CLIENT_SECRET", "")).strip()
+    )
+
+
+def employee_sso_authorize_url():
+    configured = _clean_url(getattr(settings, "EMPLOYEE_SSO_AUTHORIZE_URL", ""))
+    if configured:
+        return configured
+    base_url = _employee_sso_base_url()
+    return f"{base_url}/oauth/authorize" if base_url else ""
+
+
+def employee_sso_token_url():
+    configured = _clean_url(getattr(settings, "EMPLOYEE_SSO_TOKEN_URL", ""))
+    if configured:
+        return configured
+    base_url = _employee_sso_base_url()
+    return f"{base_url}/oauth/token" if base_url else ""
+
+
+def employee_sso_userinfo_url():
+    configured = _clean_url(getattr(settings, "EMPLOYEE_SSO_USERINFO_URL", ""))
+    if configured:
+        return configured
+    base_url = _employee_sso_base_url()
+    return f"{base_url}/oauth/userinfo" if base_url else ""
+
+
+def employee_sso_logout_url():
+    configured = _clean_url(getattr(settings, "EMPLOYEE_SSO_LOGOUT_URL", ""))
+    if configured:
+        return configured
+    base_url = _employee_sso_base_url()
+    return f"{base_url}/logout" if base_url else ""
+
+
+def employee_sso_callback_url():
+    return str(getattr(settings, "EMPLOYEE_SSO_CALLBACK_URL", "")).strip()
+
+
+def employee_sso_post_logout_redirect_url():
+    return str(getattr(settings, "EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL", "")).strip()
+
+
+def _parse_json_bytes(raw_bytes):
+    if not raw_bytes:
+        return {}
+    try:
+        return json.loads(raw_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise AuthFlowError(
+            "Employee SSO returned an unreadable response.",
+            status=502,
+            code="employee_sso_bad_response",
+        ) from exc
+
+
+def _employee_sso_request(url, *, method="GET", data=None, headers=None):
+    encoded_data = None
+    request_headers = {"Accept": "application/json"}
+    if headers:
+        request_headers.update(headers)
+    if data is not None:
+        encoded_data = urlencode(data).encode("utf-8")
+        request_headers.setdefault("Content-Type", "application/x-www-form-urlencoded")
+
+    request = Request(url, data=encoded_data, method=method.upper(), headers=request_headers)
+    try:
+        with urlopen(request, timeout=15) as response:
+            return _parse_json_bytes(response.read())
+    except HTTPError as exc:
+        payload = _parse_json_bytes(exc.read())
+        detail = str(payload.get("detail") or payload.get("error_description") or payload.get("error") or "").strip()
+        raise AuthFlowError(
+            detail or "Employee SSO rejected the request.",
+            status=502,
+            code="employee_sso_request_failed",
+        ) from exc
+    except URLError as exc:
+        raise AuthFlowError(
+            "Employee SSO could not be reached right now.",
+            status=502,
+            code="employee_sso_unreachable",
+        ) from exc
+
+
+def _ensure_employee_sso_configured():
+    if not employee_sso_enabled():
+        raise AuthFlowError(
+            "Employee SSO is not configured for Acuite Connect yet.",
+            status=503,
+            code="employee_sso_not_configured",
+        )
+    if not employee_sso_callback_url():
+        raise AuthFlowError(
+            "Employee SSO callback URL is not configured for Acuite Connect yet.",
+            status=503,
+            code="employee_sso_callback_not_configured",
+        )
+
+
+def _split_name_parts(full_name, fallback_email=""):
+    cleaned = str(full_name or "").strip()
+    if not cleaned:
+        cleaned = normalize_email(fallback_email).split("@", 1)[0].replace(".", " ").replace("_", " ").title()
+    parts = [part for part in cleaned.split() if part]
+    if not parts:
+        return "", "", ""
+    if len(parts) == 1:
+        return cleaned, parts[0], ""
+    return cleaned, parts[0], " ".join(parts[1:])
+
+
+def _first_present(payload, *keys):
+    for key in keys:
+        value = payload.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            trimmed = value.strip()
+            if trimmed:
+                return trimmed
+            continue
+        return value
+    return ""
+
+
+def _normalize_employee_sso_identity(identity_payload):
+    source_payload = identity_payload
+    for nested_key in ("user", "profile", "identity", "data"):
+        nested_value = identity_payload.get(nested_key)
+        if isinstance(nested_value, dict) and nested_value:
+            source_payload = nested_value
+            break
+
+    full_name = _first_present(
+        source_payload,
+        "full_name",
+        "name",
+        "display_name",
+        "displayName",
+    )
+    normalized = {
+        "user_id": str(
+            _first_present(
+                source_payload,
+                "user_id",
+                "userId",
+                "sub",
+                "id",
+                "uuid",
+            )
+            or ""
+        ).strip(),
+        "email": normalize_email(
+            _first_present(
+                source_payload,
+                "email",
+                "email_address",
+                "emailAddress",
+                "mail",
+                "preferred_username",
+                "preferredUsername",
+                "upn",
+            )
+        ),
+        "full_name": str(full_name or "").strip(),
+        "employee_id": str(
+            _first_present(
+                source_payload,
+                "employee_id",
+                "employeeId",
+                "employee_code",
+                "employeeCode",
+                "staff_id",
+                "staffId",
+            )
+            or ""
+        ).strip(),
+        "company": str(
+            _first_present(
+                source_payload,
+                "company",
+                "company_name",
+                "companyName",
+                "organisation",
+                "organization",
+            )
+            or ""
+        ).strip(),
+        "employment_type": str(
+            _first_present(
+                source_payload,
+                "employment_type",
+                "employmentType",
+                "employment_category",
+                "employmentCategory",
+                "employee_type",
+                "employeeType",
+            )
+            or ""
+        ).strip(),
+    }
+
+    if not normalized["full_name"]:
+        normalized["full_name"] = _split_name_parts("", normalized["email"])[0]
+
+    missing_fields = [
+        field
+        for field in ("user_id", "email")
+        if not normalized[field]
+    ]
+    if missing_fields:
+        raise AuthFlowError(
+            "Employee SSO did not return a complete identity profile.",
+            status=502,
+            code="employee_sso_identity_incomplete",
+            extra={"missing_fields": missing_fields},
+        )
+    return normalized
+
+
+def begin_employee_sso_login(request, *, next_path="/"):
+    _ensure_employee_sso_configured()
+    state = secrets.token_urlsafe(24)
+    request.session[EMPLOYEE_SSO_STATE_SESSION_KEY] = {
+        "state": state,
+        "next_path": next_path or "/",
+    }
+    params = {
+        "response_type": "code",
+        "client_id": settings.EMPLOYEE_SSO_CLIENT_ID,
+        "redirect_uri": employee_sso_callback_url(),
+        "scope": str(getattr(settings, "EMPLOYEE_SSO_SCOPE", "openid profile email")).strip(),
+        "state": state,
+    }
+    return f"{employee_sso_authorize_url()}?{urlencode(params)}"
+
+
+def _load_and_validate_employee_sso_state(request, state):
+    session_state = request.session.get(EMPLOYEE_SSO_STATE_SESSION_KEY) or {}
+    expected_state = str(session_state.get("state") or "").strip()
+    if not expected_state or not compare_digest(expected_state, str(state or "").strip()):
+        raise AuthFlowError(
+            "The Employee SSO login session is no longer valid. Please try again.",
+            status=400,
+            code="employee_sso_state_invalid",
+        )
+    return str(session_state.get("next_path") or "/").strip() or "/"
+
+
+def _exchange_employee_sso_code(code):
+    _ensure_employee_sso_configured()
+    if not str(code or "").strip():
+        raise AuthFlowError(
+            "Employee SSO did not return a login code.",
+            status=400,
+            code="employee_sso_code_missing",
+        )
+    return _employee_sso_request(
+        employee_sso_token_url(),
+        method="POST",
+        data={
+            "grant_type": "authorization_code",
+            "code": str(code).strip(),
+            "redirect_uri": employee_sso_callback_url(),
+            "client_id": settings.EMPLOYEE_SSO_CLIENT_ID,
+            "client_secret": settings.EMPLOYEE_SSO_CLIENT_SECRET,
+        },
+    )
+
+
+def _load_employee_sso_identity(token_payload):
+    if all(token_payload.get(field) for field in ["user_id", "email", "full_name", "employee_id", "company", "employment_type"]):
+        return _normalize_employee_sso_identity(token_payload)
+
+    access_token = str(token_payload.get("access_token") or "").strip()
+    if not access_token:
+        raise AuthFlowError(
+            "Employee SSO did not return identity details or an access token.",
+            status=502,
+            code="employee_sso_token_incomplete",
+        )
+    headers = {"Authorization": f"Bearer {access_token}"}
+    identity_payload = _employee_sso_request(
+        employee_sso_userinfo_url(),
+        headers=headers,
+    )
+
+    try:
+        normalized_identity = _normalize_employee_sso_identity(identity_payload)
+    except AuthFlowError:
+        normalized_identity = None
+    if normalized_identity and normalized_identity["user_id"] and normalized_identity["email"]:
+        return normalized_identity
+
+    # Some SSO stacks expose userinfo on the same endpoint but expect POST.
+    identity_payload = _employee_sso_request(
+        employee_sso_userinfo_url(),
+        method="POST",
+        headers=headers,
+        data={},
+    )
+    return _normalize_employee_sso_identity(identity_payload)
+
+
+def sync_employee_sso_user(identity_payload):
+    identity = _normalize_employee_sso_identity(identity_payload)
+    display_name, first_name, last_name = _split_name_parts(
+        identity["full_name"],
+        identity["email"],
+    )
+
+    with transaction.atomic():
+        user = User.objects.filter(email=identity["email"]).first()
+        created = user is None
+        if created:
+            user = User.objects.create_user(
+                email=identity["email"],
+                password=None,
+                first_name=first_name,
+                last_name=last_name,
+                display_name=display_name,
+                employee_code=identity["employee_id"],
+                employment_status=User.EmploymentStatus.PENDING,
+                can_post_in_connect=False,
+                is_active=True,
+                must_change_password=False,
+                password_changed_at=timezone.now(),
+            )
+        else:
+            update_fields = []
+            if display_name and user.display_name != display_name:
+                user.display_name = display_name
+                update_fields.append("display_name")
+            if first_name and user.first_name != first_name:
+                user.first_name = first_name
+                update_fields.append("first_name")
+            if last_name and user.last_name != last_name:
+                user.last_name = last_name
+                update_fields.append("last_name")
+            if identity["employee_id"] and user.employee_code != identity["employee_id"]:
+                user.employee_code = identity["employee_id"]
+                update_fields.append("employee_code")
+            if update_fields:
+                user.save(update_fields=[*update_fields, "updated_at"])
+
+        EmployeeSSOIdentitySnapshot.objects.update_or_create(
+            user=user,
+            defaults={
+                "sso_user_id": identity["user_id"],
+                "email": identity["email"],
+                "full_name": identity["full_name"],
+                "employee_id": identity["employee_id"],
+                "company": identity["company"],
+                "employment_type": identity["employment_type"],
+                "raw_payload": identity_payload,
+            },
+        )
+
+    return user, created, identity
+
+
+def complete_employee_sso_login(request, *, code, state):
+    next_path = _load_and_validate_employee_sso_state(request, state)
+    token_payload = _exchange_employee_sso_code(code)
+    identity = _load_employee_sso_identity(token_payload)
+    user, created, normalized_identity = sync_employee_sso_user(identity)
+    request.session.pop(EMPLOYEE_SSO_STATE_SESSION_KEY, None)
+    return {
+        "user": user,
+        "created": created,
+        "identity": normalized_identity,
+        "next_path": next_path,
+    }
+
+
+def employee_sso_logout_redirect():
+    logout_url = employee_sso_logout_url()
+    if not logout_url:
+        return ""
+    post_logout_redirect = employee_sso_post_logout_redirect_url()
+    if not post_logout_redirect:
+        return logout_url
+    return f"{logout_url}?{urlencode({'next': post_logout_redirect})}"
 
 
 def generate_otp_code():

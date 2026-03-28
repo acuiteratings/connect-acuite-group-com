@@ -3354,6 +3354,32 @@ select {
   gap: 20px;
 }
 
+.auth-sso-sequence {
+  align-content: start;
+}
+
+.connect-auth-intro,
+.connect-auth-guidance p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text2);
+}
+
+.connect-auth-guidance {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.connect-auth-guidance p:first-child {
+  font-weight: 800;
+  color: var(--text);
+}
+
 .auth-inline-group {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 168px;

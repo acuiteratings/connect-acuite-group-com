@@ -350,3 +350,26 @@ class TrustedAppLoginGrant(models.Model):
     @property
     def is_expired(self):
         return timezone.now() >= self.expires_at
+
+
+class EmployeeSSOIdentitySnapshot(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="employee_sso_identity",
+    )
+    sso_user_id = models.CharField(max_length=120, blank=True)
+    email = models.EmailField()
+    full_name = models.CharField(max_length=255, blank=True)
+    employee_id = models.CharField(max_length=120, blank=True)
+    company = models.CharField(max_length=120, blank=True)
+    employment_type = models.CharField(max_length=120, blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("user__email",)
+
+    def __str__(self):
+        return f"Employee SSO identity for {self.user.email}"

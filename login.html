@@ -32,76 +32,29 @@
             <h2>Login</h2>
           </div>
 
-          <div class="auth-sequence">
-            <form id="connect-access-form" class="stack-form" autocomplete="off" novalidate>
-              <div class="form-field">
-                <label for="login-email">Email</label>
-                <div class="auth-inline-group">
-                  <div class="auth-inline-field">
-                    <input id="login-email" name="email" type="email" placeholder="name@acuite.in" autocomplete="email" required>
-                  </div>
-                  <button type="submit" name="action" value="send_code" class="button connect-button-secondary auth-inline-button">SEND CODE</button>
-                </div>
-                <div class="field-error" id="email-error" hidden></div>
-              </div>
-
-              <div class="form-field">
-                <label for="login-code">OTP</label>
-                <div class="auth-inline-group">
-                  <div class="auth-inline-field">
-                    <input id="login-code" name="verification_code" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" autocomplete="one-time-code" disabled required>
-                  </div>
-                  <button type="submit" name="action" value="validate_code" class="button connect-button-secondary auth-inline-button" id="validate-code-button" disabled>VALIDATE</button>
-                </div>
-                <div class="field-error" id="code-error" hidden></div>
-              </div>
-            </form>
+          <div class="auth-sequence auth-sso-sequence">
+            <p class="connect-auth-intro">
+              Acuité Connect now uses Employee SSO for identity verification. Your Connect access rights still remain controlled inside Connect.
+            </p>
 
             <div class="auth-status" id="auth-status" hidden></div>
 
-            <form id="connect-password-form" class="stack-form auth-password-form" autocomplete="off" novalidate>
-              <div class="auth-autofill-decoy" aria-hidden="true">
-                <input type="text" tabindex="-1" autocomplete="username" name="connect_username_hint">
-                <input type="password" tabindex="-1" autocomplete="current-password" name="connect_password_hint">
-              </div>
+            <div class="stack-form">
+              <button
+                type="button"
+                class="button connect-button-primary button-block"
+                id="employee-sso-login-button"
+                data-sso-enabled="{% if employee_sso_enabled %}true{% else %}false{% endif %}"
+              >
+                Continue With Employee SSO
+              </button>
+            </div>
 
-              <div class="form-field">
-                <label for="login-password">PASSWORD</label>
-                <div class="password-input-wrap">
-                  <input id="login-password" name="login_secret" type="password" placeholder="Enter your password" autocomplete="current-password" disabled required>
-                  <button type="button" class="password-toggle" id="password-toggle" aria-label="Show password" aria-pressed="false" disabled>Show</button>
-                </div>
-                <div class="field-error" id="password-error" hidden></div>
-              </div>
-
-              <div class="auth-form-actions">
-                <button type="button" class="auth-text-link" id="forgot-password-button">Forgot Password?</button>
-              </div>
-
-              <button type="submit" class="button connect-button-primary button-block" id="login-button" disabled>LOG IN</button>
-            </form>
-
-            <form id="connect-password-change-form" class="stack-form auth-password-form password-reset-panel" autocomplete="off" novalidate hidden>
-              <div class="form-field">
-                <label for="new-password">New Password</label>
-                <div class="password-input-wrap">
-                  <input id="new-password" name="new_password" type="password" placeholder="Create a new password" autocomplete="new-password" required>
-                  <button type="button" class="password-toggle" id="new-password-toggle" aria-label="Show new password" aria-pressed="false">Show</button>
-                </div>
-                <div class="field-error" id="new-password-error" hidden></div>
-              </div>
-
-              <div class="form-field">
-                <label for="confirm-password">Confirm Password</label>
-                <div class="password-input-wrap">
-                  <input id="confirm-password" name="confirm_password" type="password" placeholder="Re-enter the new password" autocomplete="new-password" required>
-                  <button type="button" class="password-toggle" id="confirm-password-toggle" aria-label="Show confirm password" aria-pressed="false">Show</button>
-                </div>
-                <div class="field-error" id="confirm-password-error" hidden></div>
-              </div>
-
-              <button type="submit" class="button connect-button-primary button-block" id="change-password-button">UPDATE PASSWORD &amp; LOG IN</button>
-            </form>
+            <div class="connect-auth-guidance">
+              <p id="auth-step-label">Step 1 of 2</p>
+              <p id="auth-step-copy">You will be redirected to Employee SSO to sign in, and then returned to Acuité Connect.</p>
+              <p id="password-policy-copy">If your identity is recognized but Connect access has not been granted yet, you will see a separate access-denied page after sign-in.</p>
+            </div>
           </div>
         </div>
       </section>

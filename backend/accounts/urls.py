@@ -5,6 +5,8 @@ from .views import (
     access_user_detail,
     change_password_and_login,
     current_user,
+    employee_sso_callback,
+    employee_sso_start,
     exit_process_collection,
     forgot_password,
     login_with_password,
@@ -26,6 +28,8 @@ urlpatterns = [
     path("auth/login/", login_with_password, name="login-with-password"),
     path("auth/change-password/", change_password_and_login, name="change-password-and-login"),
     path("auth/logout/", logout_view, name="logout-view"),
+    path("auth/employee-sso/start/", employee_sso_start, name="employee-sso-start"),
+    path("auth/employee-sso/callback/", employee_sso_callback, name="employee-sso-callback"),
     path("auth/sso/authorize/", sso_authorize, name="sso-authorize"),
     path("auth/sso/token/", sso_token, name="sso-token"),
 ]

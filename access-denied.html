@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Access Denied | Acuité Connect</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="connect-auth-body">
+  <div class="connect-auth-shell">
+    <header class="connect-auth-header">
+      <div class="connect-brand-lockup">
+        <img src="{% static 'img/acuite-logo.png' %}" alt="Acuité" class="connect-brand-logo">
+        <span class="connect-brand-divider" aria-hidden="true"></span>
+        <span class="connect-brand-text">Connect</span>
+      </div>
+    </header>
+
+    <main class="connect-auth-main">
+      <section class="auth-wrap">
+        <div class="auth-card connect-auth-card">
+          <div class="connect-auth-card-head">
+            <p class="widget-kicker">Access Status</p>
+            <h2>Authenticated, But Not Yet Authorized</h2>
+          </div>
+
+          <div class="auth-sequence auth-sso-sequence">
+            <p class="connect-auth-intro">
+              Your identity was confirmed successfully through Employee SSO, but your Connect permissions have not been granted yet.
+            </p>
+            <p class="connect-auth-intro">
+              Employee SSO proves who you are. Acuité Connect separately decides what you are allowed to do here.
+            </p>
+            <div class="auth-status" data-tone="warning">
+              Please contact the Connect admin team if you believe you should already have access.
+            </div>
+            <div class="stack-form">
+              <button type="button" class="button connect-button-secondary button-block" id="access-denied-logout-button">
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="connect-site-footer auth-footer">
+    <span id="build-number-display">Built with care by Sankar Chakraborti | BUILD {{ build_number }}</span>
+  </footer>
+
+  <script src="{% static 'js/auth.js' %}" defer></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const trigger = document.getElementById("access-denied-logout-button");
+      if (!trigger || !window.AcuiteConnectAuth) {
+        return;
+      }
+      trigger.addEventListener("click", async () => {
+        const payload = await window.AcuiteConnectAuth.logout();
+        if (payload && payload.redirect_url) {
+          window.location.href = payload.redirect_url;
+          return;
+        }
+        window.location.href = "/login.html";
+      });
+    });
+  </script>
+</body>
+</html>

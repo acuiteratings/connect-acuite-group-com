@@ -1,6 +1,6 @@
 import json
 from datetime import date
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.contrib.auth import login as auth_login
@@ -23,8 +23,12 @@ from .serializers import serialize_exit_process, serialize_user
 from .services import (
     AuthFlowError,
     SESSION_AUTH_BACKEND,
+    begin_employee_sso_login,
     change_password_after_challenge,
     complete_login,
+    complete_employee_sso_login,
+    employee_sso_enabled,
+    employee_sso_logout_redirect,
     exchange_trusted_sso_grant,
     get_trusted_sso_client,
     issue_trusted_sso_grant,
@@ -48,11 +52,13 @@ def _parse_json_body(request):
 
 def _auth_policy_payload():
     return {
-        "mode": "manual_accounts_with_email_otp_and_password",
+        "mode": "employee_sso" if employee_sso_enabled() else "manual_accounts_with_email_otp_and_password",
         "password_max_age_days": settings.AUTH_PASSWORD_MAX_AGE_DAYS,
         "otp_ttl_minutes": settings.AUTH_OTP_TTL_MINUTES,
         "otp_code_length": settings.AUTH_OTP_CODE_LENGTH,
         "account_provisioning": "manual_admin_control",
+        "employee_sso_enabled": employee_sso_enabled(),
+        "employee_sso_start_path": "/api/accounts/auth/employee-sso/start/",
     }
 
 
@@ -78,6 +84,18 @@ def _coerce_bool(value):
     if isinstance(value, bool):
         return value
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _safe_next_path(raw_value, fallback="/"):
+    candidate = str(raw_value or "").strip()
+    if not candidate:
+        return fallback
+    parsed = urlparse(candidate)
+    if parsed.scheme or parsed.netloc:
+        return fallback
+    if not candidate.startswith("/"):
+        return fallback
+    return candidate
 
 
 def _split_display_name(display_name, fallback_email=""):
@@ -218,11 +236,15 @@ def current_user(request):
             "authenticated": False,
             "user": None,
             "permissions": [],
-            "next_auth_decision": [
-                "manual_employee_account",
-                "email_otp",
-                "password_with_rotation",
-            ],
+            "next_auth_decision": (
+                ["employee_sso"]
+                if employee_sso_enabled()
+                else [
+                    "manual_employee_account",
+                    "email_otp",
+                    "password_with_rotation",
+                ]
+            ),
             "auth_policy": _auth_policy_payload(),
             "session_expires_at": None,
         }
@@ -883,7 +905,72 @@ def logout_view(request):
         )
 
     auth_logout(request)
-    return JsonResponse({"authenticated": False, "detail": "Logged out successfully."})
+    return JsonResponse(
+        {
+            "authenticated": False,
+            "detail": "Logged out successfully.",
+            "redirect_url": employee_sso_logout_redirect(),
+        }
+    )
+
+
+def employee_sso_start(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    try:
+        redirect_url = begin_employee_sso_login(
+            request,
+            next_path=_safe_next_path(request.GET.get("next"), "/"),
+        )
+    except AuthFlowError as exc:
+        return _error_response(exc)
+    return redirect(redirect_url)
+
+
+def employee_sso_callback(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    error_code = str(request.GET.get("error") or "").strip()
+    if error_code:
+        detail = str(request.GET.get("error_description") or "Employee SSO login was cancelled.").strip()
+        return redirect(f"/login.html?{urlencode({'error': detail})}")
+
+    try:
+        outcome = complete_employee_sso_login(
+            request,
+            code=request.GET.get("code"),
+            state=request.GET.get("state"),
+        )
+    except AuthFlowError as exc:
+        return redirect(f"/login.html?{urlencode({'error': exc.message})}")
+
+    user = outcome["user"]
+    user.backend = SESSION_AUTH_BACKEND
+    auth_login(request, user)
+    ensure_session_deadline(request, reset=True)
+    record_audit_event(
+        action="auth.employee_sso.login_completed",
+        actor=user,
+        target=user,
+        summary=f"Employee SSO login completed for {user.email}",
+        metadata={
+            "employee_sso_user_id": outcome["identity"]["user_id"],
+            "provisioned_local_user": outcome["created"],
+        },
+        request=request,
+    )
+    record_analytics_event(
+        "auth",
+        "employee_sso_login_completed",
+        actor=user,
+        metadata={"provisioned_local_user": outcome["created"]},
+        request=request,
+    )
+    if not getattr(user, "has_employee_access", False):
+        return redirect("/access-denied.html")
+    return redirect(_safe_next_path(outcome["next_path"], "/"))
 
 
 def sso_authorize(request):

@@ -22,6 +22,7 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("index.html", views.home, name="home-html"),
     path("admin-console.html", views.admin_console_page, name="admin-console-page"),
+    path("access-denied.html", views.access_denied_page, name="access-denied-page"),
     path("login.html", views.login_page, name="login-page"),
     path(
         "login/",

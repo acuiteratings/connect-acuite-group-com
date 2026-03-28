@@ -59,7 +59,11 @@
     const delay = deadline - Date.now();
     const triggerLogout = async () => {
       try {
-        await logout();
+        const payload = await logout();
+        if (payload && payload.redirect_url) {
+          window.location.href = payload.redirect_url;
+          return;
+        }
       } finally {
         if (window.location.pathname !== "/login.html") {
           window.location.href = "/login.html";
@@ -193,7 +197,7 @@
 
   async function logout() {
     try {
-      await apiRequest("/api/accounts/auth/logout/", { method: "POST" });
+      return await apiRequest("/api/accounts/auth/logout/", { method: "POST" });
     } finally {
       clearSession();
     }
