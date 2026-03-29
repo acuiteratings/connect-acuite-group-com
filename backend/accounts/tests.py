@@ -573,6 +573,7 @@ class AuthApiTests(TestCase):
         me_response = self.client.get("/api/accounts/me/")
         self.assertEqual(me_response.status_code, 200)
         self.assertTrue(me_response.json()["authenticated"])
+        self.assertEqual(me_response.json()["user"]["employment_status"], User.EmploymentStatus.PENDING)
         self.assertFalse(me_response.json()["user"]["access_rights"]["can_employee"])
 
     @override_settings(

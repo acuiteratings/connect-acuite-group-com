@@ -375,6 +375,8 @@ def sync_employee_sso_user(identity_payload):
         user = User.objects.filter(email=identity["email"]).first()
         created = user is None
         if created:
+            # New SSO identities are authenticated centrally, but Connect
+            # authorization still requires an explicit local grant.
             user = User.objects.create_user(
                 email=identity["email"],
                 password=None,
