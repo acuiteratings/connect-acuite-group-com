@@ -12,8 +12,9 @@ fi
 
 "$PYTHON_BIN" -m pip install -r backend/requirements.txt
 if [[ -f "$ROOT_DIR/package.json" ]]; then
+  export PLAYWRIGHT_BROWSERS_PATH="$ROOT_DIR/.playwright-browsers"
   npm install
-  npx playwright install chromium
+  npx playwright install chromium chromium-headless-shell
 fi
 cd "$ROOT_DIR/backend"
 "$PYTHON_BIN" manage.py collectstatic --noinput
