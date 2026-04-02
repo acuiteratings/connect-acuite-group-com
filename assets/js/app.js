@@ -319,14 +319,14 @@ const FEATURED_HOME_ANNOUNCEMENT = {
   eyebrow: "Priority Announcement",
   type: "Town Hall",
   format: "Hybrid",
-  title: "Acuite Connect launch town hall and leadership briefing.",
+  title: "Town hall and leadership briefing.",
   summary: "The next all-hands is being treated as a high-signal moment: a live walkthrough of Acuite Connect, a business update from leadership, and a focused Q&A on how we work together better from here.",
-  dateLabel: "Friday, 27 March 2026",
+  dateLabel: "Thursday, 23rd April 2026",
   timeLabel: "4:00 PM - 5:30 PM IST",
-  venueLabel: "Acuite Auditorium, Mumbai + companywide live stream",
+  venueLabel: "Venue: TBD",
   hostLabel: "Hosted by the MD & CEO with the leadership team",
   audienceLabel: "Open to all employees",
-  countdownLabel: "2 days to go",
+  countdownLabel: "21 days to go",
   agenda: [
     "Acuite Connect launch and rollout note",
     "Business priorities and FY27 direction",
@@ -345,9 +345,9 @@ const FEATURED_HOME_ANNOUNCEMENT = {
   calendar: {
     title: "Acuite Connect Launch Town Hall",
     description: "Acuite Connect launch walkthrough, business update, and leadership Q&A for all employees.",
-    location: "Acuite Auditorium, Mumbai + companywide live stream",
-    start: "2026-03-27T16:00:00+05:30",
-    end: "2026-03-27T17:30:00+05:30",
+    location: "Venue: TBD",
+    start: "2026-04-23T16:00:00+05:30",
+    end: "2026-04-23T17:30:00+05:30",
   },
 };
 const CONNECT_BOOT_USER_KEY = "acuite-connect-boot-user";
@@ -2514,45 +2514,11 @@ function renderHomeAnnouncement() {
           <span>${escapeHtml(announcement.countdownLabel)}</span>
         </article>
       </div>
-
-      <div class="announcement-actions">
-        <button
-          type="button"
-          class="btn-warm announcement-action ${state.homeAnnouncementBooked ? "is-active" : ""}"
-          data-action="book-home-announcement"
-          aria-pressed="${state.homeAnnouncementBooked ? "true" : "false"}"
-        >
-          ${state.homeAnnouncementBooked ? "Seat booked" : "Book a seat"}
-        </button>
-        <button
-          type="button"
-          class="btn-outline announcement-action ${state.homeAnnouncementCalendarBlocked ? "is-active" : ""}"
-          data-action="block-home-announcement"
-        >
-          ${state.homeAnnouncementCalendarBlocked ? "Time blocked" : "Block the time"}
-        </button>
-      </div>
-
-      <div class="announcement-reactions">
-        <button
-          type="button"
-          class="announcement-reaction ${state.homeAnnouncementInterested ? "is-active" : ""}"
-          data-action="interest-home-announcement"
-          aria-pressed="${state.homeAnnouncementInterested ? "true" : "false"}"
-        >
-          Interested
-          <span>${escapeHtml(String(announcement.baseMetrics.interested + (state.homeAnnouncementInterested ? 1 : 0)))}</span>
-        </button>
-        <button
-          type="button"
-          class="announcement-reaction ${state.homeAnnouncementLiked ? "is-active" : ""}"
-          data-action="like-home-announcement"
-          aria-pressed="${state.homeAnnouncementLiked ? "true" : "false"}"
-        >
-          Like
-          <span>${escapeHtml(String(announcement.baseMetrics.likes + (state.homeAnnouncementLiked ? 1 : 0)))}</span>
-        </button>
-      </div>
+    </div>
+    <div class="announcement-side announcement-side-actions">
+      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Post a Question</button>
+      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Share an Idea</button>
+      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Give a Suggestion</button>
     </div>
   `;
 }
