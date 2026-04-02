@@ -68,6 +68,8 @@
       libraryBookForm: document.getElementById("admin-library-book-form"),
       libraryRequisitionList: document.getElementById("admin-library-requisition-list"),
       libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
+      libraryReturnList: document.getElementById("admin-library-return-list"),
+      libraryReturnMeta: document.getElementById("admin-library-return-meta"),
       internalJobForm: document.getElementById("admin-internal-job-form"),
       vacancyForm: document.getElementById("admin-vacancy-form"),
       awardForm: document.getElementById("admin-award-form"),
@@ -173,6 +175,11 @@
 
     if (action.dataset.action === "approve-library-requisition") {
       void updateLibraryRequisition(Number(action.dataset.id || 0), "approved");
+      return;
+    }
+
+    if (action.dataset.action === "reject-library-requisition") {
+      void updateLibraryRequisition(Number(action.dataset.id || 0), "declined");
       return;
     }
 
@@ -346,24 +353,58 @@
   }
 
   function renderLibraryAdmin() {
-    if (!elements.libraryRequisitionList || !elements.libraryRequisitionMeta) {
+    if (!elements.libraryRequisitionList || !elements.libraryRequisitionMeta || !elements.libraryReturnList || !elements.libraryReturnMeta) {
       return;
     }
 
-    const activeItems = state.library.requisitions
-      .filter((item) => item.status === "requested" || item.status === "approved")
+    const requestedItems = state.library.requisitions
+      .filter((item) => item.status === "requested")
       .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime());
 
-    elements.libraryRequisitionMeta.textContent = activeItems.length
-      ? `${activeItems.length} active requisition${activeItems.length === 1 ? "" : "s"}`
-      : "No active requisitions";
+    const handedOverItems = state.library.requisitions
+      .filter((item) => item.status === "approved")
+      .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime());
 
-    if (!activeItems.length) {
+    elements.libraryRequisitionMeta.textContent = requestedItems.length
+      ? `${requestedItems.length} open requisition${requestedItems.length === 1 ? "" : "s"}`
+      : "No open requisitions";
+
+    if (!requestedItems.length) {
       elements.libraryRequisitionList.innerHTML = '<div class="celebration-empty">No book requisitions are open right now.</div>';
+    } else {
+      elements.libraryRequisitionList.innerHTML = requestedItems.map((item) => `
+        <article class="admin-library-requisition-card">
+          <div class="admin-library-requisition-head">
+            <div>
+              <h4>${escapeHtml(item.book.title)}</h4>
+              <p>${escapeHtml([item.book.author, item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
+            </div>
+            <span class="admin-process-stage">${escapeHtml(formatLibraryStatus(item.status))}</span>
+          </div>
+          <div class="celebration-row-meta">
+            ${item.book_location.office_location ? `<span class="admin-flag">${escapeHtml(item.book_location.office_location)}</span>` : ""}
+            ${item.book_location.shelf_area ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_area)}</span>` : ""}
+            ${item.book_location.shelf_label ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_label)}</span>` : ""}
+          </div>
+          ${item.note ? `<p class="admin-library-note">${escapeHtml(item.note)}</p>` : ""}
+          <div class="celebration-preview-actions">
+            <button type="button" class="admin-btn admin-btn-primary" data-action="approve-library-requisition" data-id="${item.id}">Approve and hand over</button>
+            <button type="button" class="admin-btn admin-btn-danger" data-action="reject-library-requisition" data-id="${item.id}">Reject</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    elements.libraryReturnMeta.textContent = handedOverItems.length
+      ? `${handedOverItems.length} handed-over book${handedOverItems.length === 1 ? "" : "s"}`
+      : "No handed-over books";
+
+    if (!handedOverItems.length) {
+      elements.libraryReturnList.innerHTML = '<div class="celebration-empty">No handed-over books are waiting to be marked returned.</div>';
       return;
     }
 
-    elements.libraryRequisitionList.innerHTML = activeItems.map((item) => `
+    elements.libraryReturnList.innerHTML = handedOverItems.map((item) => `
       <article class="admin-library-requisition-card">
         <div class="admin-library-requisition-head">
           <div>
@@ -379,11 +420,7 @@
         </div>
         ${item.note ? `<p class="admin-library-note">${escapeHtml(item.note)}</p>` : ""}
         <div class="celebration-preview-actions">
-          ${
-            item.status === "requested"
-              ? `<button type="button" class="admin-btn admin-btn-primary" data-action="approve-library-requisition" data-id="${item.id}">Approve and hand over</button>`
-              : `<button type="button" class="admin-btn admin-btn-secondary" data-action="return-library-book" data-id="${item.id}">Mark returned</button>`
-          }
+          <button type="button" class="admin-btn admin-btn-secondary" data-action="return-library-book" data-id="${item.id}">Release requisitioned tag</button>
         </div>
       </article>
     `).join("");
@@ -565,7 +602,13 @@
       });
       await loadLibraryAdminData();
       renderLibraryAdmin();
-      showToast(status === "approved" ? "Book handed over and requisition approved." : "Book marked as returned.");
+      showToast(
+        status === "approved"
+          ? "Book handed over and requisition approved."
+          : status === "declined"
+            ? "Book requisition rejected."
+            : "Book marked as returned."
+      );
     } catch (error) {
       showToast(error.message || "Could not update the requisition.");
     }
