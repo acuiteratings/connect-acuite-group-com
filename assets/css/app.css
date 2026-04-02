@@ -1965,12 +1965,60 @@ select {
   line-height: 1.65;
 }
 
+.learning-book-holder {
+  margin: 0;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .learning-book-meta {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-end;
+}
+
+.learning-issued-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.learning-issued-list {
+  display: grid;
+  gap: 12px;
+}
+
+.learning-issued-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.learning-issued-card h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.learning-issued-person {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.learning-issued-person strong {
+  font-size: 14px;
+}
+
+.learning-issued-person span {
+  color: var(--text3);
+  font-size: 12px;
 }
 
 .learning-req-list .mini-item-time,

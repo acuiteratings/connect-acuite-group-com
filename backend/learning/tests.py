@@ -21,6 +21,13 @@ class LearningApiTests(TestCase):
             total_copies=2,
             summary="A classic on investing discipline.",
         )
+        self.admin_user = User.objects.create_user(
+            email="admin.library@acuite.in",
+            password="testpass123",
+            first_name="Admin",
+            last_name="Library",
+            is_staff=True,
+        )
 
     def test_books_endpoint_lists_active_titles(self):
         response = self.client.get("/api/learning/books/")
@@ -59,3 +66,39 @@ class LearningApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("open request", response.json()["detail"])
+
+    def test_admin_can_add_book(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/learning/books/",
+            data=json.dumps(
+                {
+                    "catalog_number": "999",
+                    "title": "The Outsiders",
+                    "author": "William Thorndike",
+                    "category": "Leadership & Management",
+                    "office_location": "Mumbai-Kanjurmarg",
+                    "shelf_area": "CEO Cabin",
+                    "shelf_label": "White Book Shelf",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["book"]["title"], "The Outsiders")
+
+    def test_admin_can_approve_book_requisition(self):
+        requisition = BookRequisition.objects.create(book=self.book, requester=self.user)
+        self.client.force_login(self.admin_user)
+
+        response = self.client.patch(
+            f"/api/learning/requisitions/{requisition.id}/",
+            data=json.dumps({"status": "approved"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        requisition.refresh_from_db()
+        self.assertEqual(requisition.status, BookRequisition.Status.APPROVED)

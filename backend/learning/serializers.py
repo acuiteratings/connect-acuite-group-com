@@ -16,6 +16,19 @@ def serialize_book(book, *, requester=None):
     if open_requisition_count is None:
         open_requisition_count = book.open_requisition_count
 
+    current_holder = None
+    current_requisition = getattr(book, "current_holder_requisition", None)
+    if current_requisition is None:
+        current_requisition = book.requisitions.filter(
+            status__in=(book.requisitions.model.Status.APPROVED, book.requisitions.model.Status.ISSUED),
+        ).select_related("requester").order_by("-updated_at").first()
+    if current_requisition:
+        current_holder = {
+            "name": current_requisition.requester.full_name,
+            "email": current_requisition.requester.email,
+            "status": current_requisition.status,
+        }
+
     return {
         "id": book.id,
         "catalog_number": book.catalog_number,
@@ -33,6 +46,7 @@ def serialize_book(book, *, requester=None):
         "total_copies": book.total_copies,
         "open_requisition_count": open_requisition_count,
         "available_copies": available_copies,
+        "current_holder": current_holder,
         "is_active": book.is_active,
         "can_request": available_copies > 0 and not requester_open,
         "requester_has_open_requisition": requester_open,
@@ -60,5 +74,10 @@ def serialize_requisition(requisition):
             "id": requisition.requester_id,
             "name": requisition.requester.full_name,
             "email": requisition.requester.email,
+        },
+        "book_location": {
+            "office_location": requisition.book.office_location,
+            "shelf_area": requisition.book.shelf_area,
+            "shelf_label": requisition.book.shelf_label,
         },
     }

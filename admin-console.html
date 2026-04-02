@@ -85,6 +85,83 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
+          <span class="admin-console-index">03</span>
+          <h2>Add a new book to library</h2>
+          <p>Add a new title so it appears in the live Library catalog inside Connect.</p>
+        </div>
+      </div>
+      <form id="admin-library-book-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Catalog number</span>
+            <input type="text" name="catalog_number" maxlength="32" placeholder="e.g. 625">
+          </label>
+          <label class="admin-field">
+            <span>Category</span>
+            <input type="text" name="category" maxlength="80" placeholder="Finance & Credit / Leadership">
+          </label>
+          <label class="admin-field">
+            <span>Total copies</span>
+            <input type="number" name="total_copies" min="1" step="1" value="1">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Book title</span>
+            <input type="text" name="title" maxlength="220" placeholder="Book title" required>
+          </label>
+          <label class="admin-field">
+            <span>Author</span>
+            <input type="text" name="author" maxlength="180" placeholder="Author name" required>
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Summary</span>
+          <textarea name="summary" rows="3" placeholder="Short description for the Library card"></textarea>
+        </label>
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Office location</span>
+            <input type="text" name="office_location" maxlength="120" placeholder="Mumbai-Kanjurmarg / 708 Office">
+          </label>
+          <label class="admin-field">
+            <span>Shelf area</span>
+            <input type="text" name="shelf_area" maxlength="120" placeholder="CEO Cabin / Reception">
+          </label>
+          <label class="admin-field">
+            <span>Shelf label</span>
+            <input type="text" name="shelf_label" maxlength="120" placeholder="White Book Shelf">
+          </label>
+        </div>
+        <div class="admin-form-actions">
+          <p>The book will appear in the live Library catalog after saving.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Add book to library</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">04</span>
+          <h2>Approve book requisitions</h2>
+          <p>Approve a request only after physically handing over the book to the employee.</p>
+        </div>
+      </div>
+      <div class="admin-form admin-library-layout">
+        <div class="admin-library-column">
+          <div class="admin-mini-head">
+            <h3>Open requisitions</h3>
+            <span id="admin-library-requisition-meta">Loading requisitions...</span>
+          </div>
+          <div class="admin-library-requisition-list" id="admin-library-requisition-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
           <span class="admin-console-index">05</span>
           <h2>Internal job post</h2>
           <p>Publish an internal opportunity to the bulletin board so employees can apply.</p>

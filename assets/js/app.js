@@ -2557,6 +2557,7 @@ function renderCommunityPanel() {
 function renderLearningPanel() {
   renderLearningSummary();
   renderLearningBooks();
+  renderLearningIssuedBooks();
   renderLearningRequisitions();
   renderLearningGuideCards();
 }
@@ -4148,6 +4149,9 @@ function renderLearningBookCard(book) {
       </div>`;
   const note = book.review_quote || book.summary || "Ready for requisition by employees through the internal library.";
   const locationLine = [book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | ");
+  const holderLine = book.current_holder
+    ? `${book.current_holder.name} currently has this book`
+    : "";
 
   return `
     <article class="learning-book-card" id="book-${book.id}">
@@ -4162,6 +4166,7 @@ function renderLearningBookCard(book) {
         <h3>${escapeHtml(book.title)}</h3>
         <p class="learning-book-author">${escapeHtml(book.author)}</p>
         <p class="learning-book-note">${escapeHtml(note)}</p>
+        ${holderLine ? `<p class="learning-book-holder">${escapeHtml(holderLine)}</p>` : ""}
         <div class="learning-book-meta">
           <span class="mini-item-meta">${escapeHtml(locationLine || `${book.open_requisition_count} active requisition${book.open_requisition_count === 1 ? "" : "s"}`)}</span>
           <button
@@ -4177,6 +4182,42 @@ function renderLearningBookCard(book) {
       </div>
     </article>
   `;
+}
+
+function renderLearningIssuedBooks() {
+  const section = document.getElementById("learning-issued-section");
+  const list = document.getElementById("learning-issued-list");
+  const meta = document.getElementById("learning-issued-meta");
+  if (!section || !list || !meta) {
+    return;
+  }
+
+  const issuedBooks = appData.learningBooks
+    .filter((book) => book.current_holder)
+    .sort((left, right) => left.title.localeCompare(right.title));
+
+  meta.textContent = issuedBooks.length
+    ? `${issuedBooks.length} book${issuedBooks.length === 1 ? "" : "s"} currently with employees`
+    : "No books are currently issued";
+
+  if (!issuedBooks.length) {
+    list.innerHTML = '<div class="empty-state">No books are currently with employees.</div>';
+    return;
+  }
+
+  list.innerHTML = issuedBooks.map((book) => `
+    <article class="learning-issued-card">
+      <div>
+        <h3>${escapeHtml(book.title)}</h3>
+        <p class="learning-book-author">${escapeHtml(book.author)}</p>
+        <p class="mini-item-meta">${escapeHtml([book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | "))}</p>
+      </div>
+      <div class="learning-issued-person">
+        <strong>${escapeHtml(book.current_holder.name)}</strong>
+        <span>${escapeHtml(book.current_holder.email || "")}</span>
+      </div>
+    </article>
+  `).join("");
 }
 
 function groupLearningBooksByCategory(books) {

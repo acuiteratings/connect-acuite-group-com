@@ -567,6 +567,46 @@ button {
   color: var(--admin-text-3);
 }
 
+.admin-library-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-library-column {
+  min-width: 0;
+}
+
+.admin-library-requisition-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-library-requisition-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-2);
+}
+
+.admin-library-requisition-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-library-requisition-head h4 {
+  margin: 0;
+}
+
+.admin-library-requisition-head p,
+.admin-library-note {
+  margin: 0;
+  color: var(--admin-text-3);
+}
+
 .admin-console-footer {
   padding: 0 0 28px;
   color: var(--admin-text-3);

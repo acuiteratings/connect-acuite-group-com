@@ -5,6 +5,7 @@ from django.db.models.functions import Greatest
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from operations.services import record_analytics_event, record_audit_event
 
@@ -29,8 +30,47 @@ def _can_manage_learning(user):
 
 @csrf_exempt
 def books_collection(request):
+    if request.method == "POST":
+        if not _can_manage_learning(request.user):
+            return JsonResponse({"detail": "Admin access required."}, status=403)
+        try:
+            payload = _parse_json_body(request)
+        except ValueError as exc:
+            return JsonResponse({"detail": str(exc)}, status=400)
+
+        title = str(payload.get("title", "")).strip()
+        author = str(payload.get("author", "")).strip()
+        if not title or not author:
+            return JsonResponse({"detail": "title and author are required."}, status=400)
+
+        book = Book.objects.create(
+            catalog_number=str(payload.get("catalog_number", "")).strip(),
+            slug=str(payload.get("slug", "")).strip(),
+            title=title,
+            author=author,
+            category=str(payload.get("category", "")).strip(),
+            summary=str(payload.get("summary", "")).strip(),
+            review_quote=str(payload.get("review_quote", "")).strip(),
+            review_source=str(payload.get("review_source", "")).strip(),
+            cover_url=str(payload.get("cover_url", "")).strip(),
+            office_location=str(payload.get("office_location", "")).strip(),
+            shelf_area=str(payload.get("shelf_area", "")).strip(),
+            shelf_label=str(payload.get("shelf_label", "")).strip(),
+            total_copies=max(1, int(payload.get("total_copies", 1) or 1)),
+            is_active=payload.get("is_active", True) is not False,
+        )
+        record_audit_event(
+            action="learning.book_created",
+            actor=request.user,
+            target=book,
+            summary=f"Added library book '{book.title}'",
+            metadata={"book_id": book.id},
+            request=request,
+        )
+        return JsonResponse({"book": serialize_book(book, requester=request.user)}, status=201)
+
     if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])
+        return HttpResponseNotAllowed(["GET", "POST"])
 
     open_statuses = BookRequisition.open_statuses()
     queryset = Book.objects.annotate(
@@ -146,3 +186,76 @@ def requisitions_collection(request):
     )
     requisition = BookRequisition.objects.select_related("book", "requester").get(pk=requisition.pk)
     return JsonResponse({"requisition": serialize_requisition(requisition)}, status=201)
+
+
+@csrf_exempt
+def requisition_detail(request, requisition_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    requisition = get_object_or_404(
+        BookRequisition.objects.select_related("book", "requester"),
+        pk=requisition_id,
+    )
+
+    if request.method == "GET":
+        if not _can_manage_learning(request.user) and requisition.requester_id != request.user.id:
+            return JsonResponse({"detail": "Not found."}, status=404)
+        return JsonResponse({"requisition": serialize_requisition(requisition)})
+
+    if request.method != "PATCH":
+        return HttpResponseNotAllowed(["GET", "PATCH"])
+
+    if not _can_manage_learning(request.user):
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    try:
+        payload = _parse_json_body(request)
+    except ValueError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+
+    status = str(payload.get("status", "")).strip()
+    admin_note = str(payload.get("admin_note", "")).strip()[:280]
+    valid_statuses = {
+        BookRequisition.Status.APPROVED,
+        BookRequisition.Status.DECLINED,
+        BookRequisition.Status.RETURNED,
+        BookRequisition.Status.CANCELLED,
+    }
+    if status not in valid_statuses:
+        return JsonResponse({"detail": "Unsupported requisition status."}, status=400)
+
+    requisition.status = status
+    requisition.admin_note = admin_note
+    update_fields = ["status", "admin_note", "updated_at"]
+    now = timezone.now()
+    if status == BookRequisition.Status.APPROVED:
+        requisition.reviewed_at = now
+        requisition.issued_at = now
+        requisition.returned_at = None
+        update_fields.extend(["reviewed_at", "issued_at", "returned_at"])
+    elif status == BookRequisition.Status.DECLINED:
+        requisition.reviewed_at = now
+        update_fields.append("reviewed_at")
+    elif status == BookRequisition.Status.RETURNED:
+        requisition.returned_at = now
+        update_fields.append("returned_at")
+    requisition.save(update_fields=update_fields)
+
+    record_audit_event(
+        action=f"learning.book_requisition_{status}",
+        actor=request.user,
+        target=requisition,
+        summary=f"Marked requisition for '{requisition.book.title}' as {status}",
+        metadata={"requisition_id": requisition.id, "status": status},
+        request=request,
+    )
+    record_analytics_event(
+        "learning",
+        f"book_requisition_{status}",
+        actor=request.user,
+        metadata={"requisition_id": requisition.id, "book_id": requisition.book_id},
+        request=request,
+    )
+    requisition = BookRequisition.objects.select_related("book", "requester").get(pk=requisition.pk)
+    return JsonResponse({"requisition": serialize_requisition(requisition)})

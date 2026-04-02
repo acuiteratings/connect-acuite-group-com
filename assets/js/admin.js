@@ -7,6 +7,9 @@
       birthdays: [],
       anniversaries: [],
     },
+    library: {
+      requisitions: [],
+    },
     previews: {
       birthday: null,
       anniversary: null,
@@ -37,7 +40,7 @@
     cacheElements();
     bindEvents();
     renderCurrentUser();
-    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations()]);
+    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations(), loadLibraryAdminData()]);
     renderAll();
   }
 
@@ -62,6 +65,9 @@
       anniversaryResultsMeta: document.getElementById("admin-anniversary-results-meta"),
       anniversaryPreviewShell: document.getElementById("admin-anniversary-preview-shell"),
       anniversaryPreviewMeta: document.getElementById("admin-anniversary-preview-meta"),
+      libraryBookForm: document.getElementById("admin-library-book-form"),
+      libraryRequisitionList: document.getElementById("admin-library-requisition-list"),
+      libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
       internalJobForm: document.getElementById("admin-internal-job-form"),
       vacancyForm: document.getElementById("admin-vacancy-form"),
       awardForm: document.getElementById("admin-award-form"),
@@ -96,11 +102,17 @@
     state.celebrations.anniversaries = Array.isArray(payload.anniversaries) ? payload.anniversaries : [];
   }
 
+  async function loadLibraryAdminData() {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/");
+    state.library.requisitions = Array.isArray(payload.results) ? payload.results : [];
+  }
+
   function renderAll() {
     renderExitSearchResults();
     renderExitProcessList();
     syncExitForm();
     renderCelebrationSections();
+    renderLibraryAdmin();
   }
 
   function renderCurrentUser() {
@@ -158,6 +170,16 @@
       void publishCelebrationPreview(action.dataset.kind);
       return;
     }
+
+    if (action.dataset.action === "approve-library-requisition") {
+      void updateLibraryRequisition(Number(action.dataset.id || 0), "approved");
+      return;
+    }
+
+    if (action.dataset.action === "return-library-book") {
+      void updateLibraryRequisition(Number(action.dataset.id || 0), "returned");
+      return;
+    }
   }
 
   function handleSubmit(event) {
@@ -212,6 +234,12 @@
     if (event.target === elements.debateForm) {
       event.preventDefault();
       void submitDebateAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.libraryBookForm) {
+      event.preventDefault();
+      void submitLibraryBook();
     }
   }
 
@@ -315,6 +343,50 @@
     renderCelebrationList("anniversary");
     renderCelebrationPreview("birthday");
     renderCelebrationPreview("anniversary");
+  }
+
+  function renderLibraryAdmin() {
+    if (!elements.libraryRequisitionList || !elements.libraryRequisitionMeta) {
+      return;
+    }
+
+    const activeItems = state.library.requisitions
+      .filter((item) => item.status === "requested" || item.status === "approved")
+      .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime());
+
+    elements.libraryRequisitionMeta.textContent = activeItems.length
+      ? `${activeItems.length} active requisition${activeItems.length === 1 ? "" : "s"}`
+      : "No active requisitions";
+
+    if (!activeItems.length) {
+      elements.libraryRequisitionList.innerHTML = '<div class="celebration-empty">No book requisitions are open right now.</div>';
+      return;
+    }
+
+    elements.libraryRequisitionList.innerHTML = activeItems.map((item) => `
+      <article class="admin-library-requisition-card">
+        <div class="admin-library-requisition-head">
+          <div>
+            <h4>${escapeHtml(item.book.title)}</h4>
+            <p>${escapeHtml([item.book.author, item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
+          </div>
+          <span class="admin-process-stage">${escapeHtml(formatLibraryStatus(item.status))}</span>
+        </div>
+        <div class="celebration-row-meta">
+          ${item.book_location.office_location ? `<span class="admin-flag">${escapeHtml(item.book_location.office_location)}</span>` : ""}
+          ${item.book_location.shelf_area ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_area)}</span>` : ""}
+          ${item.book_location.shelf_label ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_label)}</span>` : ""}
+        </div>
+        ${item.note ? `<p class="admin-library-note">${escapeHtml(item.note)}</p>` : ""}
+        <div class="celebration-preview-actions">
+          ${
+            item.status === "requested"
+              ? `<button type="button" class="admin-btn admin-btn-primary" data-action="approve-library-requisition" data-id="${item.id}">Approve and hand over</button>`
+              : `<button type="button" class="admin-btn admin-btn-secondary" data-action="return-library-book" data-id="${item.id}">Mark returned</button>`
+          }
+        </div>
+      </article>
+    `).join("");
   }
 
   function renderCelebrationList(kind) {
@@ -447,6 +519,55 @@
       showToast(`${kind === "birthday" ? "Birthday" : "Anniversary"} post published to the bulletin board.`);
     } catch (error) {
       showToast(error.message || "Could not publish the celebration post.");
+    }
+  }
+
+  async function submitLibraryBook() {
+    const formData = new FormData(elements.libraryBookForm);
+    const payload = {
+      catalog_number: String(formData.get("catalog_number") || "").trim(),
+      category: String(formData.get("category") || "").trim(),
+      title: String(formData.get("title") || "").trim(),
+      author: String(formData.get("author") || "").trim(),
+      summary: String(formData.get("summary") || "").trim(),
+      total_copies: Number(formData.get("total_copies") || 1) || 1,
+      office_location: String(formData.get("office_location") || "").trim(),
+      shelf_area: String(formData.get("shelf_area") || "").trim(),
+      shelf_label: String(formData.get("shelf_label") || "").trim(),
+    };
+
+    if (!payload.title || !payload.author) {
+      showToast("Book title and author are required.");
+      return;
+    }
+
+    try {
+      await window.AcuiteConnectAuth.apiRequest("/api/learning/books/", {
+        method: "POST",
+        body: payload,
+      });
+      elements.libraryBookForm.reset();
+      showToast("Book added to the Library catalog.");
+    } catch (error) {
+      showToast(error.message || "Could not add the book.");
+    }
+  }
+
+  async function updateLibraryRequisition(requisitionId, status) {
+    if (!requisitionId) {
+      return;
+    }
+
+    try {
+      await window.AcuiteConnectAuth.apiRequest(`/api/learning/requisitions/${requisitionId}/`, {
+        method: "PATCH",
+        body: { status },
+      });
+      await loadLibraryAdminData();
+      renderLibraryAdmin();
+      showToast(status === "approved" ? "Book handed over and requisition approved." : "Book marked as returned.");
+    } catch (error) {
+      showToast(error.message || "Could not update the requisition.");
     }
   }
 
@@ -822,6 +943,16 @@
     if (!value) {
       return "";
     }
+    if (String(value).includes("T")) {
+      const dateTimeValue = new Date(value);
+      if (!Number.isNaN(dateTimeValue.getTime())) {
+        return dateTimeValue.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
     const dateValue = new Date(`${value}T00:00:00`);
     if (Number.isNaN(dateValue.getTime())) {
       return value;
@@ -845,6 +976,16 @@
   function capitalize(value) {
     const text = String(value || "");
     return text ? text[0].toUpperCase() + text.slice(1) : "";
+  }
+
+  function formatLibraryStatus(status) {
+    return {
+      requested: "Requested",
+      approved: "Approved",
+      returned: "Returned",
+      declined: "Declined",
+      cancelled: "Cancelled",
+    }[status] || capitalize(status || "requested");
   }
 
   function showToast(message) {
