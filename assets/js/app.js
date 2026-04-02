@@ -2558,19 +2558,32 @@ function renderHomeAnnouncement() {
 }
 
 function renderTodayPanel() {
+  if (!document.getElementById("today-panel")) {
+    return;
+  }
   renderHomePillar("today-panel", HOME_PILLARS[0]);
 }
 
 function renderTasksPanel() {
+  if (!document.getElementById("tasks-panel")) {
+    return;
+  }
   renderHomePillar("tasks-panel", HOME_PILLARS[1]);
 }
 
 function renderPulsePanel() {
+  if (!document.getElementById("pulse-panel")) {
+    return;
+  }
   renderHomePillar("pulse-panel", HOME_PILLARS[2]);
 }
 
 function renderHomeTools() {
   const head = document.getElementById("home-core-spaces-head");
+  const grid = document.getElementById("home-tools-grid");
+  if (!head || !grid) {
+    return;
+  }
   if (head) {
     head.innerHTML = `
       <div>
@@ -2580,11 +2593,15 @@ function renderHomeTools() {
       <button type="button" class="btn-link" data-switch-tab="community">Start exploring</button>
     `;
   }
-  document.getElementById("home-tools-grid").innerHTML = HOME_CORE_SPACES.map(renderHomeSpaceCard).join("");
+  grid.innerHTML = HOME_CORE_SPACES.map(renderHomeSpaceCard).join("");
 }
 
 function renderHomeFeed() {
   const head = document.getElementById("home-foundation-head");
+  const feed = document.getElementById("home-feed");
+  if (!head || !feed) {
+    return;
+  }
   if (head) {
     head.innerHTML = `
       <div>
@@ -2594,7 +2611,7 @@ function renderHomeFeed() {
       <button type="button" class="btn-link" data-switch-tab="directory">Open directory</button>
     `;
   }
-  document.getElementById("home-feed").innerHTML = HOME_FOUNDATION_LAYERS.map((layer) => `
+  feed.innerHTML = HOME_FOUNDATION_LAYERS.map((layer) => `
     <article class="summary-card foundation-card">
       <strong>${escapeHtml(layer.title)}</strong>
       <span>${escapeHtml(layer.label)}</span>
