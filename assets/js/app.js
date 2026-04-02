@@ -2483,10 +2483,6 @@ function renderHomeAnnouncement() {
   }
 
   const announcement = FEATURED_HOME_ANNOUNCEMENT;
-  const bookedCount = announcement.baseMetrics.booked + (state.homeAnnouncementBooked ? 1 : 0);
-  const interestedCount = announcement.baseMetrics.interested + (state.homeAnnouncementInterested ? 1 : 0);
-  const likeCount = announcement.baseMetrics.likes + (state.homeAnnouncementLiked ? 1 : 0);
-
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -2545,7 +2541,7 @@ function renderHomeAnnouncement() {
           aria-pressed="${state.homeAnnouncementInterested ? "true" : "false"}"
         >
           Interested
-          <span>${escapeHtml(String(interestedCount))}</span>
+          <span>${escapeHtml(String(announcement.baseMetrics.interested + (state.homeAnnouncementInterested ? 1 : 0)))}</span>
         </button>
         <button
           type="button"
@@ -2554,48 +2550,9 @@ function renderHomeAnnouncement() {
           aria-pressed="${state.homeAnnouncementLiked ? "true" : "false"}"
         >
           Like
-          <span>${escapeHtml(String(likeCount))}</span>
+          <span>${escapeHtml(String(announcement.baseMetrics.likes + (state.homeAnnouncementLiked ? 1 : 0)))}</span>
         </button>
       </div>
-    </div>
-
-    <div class="announcement-side">
-      <article class="announcement-panel response-panel">
-        <div class="announcement-panel-head">
-          <p class="widget-kicker">Response pulse</p>
-          <strong>${escapeHtml(announcement.countdownLabel)}</strong>
-        </div>
-        <div class="announcement-metrics">
-          <div class="announcement-metric">
-            <span class="announcement-metric-label">Booked</span>
-            <strong>${escapeHtml(String(bookedCount))}</strong>
-          </div>
-          <div class="announcement-metric">
-            <span class="announcement-metric-label">Interested</span>
-            <strong>${escapeHtml(String(interestedCount))}</strong>
-          </div>
-          <div class="announcement-metric">
-            <span class="announcement-metric-label">Likes</span>
-            <strong>${escapeHtml(String(likeCount))}</strong>
-          </div>
-        </div>
-      </article>
-
-      <article class="announcement-panel">
-        <p class="widget-kicker">What to expect</p>
-        <h3>Key agenda</h3>
-        <ul class="announcement-list">
-          ${announcement.agenda.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-        </ul>
-      </article>
-
-      <article class="announcement-panel">
-        <p class="widget-kicker">Why respond now</p>
-        <h3>Make the event visible</h3>
-        <ul class="announcement-list">
-          ${announcement.outcomes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-        </ul>
-      </article>
     </div>
   `;
 }
