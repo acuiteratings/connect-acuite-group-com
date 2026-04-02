@@ -3844,6 +3844,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 18px 40px rgba(10, 19, 34, 0.18);
   color: #f3f5f8;
+  min-width: 0;
 }
 
 [data-theme="dark"] .battleship-stage-card,
@@ -4091,6 +4092,7 @@ select {
 }
 
 .battleship-board-shell {
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -4098,6 +4100,8 @@ select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  align-items: start;
+  min-width: 0;
 }
 
 .battleship-grid {
@@ -4201,6 +4205,12 @@ button.battleship-cell:hover:not(:disabled) {
 @media (max-width: 1320px) {
   .battleship-lobby-grid,
   .battleship-board-duo {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1520px) {
+  .battleship-layout {
     grid-template-columns: 1fr;
   }
 }

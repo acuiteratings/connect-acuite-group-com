@@ -23,11 +23,11 @@ OPEN_MATCH_STATUSES = SERIOUS_MATCH_STATUSES | {
     BattleshipMatch.Status.INVITED,
 }
 FLEET_SPEC = (
-    {"ship_type": "carrier", "label": "Carrier", "size": 5},
+    {"ship_type": "carrier", "label": "Aircraft Carrier", "size": 5},
     {"ship_type": "battleship", "label": "Battleship", "size": 4},
     {"ship_type": "cruiser", "label": "Cruiser", "size": 3},
-    {"ship_type": "submarine", "label": "Submarine", "size": 3},
     {"ship_type": "destroyer", "label": "Destroyer", "size": 2},
+    {"ship_type": "submarine", "label": "Submarine", "size": 3},
 )
 FLEET_BY_TYPE = {item["ship_type"]: item for item in FLEET_SPEC}
 EMPLOYEE_ACCESS_LEVELS = {

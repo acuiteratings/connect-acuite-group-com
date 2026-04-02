@@ -4,6 +4,13 @@
   const DEFAULT_POLL_SECONDS = 4;
   const DRAFT_STORAGE_PREFIX = "acuite-connect-battleship-draft-";
   const FLEET_ORDER = ["carrier", "battleship", "cruiser", "submarine", "destroyer"];
+  const SHIP_MARKERS = {
+    carrier: "A",
+    battleship: "B",
+    cruiser: "C",
+    destroyer: "D",
+    submarine: "S",
+  };
 
   const state = {
     currentUser: null,
@@ -842,7 +849,7 @@
           data-row="${row}"
           data-col="${col}"
           ${state.busy ? "disabled" : ""}
-        >${shipType ? escapeHtml(shipType.slice(0, 1).toUpperCase()) : ""}</button>
+        >${shipType ? escapeHtml(getShipMarker(shipType)) : ""}</button>
       `;
     });
   }
@@ -874,7 +881,7 @@
         if (ship.sunk) {
           classes.push("sunk");
         }
-        content = escapeHtml(ship.shipType.slice(0, 1).toUpperCase());
+        content = escapeHtml(getShipMarker(ship.shipType));
       }
       if (shotResult === "miss") {
         classes.push("miss");
@@ -1157,12 +1164,16 @@
 
   function getFleetSpec() {
     return state.match?.fleet_spec || [
-      { ship_type: "carrier", label: "Carrier", size: 5 },
+      { ship_type: "carrier", label: "Aircraft Carrier", size: 5 },
       { ship_type: "battleship", label: "Battleship", size: 4 },
       { ship_type: "cruiser", label: "Cruiser", size: 3 },
-      { ship_type: "submarine", label: "Submarine", size: 3 },
       { ship_type: "destroyer", label: "Destroyer", size: 2 },
+      { ship_type: "submarine", label: "Submarine", size: 3 },
     ];
+  }
+
+  function getShipMarker(shipType) {
+    return SHIP_MARKERS[String(shipType || "").toLowerCase()] || "?";
   }
 
   function getShipSpec(shipType) {
