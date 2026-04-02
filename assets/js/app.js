@@ -320,7 +320,7 @@ const FEATURED_HOME_ANNOUNCEMENT = {
   type: "Town Hall",
   format: "Hybrid",
   title: "Town hall and leadership briefing.",
-  summary: "The next all-hands is being treated as a high-signal moment: a live walkthrough of Acuite Connect, a business update from leadership, and a focused Q&A on how we work together better from here.",
+  summary: "How did we do last year? What is our plan going forward? If you want to know about these, do attend the session. Before the session you may post a question to our MD & CEO, give a suggestion or share an idea.",
   dateLabel: "Thursday, 23rd April 2026",
   timeLabel: "4:00 PM - 5:30 PM IST",
   venueLabel: "Venue: TBD",
