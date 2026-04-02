@@ -2766,11 +2766,16 @@ function renderLearningBooks() {
 }
 
 function renderLearningRequisitions() {
+  const container = document.getElementById("learning-my-requisitions");
+  if (!container) {
+    return;
+  }
+
   const openItems = appData.learningRequisitions.filter((item) => isOpenLearningStatus(item.status));
   const closedItems = appData.learningRequisitions.filter((item) => !isOpenLearningStatus(item.status));
   const items = [...openItems, ...closedItems].slice(0, 6);
 
-  document.getElementById("learning-my-requisitions").innerHTML = `
+  container.innerHTML = `
     <p class="widget-kicker">My requisitions</p>
     <h3>Your reading queue</h3>
     ${
@@ -2792,7 +2797,13 @@ function renderLearningRequisitions() {
 }
 
 function renderLearningGuideCards() {
-  document.getElementById("learning-guidance-card").innerHTML = `
+  const guidanceCard = document.getElementById("learning-guidance-card");
+  const nextCard = document.getElementById("learning-next-card");
+  if (!guidanceCard || !nextCard) {
+    return;
+  }
+
+  guidanceCard.innerHTML = `
     <p class="widget-kicker">How it works</p>
     <h3>Book requisitions made simple</h3>
     <ul class="simple-list">
@@ -2802,7 +2813,7 @@ function renderLearningGuideCards() {
     </ul>
   `;
 
-  document.getElementById("learning-next-card").innerHTML = `
+  nextCard.innerHTML = `
     <p class="widget-kicker">Coming next</p>
     <h3>Mentoring and training exchange</h3>
     <p>After the book workflow, this module is ready for skill requests, internal mentors and peer-led sessions.</p>
