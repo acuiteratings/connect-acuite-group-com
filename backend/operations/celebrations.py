@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -19,6 +20,9 @@ from .services import record_analytics_event, record_audit_event
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent / "bulletin_templates"
 RENDER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "render_bulletin_template.mjs"
+PLAYWRIGHT_BROWSERS_PATH = str(
+    Path(os.getenv("PLAYWRIGHT_BROWSERS_PATH", Path(__file__).resolve().parents[2] / ".playwright-browsers"))
+)
 
 
 @dataclass(frozen=True)
@@ -146,6 +150,10 @@ def _render_template_image_data_url(*, template_path: Path, name: str, occasion_
             capture_output=True,
             text=True,
             check=False,
+            env={
+                **os.environ,
+                "PLAYWRIGHT_BROWSERS_PATH": PLAYWRIGHT_BROWSERS_PATH,
+            },
         )
         if result.returncode != 0:
             message = (result.stderr or result.stdout or "Template render failed.").strip()
