@@ -297,6 +297,10 @@ def get_match_queryset():
     )
 
 
+def get_locked_match(match_id):
+    return BattleshipMatch.objects.select_for_update().get(pk=match_id)
+
+
 def get_participant(match, user):
     for participant in match.participants.all():
         if participant.user_id == user.id:
@@ -668,7 +672,7 @@ def respond_to_invitation(match_id, actor, decision, *, request=None, now=None):
         raise BattleshipRuleError("Decision must be accept or decline.", code="invalid_decision")
 
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         sync_match_state(match, now=current_time, request=request)
         get_participant(match, actor)
         if actor.id != match.invitee_id:
@@ -728,7 +732,7 @@ def respond_to_invitation(match_id, actor, decision, *, request=None, now=None):
 def cancel_invitation(match_id, actor, *, request=None, now=None):
     current_time = now or get_now()
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         get_participant(match, actor)
         if actor.id != match.inviter_id:
             raise BattleshipRuleError(
@@ -761,7 +765,7 @@ def submit_fleet_layout(match_id, actor, layout, *, request=None, now=None):
     current_time = now or get_now()
     normalized_layout = validate_fleet_layout(layout)
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         sync_match_state(match, now=current_time, request=request)
         participant = get_participant(match, actor)
         if match.status == BattleshipMatch.Status.PAUSED_OFFICE_HOURS:
@@ -827,7 +831,7 @@ def fire_turn(match_id, actor, row, col, *, request=None, now=None):
         raise BattleshipRuleError("Shot must stay within the 10x10 board.", code="invalid_coordinates")
 
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         sync_match_state(match, now=current_time, request=request)
         participant = get_participant(match, actor)
         opponent = get_opponent_participant(match, participant)
@@ -925,7 +929,7 @@ def fire_turn(match_id, actor, row, col, *, request=None, now=None):
 def resign_match(match_id, actor, *, request=None, now=None):
     current_time = now or get_now()
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         get_participant(match, actor)
         sync_match_state(match, now=current_time, request=request)
         if match.status not in SERIOUS_MATCH_STATUSES:
@@ -974,7 +978,7 @@ def resign_match(match_id, actor, *, request=None, now=None):
 def request_rematch(match_id, actor, *, request=None, now=None):
     current_time = now or get_now()
     with transaction.atomic():
-        match = get_match_queryset().select_for_update().get(pk=match_id)
+        match = get_locked_match(match_id)
         get_participant(match, actor)
         sync_match_state(match, now=current_time, request=request)
         if match.status not in {
