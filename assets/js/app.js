@@ -5055,6 +5055,7 @@ function mapBulletinPost(post) {
     ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
     imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
+    bulletinCard: metadata.bulletin_card && typeof metadata.bulletin_card === "object" ? metadata.bulletin_card : null,
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
     initials: author.initials || initialsFromName(authorName),
@@ -6089,8 +6090,9 @@ function renderBulletinPostCard(post) {
           <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
         </div>
       </div>
+      ${post.bulletinCard ? renderNativeCelebrationCard(post.bulletinCard) : ""}
       ${
-        post.imageDataUrl
+        !post.bulletinCard && post.imageDataUrl
           ? `<div class="bulletin-card-image">
               <img src="${escapeHtml(post.imageDataUrl)}" alt="${escapeHtml(post.imageAlt)}" loading="lazy">
             </div>`
@@ -6137,6 +6139,30 @@ function renderBulletinPostCard(post) {
         ${renderDeleteLivePostButton(post, "general")}
       </div>
     </article>
+  `;
+}
+
+function renderNativeCelebrationCard(card) {
+  const photo = String(card?.photo_url || "").trim();
+  return `
+    <div class="bulletin-native-card bulletin-style-${escapeHtml(card?.style_key || "sunrise")}">
+      <div class="bulletin-native-top">
+        <span class="bulletin-native-kicker">${escapeHtml(card?.occasion_label || "Celebration")}</span>
+        <span class="bulletin-native-date">${escapeHtml(card?.date_label || "")}</span>
+      </div>
+      <div class="bulletin-native-person">
+        ${
+          photo
+            ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(card?.person_name || "Employee")}" class="bulletin-native-photo" loading="lazy">`
+            : `<div class="bulletin-native-photo bulletin-native-photo-fallback">${escapeHtml(card?.initials || "AC")}</div>`
+        }
+        <div>
+          <div class="bulletin-native-name">${escapeHtml(card?.person_name || "")}</div>
+          <div class="bulletin-native-role">${escapeHtml(card?.person_role || "")}</div>
+        </div>
+      </div>
+      <div class="bulletin-native-message">${escapeHtml(card?.message || "")}</div>
+    </div>
   `;
 }
 

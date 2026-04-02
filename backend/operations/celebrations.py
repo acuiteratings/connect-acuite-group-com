@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import base64
 import hashlib
-import os
-import subprocess
-import tempfile
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -19,10 +15,6 @@ from feed.models import Post
 from .services import record_analytics_event, record_audit_event
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent / "bulletin_templates"
-RENDER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "render_bulletin_template.mjs"
-PLAYWRIGHT_BROWSERS_PATH = str(
-    Path(os.getenv("PLAYWRIGHT_BROWSERS_PATH", Path(__file__).resolve().parents[2] / ".playwright-browsers"))
-)
 
 
 @dataclass(frozen=True)
@@ -125,42 +117,44 @@ def _profile_photo_url(profile: DirectoryProfile) -> str:
     return ""
 
 
-def _render_template_image_data_url(*, template_path: Path, name: str, occasion_date: str, photo_url: str) -> str:
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as output_file:
-        output_path = Path(output_file.name)
+def _initials_from_name(name: str) -> str:
+    parts = [part for part in str(name or "").strip().split() if part]
+    if len(parts) >= 2:
+        return f"{parts[0][0]}{parts[1][0]}".upper()
+    if parts:
+        return parts[0][:2].upper()
+    return "AC"
 
-    try:
-        command = [
-            "node",
-            str(RENDER_SCRIPT_PATH),
-            "--template",
-            str(template_path),
-            "--name",
-            name,
-            "--date",
-            occasion_date,
-            "--photo-url",
-            photo_url,
-            "--output",
-            str(output_path),
-        ]
-        result = subprocess.run(
-            command,
-            cwd=Path(__file__).resolve().parents[2],
-            capture_output=True,
-            text=True,
-            check=False,
-            env={
-                **os.environ,
-                "PLAYWRIGHT_BROWSERS_PATH": PLAYWRIGHT_BROWSERS_PATH,
-            },
-        )
-        if result.returncode != 0:
-            message = (result.stderr or result.stdout or "Template render failed.").strip()
-            raise RuntimeError(message)
-        return "data:image/png;base64," + base64.b64encode(output_path.read_bytes()).decode("ascii")
-    finally:
-        output_path.unlink(missing_ok=True)
+
+def _template_label(template_path: Path) -> str:
+    name = template_path.stem
+    name = name.replace("birthday-", "").replace("anniversary-", "")
+    parts = [part for part in name.split("-") if part and not part.isdigit()]
+    return " ".join(word.capitalize() for word in parts) or template_path.name
+
+
+def _template_style_key(template_path: Path) -> str:
+    styles = ("sunrise", "confetti", "emerald", "midnight", "pearl", "gold")
+    digest = hashlib.sha256(template_path.name.encode("utf-8")).hexdigest()
+    return styles[int(digest[:8], 16) % len(styles)]
+
+
+def _build_celebration_card(candidate: CelebrationCandidate, *, template_path: Path) -> dict:
+    profile = candidate.profile
+    user = profile.user
+    return {
+        "style_key": _template_style_key(template_path),
+        "template_label": _template_label(template_path),
+        "occasion_label": "Happy Birthday" if candidate.template_key == "birthday_wish" else "Happy Work Anniversary",
+        "person_name": user.full_name,
+        "person_role": " | ".join(
+            item for item in [user.title, user.department or profile.company_name] if item
+        ),
+        "date_label": candidate.occasion_date_label,
+        "message": candidate.body,
+        "photo_url": _profile_photo_url(profile),
+        "initials": _initials_from_name(user.full_name),
+    }
 
 
 def _build_birthday_candidate(profile: DirectoryProfile, *, reference_date: date) -> CelebrationCandidate:
@@ -246,12 +240,7 @@ def build_celebration_preview(*, kind: str, user_id: int, reference_date: date |
             raise RuntimeError("Selected template file was not found.")
     else:
         template_path = _select_template(kind, user_id=user_id, reference_date=reference_date)
-    image_data_url = _render_template_image_data_url(
-        template_path=template_path,
-        name=profile.user.full_name,
-        occasion_date=candidate.occasion_date_label,
-        photo_url=_profile_photo_url(profile),
-    )
+    card = _build_celebration_card(candidate, template_path=template_path)
     payload = _candidate_payload(candidate)
     payload.update(
         {
@@ -260,8 +249,8 @@ def build_celebration_preview(*, kind: str, user_id: int, reference_date: date |
             "body": candidate.body,
             "meta_lines": candidate.meta_lines,
             "template_file": template_path.name,
-            "image_data_url": image_data_url,
-            "image_alt": candidate.title,
+            "template_label": card["template_label"],
+            "card": card,
         }
     )
     return payload
@@ -280,12 +269,7 @@ def _create_post_for_candidate(candidate: CelebrationCandidate, *, author: User)
         user_id=candidate.profile.user_id,
         reference_date=candidate.source_date,
     )
-    image_data_url = _render_template_image_data_url(
-        template_path=template_path,
-        name=candidate.profile.user.full_name,
-        occasion_date=candidate.occasion_date_label,
-        photo_url=_profile_photo_url(candidate.profile),
-    )
+    card = _build_celebration_card(candidate, template_path=template_path)
     metadata = {
         "post_as_company": True,
         "company_author_name": "Acuité Ratings & Research",
@@ -294,8 +278,7 @@ def _create_post_for_candidate(candidate: CelebrationCandidate, *, author: User)
         "bulletin_category": "hr",
         "bulletin_template": candidate.template_key,
         "bulletin_meta_lines": candidate.meta_lines,
-        "bulletin_image_data_url": image_data_url,
-        "bulletin_image_alt": candidate.title,
+        "bulletin_card": card,
         "bulletin_template_file": template_path.name,
         "bulletin_auto_key": candidate.auto_key,
         "bulletin_auto_kind": candidate.template_key,
@@ -349,13 +332,8 @@ def publish_celebration_post_from_preview(*, kind: str, user_id: int, template_n
     template_path = TEMPLATE_ROOT / template_kind / template_name
     if not template_path.exists():
         raise RuntimeError("Selected template file was not found.")
-    image_data_url = _render_template_image_data_url(
-        template_path=template_path,
-        name=candidate.profile.user.full_name,
-        occasion_date=candidate.occasion_date_label,
-        photo_url=_profile_photo_url(candidate.profile),
-    )
     candidate_post = candidate
+    card = _build_celebration_card(candidate_post, template_path=template_path)
     metadata = {
         "post_as_company": True,
         "company_author_name": "Acuité Ratings & Research",
@@ -364,8 +342,7 @@ def publish_celebration_post_from_preview(*, kind: str, user_id: int, template_n
         "bulletin_category": "hr",
         "bulletin_template": candidate_post.template_key,
         "bulletin_meta_lines": candidate_post.meta_lines,
-        "bulletin_image_data_url": image_data_url,
-        "bulletin_image_alt": candidate_post.title,
+        "bulletin_card": card,
         "bulletin_template_file": template_path.name,
         "bulletin_auto_key": candidate_post.auto_key,
         "bulletin_auto_kind": candidate_post.template_key,

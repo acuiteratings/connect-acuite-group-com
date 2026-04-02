@@ -363,12 +363,10 @@
       shell.innerHTML = `<div class="admin-selected-user">Choose ${kind === "birthday" ? "a birthday" : "an anniversary"} entry and click Generate card.</div>`;
       return;
     }
-    meta.textContent = `${preview.name} | ${preview.template_file}`;
+    meta.textContent = `${preview.name} | ${preview.template_label || preview.template_file}`;
     shell.innerHTML = `
       <div class="celebration-preview-card">
-        <div class="celebration-preview-image">
-          <img src="${escapeHtml(preview.image_data_url)}" alt="${escapeHtml(preview.image_alt)}">
-        </div>
+        ${renderCelebrationCard(preview.card)}
         <div class="celebration-preview-details">
           <h4>${escapeHtml(preview.title)}</h4>
           <p>${escapeHtml(preview.body)}</p>
@@ -380,6 +378,33 @@
           <button type="button" class="admin-btn admin-btn-secondary" data-action="generate-celebration-card" data-kind="${kind}" data-user-id="${preview.user_id}">Regenerate</button>
           <button type="button" class="admin-btn admin-btn-primary" data-action="post-celebration-card" data-kind="${kind}">Post</button>
         </div>
+      </div>
+    `;
+  }
+
+  function renderCelebrationCard(card) {
+    if (!card) {
+      return "";
+    }
+    const photo = String(card.photo_url || "").trim();
+    return `
+      <div class="celebration-native-card celebration-style-${escapeHtml(card.style_key || "sunrise")}">
+        <div class="celebration-native-card-top">
+          <span class="celebration-native-kicker">${escapeHtml(card.occasion_label || "Celebration")}</span>
+          <span class="celebration-native-date">${escapeHtml(card.date_label || "")}</span>
+        </div>
+        <div class="celebration-native-person">
+          ${
+            photo
+              ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(card.person_name || "Employee")}" class="celebration-native-photo">`
+              : `<div class="celebration-native-photo celebration-native-photo-fallback">${escapeHtml(card.initials || "AC")}</div>`
+          }
+          <div>
+            <h3>${escapeHtml(card.person_name || "")}</h3>
+            <p>${escapeHtml(card.person_role || "")}</p>
+          </div>
+        </div>
+        <div class="celebration-native-message">${escapeHtml(card.message || "")}</div>
       </div>
     `;
   }

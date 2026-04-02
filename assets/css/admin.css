@@ -462,20 +462,6 @@ button {
   gap: 14px;
 }
 
-.celebration-preview-image {
-  overflow: hidden;
-  border-radius: 14px;
-  border: 1px solid var(--admin-border);
-  background: #101214;
-}
-
-.celebration-preview-image img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-
 .celebration-preview-details {
   display: grid;
   gap: 10px;
@@ -485,6 +471,93 @@ button {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.celebration-native-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  color: #fff;
+}
+
+.celebration-style-sunrise {
+  background: linear-gradient(135deg, #f08a24, #a4381d);
+}
+
+.celebration-style-confetti {
+  background: linear-gradient(135deg, #ca7c18, #7c2d5c);
+}
+
+.celebration-style-emerald {
+  background: linear-gradient(135deg, #1f8a70, #155e63);
+}
+
+.celebration-style-midnight {
+  background: linear-gradient(135deg, #243b55, #141e30);
+}
+
+.celebration-style-pearl {
+  background: linear-gradient(135deg, #5b6574, #31363f);
+}
+
+.celebration-style-gold {
+  background: linear-gradient(135deg, #a56a18, #6d3d12);
+}
+
+.celebration-native-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.celebration-native-kicker,
+.celebration-native-date {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.celebration-native-person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.celebration-native-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.24);
+}
+
+.celebration-native-photo-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.celebration-native-person h3 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.celebration-native-person p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.celebration-native-message {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  line-height: 1.6;
+  color: #fff;
 }
 
 .celebration-empty {

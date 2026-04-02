@@ -219,21 +219,19 @@ class DailyCelebrationPublishingTests(TestCase):
             profile_photos=["https://example.com/photo.jpg"],
         )
 
-    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,MOCK")
-    def test_publish_daily_celebration_posts_creates_birthday_and_anniversary_posts(self, _renderer):
+    def test_publish_daily_celebration_posts_creates_birthday_and_anniversary_posts(self):
         result = publish_daily_celebration_posts(reference_date=self.today)
 
         self.assertEqual(len(result["created"]), 2)
         posts = list(Post.objects.order_by("title"))
         self.assertEqual(len(posts), 2)
         self.assertTrue(all(post.moderation_status == Post.ModerationStatus.PUBLISHED for post in posts))
-        self.assertEqual(posts[0].metadata["bulletin_image_data_url"], "data:image/png;base64,MOCK")
+        self.assertEqual(posts[0].metadata["bulletin_card"]["person_name"], posts[0].title.split(" | ")[-1])
         self.assertEqual(posts[0].metadata["bulletin_category"], "hr")
         self.assertEqual(AuditLog.objects.filter(action="post.auto_celebration.created").count(), 2)
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="auto_celebration_post_created").count(), 2)
 
-    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,MOCK")
-    def test_publish_daily_celebration_posts_is_idempotent_for_same_date(self, _renderer):
+    def test_publish_daily_celebration_posts_is_idempotent_for_same_date(self):
         publish_daily_celebration_posts(reference_date=self.today)
         second_result = publish_daily_celebration_posts(reference_date=self.today)
 
@@ -284,8 +282,7 @@ class CelebrationAdminApiTests(TestCase):
         self.assertEqual(len(payload["birthdays"]), 1)
         self.assertEqual(payload["birthdays"][0]["name"], "Riya Sen")
 
-    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,PREVIEW")
-    def test_celebration_preview_returns_image_data(self, _renderer):
+    def test_celebration_preview_returns_native_card_data(self):
         self.client.force_login(self.admin)
 
         response = self.client.post(
@@ -297,11 +294,11 @@ class CelebrationAdminApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()["preview"]
         self.assertEqual(payload["name"], "Riya Sen")
-        self.assertEqual(payload["image_data_url"], "data:image/png;base64,PREVIEW")
+        self.assertEqual(payload["card"]["person_name"], "Riya Sen")
+        self.assertEqual(payload["card"]["occasion_label"], "Happy Birthday")
         self.assertTrue(payload["template_file"].endswith(".html"))
 
-    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,POSTED")
-    def test_celebration_publish_creates_post(self, _renderer):
+    def test_celebration_publish_creates_post(self):
         self.client.force_login(self.admin)
         preview_response = self.client.post(
             "/api/ops/celebrations/preview/",
@@ -325,5 +322,5 @@ class CelebrationAdminApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Post.objects.count(), 1)
         post = Post.objects.get()
-        self.assertEqual(post.metadata["bulletin_image_data_url"], "data:image/png;base64,POSTED")
+        self.assertEqual(post.metadata["bulletin_card"]["person_name"], "Riya Sen")
         self.assertEqual(post.metadata["bulletin_template_file"], template_file)
