@@ -2697,17 +2697,18 @@ function renderLearningSummary() {
   const filteredBooks = getFilteredLearningBooks();
   const availableTitles = appData.learningBooks.filter((book) => book.available_copies > 0).length;
   const myOpenRequests = appData.learningRequisitions.filter((item) => isOpenLearningStatus(item.status)).length;
+  const categoryCount = new Set(appData.learningBooks.map((book) => book.category).filter(Boolean)).size;
 
   document.getElementById("learning-summary-grid").innerHTML = [
     {
-      kicker: "Book Club",
+      kicker: "Library",
       title: `${appData.learningBooks.length} titles`,
-      copy: "Admin-managed library titles ready for employee requisitions.",
+      copy: "Internal catalog titles ready for employee requisitions.",
     },
     {
-      kicker: "Availability",
-      title: `${availableTitles} ready now`,
-      copy: "Titles with at least one copy still open for requisition.",
+      kicker: "Shelves",
+      title: `${categoryCount} categories`,
+      copy: "Grouped into shelf-style rows for easier browsing.",
     },
     {
       kicker: "Your queue",
@@ -2740,7 +2741,7 @@ function renderLearningBooks() {
   const books = getFilteredLearningBooks();
   document.getElementById("learning-results-meta").textContent = appData.learningBooks.length
     ? `${books.length} of ${appData.learningBooks.length} titles shown`
-    : "Live Acuité book club catalog";
+    : "Live Acuité library catalog";
 
   if (!appData.learningBooks.length) {
     container.innerHTML = `
@@ -2760,7 +2761,8 @@ function renderLearningBooks() {
     return;
   }
 
-  container.innerHTML = books.map(renderLearningBookCard).join("");
+  const groupedBooks = groupLearningBooksByCategory(books);
+  container.innerHTML = groupedBooks.map(([category, items]) => renderLearningShelf(category, items)).join("");
 }
 
 function renderLearningRequisitions() {
@@ -3821,7 +3823,12 @@ function renderAnniversaries() {
 }
 
 function renderUpcoming() {
-  document.getElementById("upcoming-events").innerHTML = appData.upcoming.length ? appData.upcoming.map((item) => `
+  const element = document.getElementById("upcoming-events");
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = appData.upcoming.length ? appData.upcoming.map((item) => `
     <div class="event-item">
       <div class="event-date">${escapeHtml(item.date)}</div>
       <div class="event-name">${escapeHtml(item.name)}</div>
@@ -3851,7 +3858,12 @@ function renderPoll() {
 }
 
 function renderSavedResources() {
-  document.getElementById("saved-resources").innerHTML = renderSavedResourceLinks("sidebar");
+  const element = document.getElementById("saved-resources");
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = renderSavedResourceLinks("sidebar");
 }
 
 function renderSavedResourceLinks(scope) {
@@ -4117,32 +4129,68 @@ function renderLearningBookCard(book) {
       ? "Request book"
       : "Unavailable";
 
+  const coverMarkup = book.cover_url
+    ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} cover" class="learning-book-cover-image" loading="lazy">`
+    : `<div class="learning-book-cover-fallback" style="background:${gradientValue(gradientKeyFromText(`${book.title}-${book.author}`))}">
+        <span class="learning-book-cover-category">${escapeHtml(book.category || "Library")}</span>
+        <strong>${escapeHtml(book.title)}</strong>
+      </div>`;
+  const note = book.review_quote || book.summary || "Ready for requisition by employees through the internal library.";
+  const locationLine = [book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | ");
+
   return `
-    <article class="tool-card learning-book-card" id="book-${book.id}">
-      <div class="tool-card-head">
-        <div class="tool-icon" style="background:${gradientValue(gradientKeyFromText(`${book.title}-${book.author}`))}">
-          ${escapeHtml(initialsFromName(book.author))}
-        </div>
-        <div>
-          <h3>${escapeHtml(book.title)}</h3>
-          <span class="tool-status ${book.available_copies > 0 ? "live" : "planned"}">${escapeHtml(statusText)}</span>
-        </div>
+    <article class="learning-book-card" id="book-${book.id}">
+      <div class="learning-book-cover">
+        ${coverMarkup}
       </div>
-      <p class="learning-book-author">${escapeHtml(book.author)}</p>
-      <p>${escapeHtml(book.summary || "Ready for requisition by employees through the internal book club.")}</p>
-      <div class="tool-meta learning-book-meta">
-        <span class="mini-item-meta">${escapeHtml(`${book.open_requisition_count} active requisition${book.open_requisition_count === 1 ? "" : "s"}`)}</span>
-        <button
-          type="button"
-          class="tool-open ${book.can_request ? "live" : ""}"
-          data-action="request-book"
-          data-id="${book.id}"
-          ${book.can_request ? "" : "disabled"}
-        >
-          ${escapeHtml(requestLabel)}
-        </button>
+      <div class="learning-book-body">
+        <div class="learning-book-headline">
+          <span class="tool-status ${book.available_copies > 0 ? "live" : "planned"}">${escapeHtml(statusText)}</span>
+          ${book.catalog_number ? `<span class="mini-item-meta">Book ${escapeHtml(book.catalog_number)}</span>` : ""}
+        </div>
+        <h3>${escapeHtml(book.title)}</h3>
+        <p class="learning-book-author">${escapeHtml(book.author)}</p>
+        <p class="learning-book-note">${escapeHtml(note)}</p>
+        <div class="learning-book-meta">
+          <span class="mini-item-meta">${escapeHtml(locationLine || `${book.open_requisition_count} active requisition${book.open_requisition_count === 1 ? "" : "s"}`)}</span>
+          <button
+            type="button"
+            class="tool-open ${book.can_request ? "live" : ""}"
+            data-action="request-book"
+            data-id="${book.id}"
+            ${book.can_request ? "" : "disabled"}
+          >
+            ${escapeHtml(requestLabel)}
+          </button>
+        </div>
       </div>
     </article>
+  `;
+}
+
+function groupLearningBooksByCategory(books) {
+  const groups = new Map();
+  books.forEach((book) => {
+    const category = book.category || "General Reading";
+    if (!groups.has(category)) {
+      groups.set(category, []);
+    }
+    groups.get(category).push(book);
+  });
+  return Array.from(groups.entries()).sort((left, right) => left[0].localeCompare(right[0]));
+}
+
+function renderLearningShelf(category, books) {
+  return `
+    <section class="learning-shelf">
+      <div class="learning-shelf-head">
+        <h3>${escapeHtml(category)}</h3>
+        <span class="mini-item-meta">${escapeHtml(`${books.length} title${books.length === 1 ? "" : "s"}`)}</span>
+      </div>
+      <div class="learning-shelf-row">
+        ${books.map(renderLearningBookCard).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -4596,7 +4644,7 @@ function buildSearchIndex() {
 
   const books = appData.learningBooks.map((book) => ({
     title: book.title,
-    subtitle: `${book.author} - Book Club`,
+    subtitle: `${book.author} - Library`,
     type: "book",
     tab: "clubs-learning",
     targetId: `book-${book.id}`,
@@ -5038,7 +5086,7 @@ function getFilteredLearningBooks() {
   }
 
   return books.filter((book) => {
-    return [book.title, book.author, book.summary]
+    return [book.title, book.author, book.summary, book.category, book.office_location, book.shelf_area, book.shelf_label]
       .filter(Boolean)
       .join(" ")
       .toLowerCase()
