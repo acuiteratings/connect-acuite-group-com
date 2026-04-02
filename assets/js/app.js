@@ -145,6 +145,7 @@ const STORE_CATEGORY_LABELS = {
   desk: "Desk",
   memorabilia: "Memorabilia",
 };
+const ENABLED_TABS = new Set(["home", "ceo-desk", "playtime", "battleship", "clubs-learning", "store", "directory"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   hr: "HR",
@@ -2135,6 +2136,10 @@ function currentUserCanAdministerConnect() {
 
 function renderPanels() {
   const canAdminister = currentUserCanAdministerConnect();
+  if (!ENABLED_TABS.has(state.activeTab)) {
+    state.activeTab = "home";
+    saveState();
+  }
   const activeSidebarTab = state.activeTab === "battleship" ? "playtime" : state.activeTab;
   if (state.activeTab === "admin") {
     state.activeTab = "home";
@@ -3125,10 +3130,14 @@ function renderRecognitionRewardsCard() {
 }
 
 function renderStoreSummary() {
+  const container = document.getElementById("store-summary-grid");
+  if (!container) {
+    return;
+  }
   const items = getFilteredStoreItems();
   const availableItems = appData.storeItems.filter((item) => item.available_units > 0).length;
 
-  document.getElementById("store-summary-grid").innerHTML = [
+  container.innerHTML = [
     {
       kicker: "Balance",
       title: `${appData.storeBalance.available_points || 0} coins`,
@@ -3195,7 +3204,11 @@ function renderStoreCatalog() {
 }
 
 function renderStoreBalanceCard() {
-  document.getElementById("store-balance-card").innerHTML = `
+  const container = document.getElementById("store-balance-card");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = `
     <p class="widget-kicker">My Acuite Coins</p>
     <h3>${escapeHtml(String(appData.storeBalance.available_points || 0))} available</h3>
     <ul class="simple-list">
@@ -3207,7 +3220,11 @@ function renderStoreBalanceCard() {
 }
 
 function renderStoreRedemptionsCard() {
-  document.getElementById("store-redemptions-card").innerHTML = `
+  const container = document.getElementById("store-redemptions-card");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = `
     <p class="widget-kicker">My redemptions</p>
     <h3>Recent requests</h3>
     ${
@@ -3229,8 +3246,12 @@ function renderStoreRedemptionsCard() {
 }
 
 function renderStorePolicyCard() {
+  const container = document.getElementById("store-policy-card");
+  if (!container) {
+    return;
+  }
   const register = Array.isArray(appData.storeBalance.register) ? appData.storeBalance.register.slice(0, 5) : [];
-  document.getElementById("store-policy-card").innerHTML = `
+  container.innerHTML = `
     <p class="widget-kicker">Coin register</p>
     <h3>Recent earned and encashed activity</h3>
     ${
@@ -4798,7 +4819,7 @@ function openTool(toolId) {
 }
 
 function switchTab(tabId) {
-  state.activeTab = tabId;
+  state.activeTab = ENABLED_TABS.has(tabId) ? tabId : "home";
   saveState();
   hideSearchResults();
   renderPanels();
