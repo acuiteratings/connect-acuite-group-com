@@ -109,7 +109,7 @@
       const query = state.inviteQuery ? `?q=${encodeURIComponent(state.inviteQuery)}` : "";
       const payload = await window.AcuiteConnectAuth.apiRequest(`/api/battleship/lobby/${query}`);
       state.lobby = payload;
-      state.match = payload.viewer_match || payload.viewer_open_match || null;
+      state.match = payload.viewer_open_match || null;
       if (isPlacementPhase(state.match)) {
         hydrateDraftFromMatch();
       } else if (!state.match) {
