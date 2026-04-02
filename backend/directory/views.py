@@ -3,6 +3,8 @@ import json
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 
+from store.services import build_coin_balance_map
+
 from .models import DirectoryProfile
 from .serializers import serialize_directory_profile
 from .utils import (
@@ -73,7 +75,12 @@ def directory_list(request):
             | Q(bio__icontains=needle)
         )
 
-    results = [serialize_directory_profile(profile) for profile in queryset.order_by("user__display_name", "user__email")[:500]]
+    profiles = list(queryset.order_by("user__display_name", "user__email")[:500])
+    coin_balance_map = build_coin_balance_map([profile.user_id for profile in profiles])
+    results = [
+        serialize_directory_profile(profile, coin_balance=coin_balance_map.get(profile.user_id))
+        for profile in profiles
+    ]
     filters = {
         "company": _distinct_values(base_queryset, "company_name"),
         "department": [

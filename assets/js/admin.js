@@ -10,6 +10,10 @@
     library: {
       requisitions: [],
     },
+    store: {
+      requests: [],
+      handedOver: [],
+    },
     previews: {
       birthday: null,
       anniversary: null,
@@ -40,7 +44,7 @@
     cacheElements();
     bindEvents();
     renderCurrentUser();
-    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations(), loadLibraryAdminData()]);
+    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations(), loadLibraryAdminData(), loadStoreAdminData()]);
     renderAll();
   }
 
@@ -70,6 +74,10 @@
       libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
       libraryReturnList: document.getElementById("admin-library-return-list"),
       libraryReturnMeta: document.getElementById("admin-library-return-meta"),
+      storeRequestList: document.getElementById("admin-store-request-list"),
+      storeRequestMeta: document.getElementById("admin-store-request-meta"),
+      storeHandedList: document.getElementById("admin-store-handed-list"),
+      storeHandedMeta: document.getElementById("admin-store-handed-meta"),
       internalJobForm: document.getElementById("admin-internal-job-form"),
       vacancyForm: document.getElementById("admin-vacancy-form"),
       awardForm: document.getElementById("admin-award-form"),
@@ -109,12 +117,19 @@
     state.library.requisitions = Array.isArray(payload.results) ? payload.results : [];
   }
 
+  async function loadStoreAdminData() {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/store/admin/overview/");
+    state.store.requests = Array.isArray(payload.requests) ? payload.requests : [];
+    state.store.handedOver = Array.isArray(payload.handed_over) ? payload.handed_over : [];
+  }
+
   function renderAll() {
     renderExitSearchResults();
     renderExitProcessList();
     syncExitForm();
     renderCelebrationSections();
     renderLibraryAdmin();
+    renderStoreAdmin();
   }
 
   function renderCurrentUser() {
@@ -185,6 +200,16 @@
 
     if (action.dataset.action === "return-library-book") {
       void updateLibraryRequisition(Number(action.dataset.id || 0), "returned");
+      return;
+    }
+
+    if (action.dataset.action === "approve-store-redemption") {
+      void updateStoreRedemption(Number(action.dataset.id || 0), "approved");
+      return;
+    }
+
+    if (action.dataset.action === "reject-store-redemption") {
+      void updateStoreRedemption(Number(action.dataset.id || 0), "declined");
       return;
     }
   }
@@ -426,6 +451,66 @@
     `).join("");
   }
 
+  function renderStoreAdmin() {
+    if (!elements.storeRequestList || !elements.storeRequestMeta || !elements.storeHandedList || !elements.storeHandedMeta) {
+      return;
+    }
+
+    elements.storeRequestMeta.textContent = state.store.requests.length
+      ? `${state.store.requests.length} pending request${state.store.requests.length === 1 ? "" : "s"}`
+      : "No pending requests";
+    elements.storeHandedMeta.textContent = state.store.handedOver.length
+      ? `${state.store.handedOver.length} handed-over item${state.store.handedOver.length === 1 ? "" : "s"}`
+      : "No items handed over yet";
+
+    if (!state.store.requests.length) {
+      elements.storeRequestList.innerHTML = '<div class="celebration-empty">No Brand Store requests are waiting right now.</div>';
+    } else {
+      elements.storeRequestList.innerHTML = state.store.requests.map((item) => `
+        <article class="admin-library-requisition-card">
+          <div class="admin-library-requisition-head">
+            <div>
+              <h4>${escapeHtml(item.item.name)}</h4>
+              <p>${escapeHtml([item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
+            </div>
+            <span class="admin-process-stage">${escapeHtml(item.status_label || capitalize(item.status || "requested"))}</span>
+          </div>
+          <div class="celebration-row-meta">
+            <span class="admin-flag">${escapeHtml(`${item.coin_cost || item.points_locked || 0} Acuite Coins`)}</span>
+            <span class="admin-flag">${escapeHtml(item.item.category_label || item.item.category || "Item")}</span>
+          </div>
+          ${item.notes ? `<p class="admin-library-note">${escapeHtml(item.notes)}</p>` : ""}
+          <div class="celebration-preview-actions">
+            <button type="button" class="admin-btn admin-btn-primary" data-action="approve-store-redemption" data-id="${item.id}">Approve and hand over</button>
+            <button type="button" class="admin-btn admin-btn-danger" data-action="reject-store-redemption" data-id="${item.id}">Reject</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    if (!state.store.handedOver.length) {
+      elements.storeHandedList.innerHTML = '<div class="celebration-empty">Handed-over Acuite items will appear here after approval.</div>';
+      return;
+    }
+
+    elements.storeHandedList.innerHTML = state.store.handedOver.map((item) => `
+      <article class="admin-library-requisition-card">
+        <div class="admin-library-requisition-head">
+          <div>
+            <h4>${escapeHtml(item.item.name)}</h4>
+            <p>${escapeHtml([item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
+          </div>
+          <span class="admin-process-stage">${escapeHtml(item.status_label || capitalize(item.status || "approved"))}</span>
+        </div>
+        <div class="celebration-row-meta">
+          <span class="admin-flag">${escapeHtml(`${item.coin_cost || item.points_locked || 0} Acuite Coins`)}</span>
+          <span class="admin-flag">${escapeHtml(formatDateLabel(item.reviewed_at || item.updated_at))}</span>
+        </div>
+        ${item.admin_note ? `<p class="admin-library-note">${escapeHtml(item.admin_note)}</p>` : ""}
+      </article>
+    `).join("");
+  }
+
   function renderCelebrationList(kind) {
     const list = kind === "birthday" ? elements.birthdayList : elements.anniversaryList;
     const meta = kind === "birthday" ? elements.birthdayResultsMeta : elements.anniversaryResultsMeta;
@@ -611,6 +696,23 @@
       );
     } catch (error) {
       showToast(error.message || "Could not update the requisition.");
+    }
+  }
+
+  async function updateStoreRedemption(redemptionId, status) {
+    if (!redemptionId) {
+      return;
+    }
+    try {
+      await window.AcuiteConnectAuth.apiRequest(`/api/store/redemptions/${redemptionId}/`, {
+        method: "PATCH",
+        body: { status },
+      });
+      await loadStoreAdminData();
+      renderStoreAdmin();
+      showToast(status === "approved" ? "Brand Store item handed over." : "Brand Store request rejected.");
+    } catch (error) {
+      showToast(error.message || "Could not update the Brand Store request.");
     }
   }
 

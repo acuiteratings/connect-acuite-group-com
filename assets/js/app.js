@@ -493,8 +493,11 @@ const appData = {
   storeBalance: {
     earned_points: 0,
     locked_points: 0,
+    spent_points: 0,
     available_points: 0,
+    register: [],
   },
+  storeCoinRules: [],
   adminUsers: [],
   learningBooks: [],
   learningRequisitions: [],
@@ -1159,8 +1162,11 @@ Object.assign(appData, {
   storeBalance: {
     earned_points: 0,
     locked_points: 0,
+    spent_points: 0,
     available_points: 0,
+    register: [],
   },
+  storeCoinRules: [],
   learningBooks: [],
   learningRequisitions: [],
   homePosts: [],
@@ -1592,8 +1598,11 @@ async function loadStoreData() {
   appData.storeBalance = {
     earned_points: 0,
     locked_points: 0,
+    spent_points: 0,
     available_points: 0,
+    register: [],
   };
+  appData.storeCoinRules = [];
 
   if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
     storeLoadError = "Brand Store services are unavailable in this build.";
@@ -1605,6 +1614,7 @@ async function loadStoreData() {
     appData.storeItems = Array.isArray(payload.items) ? payload.items : [];
     appData.storeRedemptions = Array.isArray(payload.my_redemptions) ? payload.my_redemptions : [];
     appData.storeBalance = payload.balance || appData.storeBalance;
+    appData.storeCoinRules = Array.isArray(payload.coin_rules) ? payload.coin_rules : [];
   } catch (error) {
     storeLoadError = error.message || "Could not load the Brand Store.";
   }
@@ -3121,8 +3131,8 @@ function renderStoreSummary() {
   document.getElementById("store-summary-grid").innerHTML = [
     {
       kicker: "Balance",
-      title: `${appData.storeBalance.available_points || 0} pts`,
-      copy: "Available reward points that can be used on the current catalog.",
+      title: `${appData.storeBalance.available_points || 0} coins`,
+      copy: "Acuite Coins available right now for Brand Store redemption.",
     },
     {
       kicker: "Catalog",
@@ -3186,12 +3196,12 @@ function renderStoreCatalog() {
 
 function renderStoreBalanceCard() {
   document.getElementById("store-balance-card").innerHTML = `
-    <p class="widget-kicker">My points</p>
+    <p class="widget-kicker">My Acuite Coins</p>
     <h3>${escapeHtml(String(appData.storeBalance.available_points || 0))} available</h3>
     <ul class="simple-list">
-      <li>Earned: ${escapeHtml(String(appData.storeBalance.earned_points || 0))} pts</li>
-      <li>Locked in redemptions: ${escapeHtml(String(appData.storeBalance.locked_points || 0))} pts</li>
-      <li>Use Recognition &amp; Rewards to keep building your balance.</li>
+      <li>Earned: ${escapeHtml(String(appData.storeBalance.earned_points || 0))} coins</li>
+      <li>Locked in requests: ${escapeHtml(String(appData.storeBalance.locked_points || 0))} coins</li>
+      <li>Encashed: ${escapeHtml(String(appData.storeBalance.spent_points || 0))} coins</li>
     </ul>
   `;
 }
@@ -3219,14 +3229,25 @@ function renderStoreRedemptionsCard() {
 }
 
 function renderStorePolicyCard() {
+  const register = Array.isArray(appData.storeBalance.register) ? appData.storeBalance.register.slice(0, 5) : [];
   document.getElementById("store-policy-card").innerHTML = `
-    <p class="widget-kicker">How it works</p>
-    <h3>Redemption rules</h3>
-    <ul class="simple-list">
-      <li>Items are redeemed using available Connect reward points.</li>
-      <li>Submitting a request locks points until the request is fulfilled, declined or cancelled.</li>
-      <li>Stock visibility is live, so employees only request items that are still available.</li>
-    </ul>
+    <p class="widget-kicker">Coin register</p>
+    <h3>Recent earned and encashed activity</h3>
+    ${
+      register.length
+        ? `<ul class="mini-list">
+            ${register.map((entry) => `
+              <li>
+                <div>
+                  <div class="mini-item-title">${escapeHtml(entry.label || "Acuite Coins activity")}</div>
+                  <div class="mini-item-meta">${escapeHtml(entry.summary || "")}</div>
+                </div>
+                <div class="mini-item-time ${entry.amount < 0 ? "negative-balance" : ""}">${escapeHtml(`${entry.amount > 0 ? "+" : ""}${entry.amount}c`)}</div>
+              </li>
+            `).join("")}
+          </ul>`
+        : `<div class="empty-state">Your Acuite Coin register will appear here after live activity begins.</div>`
+    }
   `;
 }
 
@@ -3237,17 +3258,18 @@ function renderStoreItemCard(item) {
       && ["requested", "approved", "fulfilled"].includes(redemption.status);
   });
   const availablePoints = Number(appData.storeBalance.available_points || 0);
-  const missingPoints = Math.max(item.point_cost - availablePoints, 0);
+  const coinCost = Number(item.coin_cost || item.point_cost || 0);
+  const missingPoints = Math.max(coinCost - availablePoints, 0);
   const outOfStock = item.available_units <= 0;
-  const canRedeem = !activeRedemption && !outOfStock && availablePoints >= item.point_cost;
-  let actionLabel = "Redeem";
+  const canRedeem = !activeRedemption && !outOfStock && availablePoints >= coinCost;
+  let actionLabel = "Buy with Acuite Coins";
 
   if (activeRedemption) {
     actionLabel = capitalize(activeRedemption.status);
   } else if (outOfStock) {
     actionLabel = "Out of stock";
   } else if (missingPoints > 0) {
-    actionLabel = `Need ${missingPoints} pts`;
+    actionLabel = `Need ${missingPoints} coins`;
   }
 
   return `
@@ -3261,9 +3283,9 @@ function renderStoreItemCard(item) {
             <h3>${escapeHtml(item.name)}</h3>
             <span class="tool-status ${item.available_units > 0 ? "live" : "planned"}">${escapeHtml(item.category_label)}</span>
           </div>
-          <div class="store-item-cost">${escapeHtml(String(item.point_cost))} pts</div>
+          <div class="store-item-cost">${escapeHtml(String(coinCost))} coins</div>
         </div>
-        <p>${escapeHtml(item.description || "Admin-managed branded merchandise available for point redemption inside Connect.")}</p>
+        <p>${escapeHtml(item.description || "Admin-managed branded merchandise available for Acuite Coin redemption inside Connect.")}</p>
         <div class="store-item-meta">
           <span class="mini-chip ${item.available_units > 0 ? "success" : ""}">
             ${escapeHtml(`${item.available_units} available`)}
@@ -3275,7 +3297,7 @@ function renderStoreItemCard(item) {
         <span class="mini-item-meta">
           ${activeRedemption
             ? escapeHtml(`You already have a ${activeRedemption.status.replaceAll("_", " ")} request`)
-            : escapeHtml(`Use ${item.point_cost} points to request this item`)}
+            : escapeHtml(`Use ${coinCost} Acuite Coins to request this item`)}
         </span>
         <button
           type="button"
@@ -3716,6 +3738,7 @@ function renderDirectory() {
         </div>
         <div class="person-detail-grid">
           ${directoryCardDetail("Employee Code", person.employeeCode)}
+          ${directoryCardDetail("Acuite Coins", person.coinBalance)}
           ${directoryCardDetail("Company", person.companyLabel || person.company)}
           ${directoryCardDetail("Office", person.office)}
           ${directoryCardDetail("Joined", person.joinedOn)}
@@ -5753,6 +5776,7 @@ function mapDirectoryProfileToCard(profile) {
     office,
     officeLine: [office, companyLabel].filter(Boolean).join(" | "),
     employeeCode: profile.employee_code || "",
+    coinBalance: String(profile.coin_balance?.available_points || 0),
     joinedOn,
     contactLine,
     teams,

@@ -44,11 +44,20 @@ class BrandStoreRedemption(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.REQUESTED)
     points_locked = models.PositiveIntegerField()
     notes = models.TextField(blank=True)
+    admin_note = models.CharField(max_length=280, blank=True)
+    reviewed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("item", "requester"),
+                condition=models.Q(status__in=("requested", "approved", "fulfilled")),
+                name="store_unique_open_redemption_per_item_requester",
+            )
+        ]
 
     def __str__(self):
         return f"{self.requester.full_name} -> {self.item.name}"

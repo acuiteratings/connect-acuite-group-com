@@ -2108,6 +2108,7 @@ select {
   font-weight: 800;
   color: var(--orange);
   white-space: nowrap;
+  text-align: right;
 }
 
 .store-item-meta {
@@ -2124,6 +2125,10 @@ select {
   padding: 14px 18px 18px;
   border-top: 1px solid var(--border);
   align-items: center;
+}
+
+.negative-balance {
+  color: var(--maroon);
 }
 
 .filter-tabs {

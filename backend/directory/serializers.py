@@ -1,7 +1,7 @@
 from accounts.serializers import serialize_user
 
 
-def serialize_directory_profile(profile):
+def serialize_directory_profile(profile, *, coin_balance=None):
     payload = serialize_user(profile.user)
     payload.update(
         {
@@ -23,6 +23,7 @@ def serialize_directory_profile(profile):
             "profile_photos": profile.profile_photos,
             "joined_on": profile.joined_on.isoformat() if profile.joined_on else None,
             "profile_visible": profile.is_visible,
+            "coin_balance": coin_balance or {},
         }
     )
     return payload
