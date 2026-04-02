@@ -277,6 +277,75 @@ class FeedApiTests(TestCase):
         post.refresh_from_db()
         self.assertEqual(post.moderation_status, Post.ModerationStatus.REMOVED)
 
+    def test_admin_can_publish_pending_post(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Pending post",
+            body="Needs approval",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.patch(
+            f"/api/feed/posts/{post.id}/",
+            data=json.dumps({"moderation_status": "published"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.moderation_status, Post.ModerationStatus.PUBLISHED)
+        self.assertIsNotNone(post.published_at)
+
+    def test_admin_can_reject_pending_post(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Pending post",
+            body="Needs approval",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.patch(
+            f"/api/feed/posts/{post.id}/",
+            data=json.dumps({"moderation_status": "rejected"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.moderation_status, Post.ModerationStatus.REJECTED)
+
+    def test_employee_can_list_own_pending_posts_with_author_filter(self):
+        own_pending = Post.objects.create(
+            author=self.user,
+            title="My pending post",
+            body="Still waiting",
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="Other pending post",
+            body="Should stay hidden",
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/api/feed/posts/?module=general&topic=employee_submission&author_id={self.user.id}")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["id"], own_pending.id)
+        self.assertEqual(
+            payload["results"][0]["moderation_status"],
+            Post.ModerationStatus.PENDING_REVIEW,
+        )
+
     def test_moderator_can_delete_any_post(self):
         post = Post.objects.create(
             author=self.user,

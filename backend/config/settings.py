@@ -145,6 +145,7 @@ INSTALLED_APPS = [
     "recognition",
     "store",
     "operations",
+    "quiz",
     "voice",
 ]
 

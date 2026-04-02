@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/voice/", include("voice.urls")),
     path("api/directory/", include("directory.urls")),
     path("api/ops/", include("operations.urls")),
+    path("api/quiz/", include("quiz.urls")),
     path("", views.home, name="home"),
     path("index.html", views.home, name="home-html"),
     path("admin-console.html", views.admin_console_page, name="admin-console-page"),

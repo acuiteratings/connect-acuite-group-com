@@ -68,8 +68,16 @@ def posts_collection(request):
             ),
         )
         queryset = queryset.exclude(moderation_status=Post.ModerationStatus.REMOVED)
+        author_id = request.GET.get("author_id")
         if not _can_moderate(request.user):
-            queryset = queryset.filter(moderation_status=Post.ModerationStatus.PUBLISHED)
+            visible_filter = Q(moderation_status=Post.ModerationStatus.PUBLISHED)
+            if (
+                request.user.is_authenticated
+                and author_id
+                and str(request.user.pk) == str(author_id)
+            ):
+                visible_filter |= Q(author_id=request.user.pk)
+            queryset = queryset.filter(visible_filter)
 
         kind = request.GET.get("kind")
         if kind:
@@ -83,7 +91,6 @@ def posts_collection(request):
         if topic:
             queryset = queryset.filter(topic=topic)
 
-        author_id = request.GET.get("author_id")
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
@@ -328,8 +335,67 @@ def toggle_post_reaction(request, post_id):
 
 @csrf_exempt
 def post_detail(request, post_id):
+    if request.method == "PATCH":
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Authentication required."}, status=403)
+        if not _can_publish(request.user):
+            return JsonResponse({"detail": "Admin access is required to review posts."}, status=403)
+
+        try:
+            payload = _parse_json_body(request)
+        except ValueError as exc:
+            return JsonResponse({"detail": str(exc)}, status=400)
+
+        post = get_object_or_404(Post.objects.select_related("author"), pk=post_id)
+        status = str(payload.get("moderation_status", "")).strip().lower()
+        if status not in {
+            Post.ModerationStatus.PUBLISHED,
+            Post.ModerationStatus.REJECTED,
+        }:
+            return JsonResponse({"detail": "Unsupported moderation status."}, status=400)
+
+        post.moderation_status = status
+        update_fields = ["moderation_status", "updated_at"]
+        if status == Post.ModerationStatus.PUBLISHED:
+            post.published_at = post.published_at or timezone.now()
+            update_fields.append("published_at")
+        post.save(update_fields=update_fields)
+
+        action_name = "post.published" if status == Post.ModerationStatus.PUBLISHED else "post.rejected"
+        record_audit_event(
+            action=action_name,
+            actor=request.user,
+            target=post,
+            summary=f"{'Published' if status == Post.ModerationStatus.PUBLISHED else 'Rejected'} post '{post.title}'",
+            metadata={"post_id": post.id, "moderation_status": status},
+            request=request,
+        )
+        record_analytics_event(
+            "moderation",
+            "post_reviewed",
+            actor=request.user,
+            metadata={"post_id": post.id, "moderation_status": status},
+            request=request,
+        )
+        refreshed_post = (
+            Post.objects.select_related("author")
+            .annotate(
+                published_comment_count=Count(
+                    "comments",
+                    filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+                ),
+                like_reaction_count=Count(
+                    "reactions",
+                    filter=Q(reactions__reaction_type=PostReaction.ReactionType.LIKE),
+                    distinct=True,
+                ),
+            )
+            .get(pk=post.pk)
+        )
+        return JsonResponse({"post": serialize_post(refreshed_post, viewer=request.user)})
+
     if request.method != "DELETE":
-        return HttpResponseNotAllowed(["DELETE"])
+        return HttpResponseNotAllowed(["PATCH", "DELETE"])
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "Authentication required."}, status=403)
 

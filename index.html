@@ -78,6 +78,18 @@
         </svg>
         MD &amp; CEO's Desk
       </button>
+      <button type="button" class="tab" data-switch-tab="bulletin">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h6m-6 4h8M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"></path>
+        </svg>
+        Bulletin Board
+      </button>
+      <button type="button" class="tab" data-switch-tab="my-posts">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+        </svg>
+        My Posts
+      </button>
       <button type="button" class="tab" data-switch-tab="playtime">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M7 4v6m10-6v6M6 20h12a2 2 0 002-2V10H4v8a2 2 0 002 2zm3-6h.01M12 14h.01M15 14h.01"></path>
@@ -269,8 +281,69 @@
                 <span class="btn-link">Open game</span>
               </div>
             </button>
+            <button type="button" class="tool-card playtime-card" data-switch-tab="quiz">
+              <div class="tool-card-head">
+                <div class="tool-icon" style="background:linear-gradient(135deg,#2452d1,#0f9a7a)">QZ</div>
+                <div>
+                  <h3>Quiz Arena</h3>
+                  <span class="tool-status live">Live</span>
+                </div>
+              </div>
+              <p>A live multiplayer quiz for up to 4 employees with 10 timed multiple-choice questions and score-based ranking.</p>
+              <div class="tool-meta">
+                <span class="mini-item-meta">Invite up to 3 colleagues and pick the difficulty before starting.</span>
+                <span class="btn-link">Open game</span>
+              </div>
+            </button>
           </div>
         </section>
+      </section>
+
+      <section class="panel" id="panel-quiz">
+        <div class="section-head">
+          <div>
+            <h2>Quiz Arena</h2>
+            <p>A multiplayer quiz for up to 4 people. Ten timed questions. Highest score wins.</p>
+          </div>
+          <div class="battleship-head-status" id="quiz-head-status" aria-live="polite"></div>
+        </div>
+
+        <div class="dashboard-grid battleship-summary-grid quiz-summary-grid">
+          <article class="mini-panel" id="quiz-difficulty-summary"></article>
+          <article class="mini-panel" id="quiz-player-summary"></article>
+        </div>
+
+        <div class="two-column-layout battleship-layout quiz-layout">
+          <section class="section-card battleship-stage-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Multiplayer quiz</p>
+                <h2 id="quiz-stage-title">Lobby</h2>
+                <div class="mini-item-meta" id="quiz-stage-meta">
+                  Invite up to 3 colleagues, choose the difficulty, and answer each question within 15 seconds.
+                </div>
+              </div>
+            </div>
+            <div id="quiz-alert" class="battleship-alert" hidden></div>
+            <div id="quiz-stage" class="battleship-stage"></div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card" id="quiz-rules-card">
+              <p class="widget-kicker">Rules</p>
+              <h3>Quick rules</h3>
+              <ul class="battleship-rules-list">
+                <li>2 to 4 players can join one quiz.</li>
+                <li>The host can invite up to 3 colleagues.</li>
+                <li>The host chooses the difficulty.</li>
+                <li>10 questions are chosen randomly for each match.</li>
+                <li>Each question has 15 seconds.</li>
+                <li>There is no negative marking.</li>
+                <li>The highest score wins.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </section>
 
       <section class="panel" id="panel-battleship">
@@ -581,6 +654,7 @@
           <div class="filter-tabs" data-filter-group="bulletin">
             <button type="button" class="active" data-filter="all">All</button>
             <button type="button" data-filter="announcements">Announcements</button>
+            <button type="button" data-filter="employee_posts">Employee posts</button>
             <button type="button" data-filter="hr">HR</button>
             <button type="button" data-filter="events">Events</button>
             <button type="button" data-filter="security">Security</button>
@@ -609,6 +683,64 @@
                 <li>Cybersecurity warnings and urgent internal notices</li>
                 <li>Picnics, office parties, offsites and key workplace updates</li>
               </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-my-posts">
+        <div class="section-head">
+          <div>
+            <h2>My Posts</h2>
+            <p>Submit a post for admin review. Once approved, it will appear on the Bulletin Board with likes and comments.</p>
+          </div>
+        </div>
+
+        <div class="two-column-layout bulletin-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Submit a post</p>
+                <h2>Start with one simple choice</h2>
+                <div class="mini-item-meta">Choose what you want to share, then fill the short form below.</div>
+              </div>
+            </div>
+
+            <form class="story-form" id="my-posts-form">
+              <label class="field">
+                <span>What would you like to post?</span>
+                <select name="submission_key" id="my-posts-type-select" required>
+                  <option value="">Choose one</option>
+                </select>
+              </label>
+
+              <div id="my-posts-fields" hidden>
+                <label class="field">
+                  <span id="my-posts-title-label">Title</span>
+                  <input type="text" name="title" id="my-posts-title-input" maxlength="140" placeholder="Add a short headline" required>
+                </label>
+                <label class="field">
+                  <span id="my-posts-meta-label">One short line</span>
+                  <input type="text" name="meta_line" id="my-posts-meta-input" maxlength="140" placeholder="Add one short line people should know">
+                </label>
+                <label class="field">
+                  <span id="my-posts-body-label">Details</span>
+                  <textarea name="body" id="my-posts-body-input" rows="6" maxlength="1200" placeholder="Write the details clearly." required></textarea>
+                </label>
+                <div class="form-actions">
+                  <p id="my-posts-help-copy">Your post will go to the admin dashboard first for approval.</p>
+                  <button type="submit" class="btn-warm">Submit for approval</button>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <p class="widget-kicker">My submissions</p>
+              <h3>Recent status</h3>
+              <div class="mini-item-meta" id="my-posts-results-meta">Loading your recent submissions...</div>
+              <div id="my-posts-list"></div>
             </div>
           </aside>
         </div>
@@ -934,6 +1066,7 @@
 
   <script src="{% static 'js/auth.js' %}?v={{ build_number }}" defer></script>
   <script src="{% static 'js/app.js' %}?v={{ build_number }}" defer></script>
+  <script src="{% static 'js/quiz.js' %}?v={{ build_number }}" defer></script>
   <script src="{% static 'js/battleship.js' %}?v={{ build_number }}" defer></script>
 </body>
 </html>

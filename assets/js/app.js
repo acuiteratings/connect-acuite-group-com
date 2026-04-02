@@ -145,13 +145,37 @@ const STORE_CATEGORY_LABELS = {
   desk: "Desk",
   memorabilia: "Memorabilia",
 };
-const ENABLED_TABS = new Set(["home", "ceo-desk", "playtime", "battleship", "clubs-learning", "store", "directory"]);
+const ENABLED_TABS = new Set(["home", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "clubs-learning", "store", "directory"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
+  employee_posts: "Employee posts",
   hr: "HR",
   events: "Events",
   security: "Security",
 };
+const MY_POST_TYPES = [
+  ["looking_for_roommate", "I am looking for a room mate", "Looking for a room mate in Mumbai", "Area, budget or move-in month", "Explain the location, budget, move-in timing, and any other relevant detail."],
+  ["give_away", "I want to give away something", "Giving away an office chair", "Condition, pickup location or deadline", "Describe the item, condition, pickup details, and who should contact you."],
+  ["exchange_something", "I want to exchange something", "Looking to exchange a study table", "Item, city or expected exchange", "Explain what you have, what you want in return, and how someone should respond."],
+  ["share_idea", "I have an idea to share", "Idea to improve internal review sharing", "People, workflow, culture or productivity", "Describe the idea clearly and explain why it would help Acuité."],
+  ["share_knowledge", "I have some knowledge to share", "Sharing a sector learning note", "Topic, team or use case", "Explain what you want to share and why it may help colleagues."],
+  ["looking_for_guidance", "I am looking for some guidance", "Looking for guidance on transition planning", "Topic, function or experience area", "Explain what guidance you need and what kind of help would be most useful."],
+  ["praise_someone", "I want to praise someone", "Appreciation for a colleague", "Team, context or contribution", "Say what the person did and why you think others should know about it."],
+  ["organise_training", "I want to organise a training", "Organising a workshop on sector writing", "Topic, audience or possible timing", "Explain the training idea, who it is for, and what support you need."],
+  ["looking_for_training", "I am looking for some training", "Looking for training on presentation skills", "Topic, level or team need", "Explain the skill gap and what kind of training would help."],
+  ["share_story", "I want to share a story", "A short workplace story", "Theme or setting", "Write your story clearly so the admin can review it before publishing."],
+  ["share_poem", "I want to share a poem", "Poem title", "Theme or mood", "Paste the poem exactly as you want it reviewed."],
+  ["share_travel", "I want to share about my travel", "A travel note from Ladakh", "Place, season or key highlight", "Share your travel story, key takeaways, and what made the experience memorable."],
+].map(([key, label, titlePlaceholder, metaPlaceholder, bodyPlaceholder]) => ({
+  key,
+  label,
+  titleLabel: "What should the post headline say?",
+  titlePlaceholder,
+  metaLabel: "One short line people should know",
+  metaPlaceholder,
+  bodyLabel: key === "share_poem" ? "Poem" : key === "share_story" ? "Story" : "Details",
+  bodyPlaceholder,
+}));
 const BULLETIN_TEMPLATE_LIBRARY = [
   {
     key: "town_hall",
@@ -1172,6 +1196,7 @@ Object.assign(appData, {
   learningRequisitions: [],
   homePosts: [],
   bulletinPosts: [],
+  myPosts: [],
   wallPosts: [],
   leaderboard: [],
   clubs: [],
@@ -1234,6 +1259,7 @@ let recognitionLoadError = "";
 let storeLoadError = "";
 let learningLoadError = "";
 let bulletinLoadError = "";
+let myPostsLoadError = "";
 let adminUsersLoadError = "";
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
@@ -1344,6 +1370,18 @@ async function init() {
     communityMetaInput: document.getElementById("community-meta-input"),
     adminSidebarTab: document.getElementById("admin-sidebar-tab"),
     bulletinAdminOpenButton: document.getElementById("bulletin-admin-open-btn"),
+    myPostsForm: document.getElementById("my-posts-form"),
+    myPostsTypeSelect: document.getElementById("my-posts-type-select"),
+    myPostsFields: document.getElementById("my-posts-fields"),
+    myPostsTitleLabel: document.getElementById("my-posts-title-label"),
+    myPostsTitleInput: document.getElementById("my-posts-title-input"),
+    myPostsMetaLabel: document.getElementById("my-posts-meta-label"),
+    myPostsMetaInput: document.getElementById("my-posts-meta-input"),
+    myPostsBodyLabel: document.getElementById("my-posts-body-label"),
+    myPostsBodyInput: document.getElementById("my-posts-body-input"),
+    myPostsHelpCopy: document.getElementById("my-posts-help-copy"),
+    myPostsList: document.getElementById("my-posts-list"),
+    myPostsResultsMeta: document.getElementById("my-posts-results-meta"),
     adminCreateUserForm: document.getElementById("admin-create-user-form"),
     adminEditUserForm: document.getElementById("admin-edit-user-form"),
     adminBulletinForm: document.getElementById("admin-bulletin-form"),
@@ -1423,6 +1461,7 @@ async function init() {
       loadVoiceData(),
       loadRecognitionData(),
       loadBulletinPosts(),
+      loadMyPosts(),
     ];
     await Promise.allSettled(criticalTasks);
     renderAll();
@@ -1631,12 +1670,33 @@ async function loadBulletinPosts() {
   }
 
   try {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=general&kind=announcement");
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=general");
     appData.bulletinPosts = Array.isArray(payload.results)
       ? payload.results.map(mapBulletinPost)
       : [];
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
+  }
+}
+
+async function loadMyPosts() {
+  myPostsLoadError = "";
+  appData.myPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest || !appData.currentUser?.id) {
+    myPostsLoadError = "My Posts is unavailable in this build.";
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=general&topic=employee_submission&author_id=${encodeURIComponent(String(appData.currentUser.id))}`,
+    );
+    appData.myPosts = Array.isArray(payload.results)
+      ? payload.results.map(mapMyPostSubmission)
+      : [];
+  } catch (error) {
+    myPostsLoadError = error.message || "Could not load your submitted posts.";
   }
 }
 
@@ -1683,6 +1743,12 @@ function bindEvents() {
   if (elements.voiceTopicSelect) {
     elements.voiceTopicSelect.addEventListener("change", () => {
       syncVoiceComposer();
+    });
+  }
+
+  if (elements.myPostsTypeSelect) {
+    elements.myPostsTypeSelect.addEventListener("change", () => {
+      syncMyPostsComposer();
     });
   }
 
@@ -2017,6 +2083,12 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target === elements.myPostsForm) {
+    event.preventDefault();
+    void submitMyPost();
+    return;
+  }
+
   if (event.target === elements.adminCreateUserForm) {
     event.preventDefault();
     void submitAdminCreateUser();
@@ -2089,6 +2161,7 @@ function renderAll() {
   renderStorePanel();
   renderLearningPanel();
   renderBulletinPanel();
+  renderMyPostsPanel();
   renderAdminPanel();
   renderKudosTags();
   renderWallFeed();
@@ -2140,7 +2213,7 @@ function renderPanels() {
     state.activeTab = "home";
     saveState();
   }
-  const activeSidebarTab = state.activeTab === "battleship" ? "playtime" : state.activeTab;
+  const activeSidebarTab = ["battleship", "quiz"].includes(state.activeTab) ? "playtime" : state.activeTab;
   if (state.activeTab === "admin") {
     state.activeTab = "home";
     saveState();
@@ -2415,6 +2488,7 @@ function syncComposerAccess() {
     elements.communityForm,
     elements.voiceForm,
     elements.recognitionForm,
+    elements.myPostsForm,
     elements.bulletinForm,
     elements.kudosForm,
     elements.pitchForm,
@@ -3367,6 +3441,46 @@ function renderBulletinPanel() {
   }
 
   container.innerHTML = posts.map(renderBulletinPostCard).join("");
+}
+
+function renderMyPostsPanel() {
+  if (elements.myPostsTypeSelect && elements.myPostsTypeSelect.options.length <= 1) {
+    elements.myPostsTypeSelect.innerHTML = `
+      <option value="">Choose one</option>
+      ${MY_POST_TYPES.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`).join("")}
+    `;
+  }
+
+  syncMyPostsComposer();
+
+  if (!elements.myPostsList || !elements.myPostsResultsMeta) {
+    return;
+  }
+
+  if (myPostsLoadError) {
+    elements.myPostsResultsMeta.textContent = "My Posts issue";
+    elements.myPostsList.innerHTML = `<div class="empty-state">${escapeHtml(myPostsLoadError)}</div>`;
+    return;
+  }
+
+  if (!appData.myPosts.length) {
+    elements.myPostsResultsMeta.textContent = "No submissions yet";
+    elements.myPostsList.innerHTML = '<div class="empty-state">Your submitted posts will appear here after your first draft is sent for review.</div>';
+    return;
+  }
+
+  elements.myPostsResultsMeta.textContent = `${appData.myPosts.length} submission${appData.myPosts.length === 1 ? "" : "s"}`;
+  elements.myPostsList.innerHTML = appData.myPosts.map((post) => `
+    <article class="summary-card foundation-card">
+      <strong>${escapeHtml(post.title)}</strong>
+      <span class="mini-chip ${post.moderationStatus === "published" ? "success" : ""}">
+        ${escapeHtml(post.moderationLabel)}
+      </span>
+      <p>${escapeHtml(post.submissionLabel)}</p>
+      ${post.metaLine ? `<div class="mini-item-meta">${escapeHtml(post.metaLine)}</div>` : ""}
+      <div class="mini-item-meta">${escapeHtml(formatRelativeTime(post.publishedAt || post.createdAt))}</div>
+    </article>
+  `).join("");
 }
 
 function renderAdminPanel() {
@@ -5115,6 +5229,26 @@ function mapBulletinPost(post) {
   };
 }
 
+function mapMyPostSubmission(post) {
+  const metadata = post.metadata || {};
+  const moderationStatus = String(post.moderation_status || "pending_review");
+  return {
+    id: post.id,
+    title: post.title || "Untitled post",
+    submissionLabel: String(metadata.submission_label || "Employee post"),
+    metaLine: Array.isArray(metadata.bulletin_meta_lines) ? String(metadata.bulletin_meta_lines[0] || "").trim() : "",
+    moderationStatus,
+    moderationLabel:
+      moderationStatus === "published"
+        ? "Approved and live"
+        : moderationStatus === "rejected"
+          ? "Not approved"
+          : "Waiting for admin review",
+    createdAt: post.created_at || "",
+    publishedAt: post.published_at || "",
+  };
+}
+
 function mapVoicePoll(poll) {
   return {
     ...poll,
@@ -5307,6 +5441,40 @@ function syncRecognitionComposer() {
   }
 }
 
+function syncMyPostsComposer() {
+  if (!elements.myPostsTypeSelect || !elements.myPostsFields) {
+    return;
+  }
+
+  const selectedType = MY_POST_TYPES.find((item) => item.key === String(elements.myPostsTypeSelect.value || "").trim());
+  elements.myPostsFields.hidden = !selectedType;
+  if (!selectedType) {
+    return;
+  }
+
+  if (elements.myPostsTitleLabel) {
+    elements.myPostsTitleLabel.textContent = selectedType.titleLabel;
+  }
+  if (elements.myPostsTitleInput) {
+    elements.myPostsTitleInput.placeholder = selectedType.titlePlaceholder;
+  }
+  if (elements.myPostsMetaLabel) {
+    elements.myPostsMetaLabel.textContent = selectedType.metaLabel;
+  }
+  if (elements.myPostsMetaInput) {
+    elements.myPostsMetaInput.placeholder = selectedType.metaPlaceholder;
+  }
+  if (elements.myPostsBodyLabel) {
+    elements.myPostsBodyLabel.textContent = selectedType.bodyLabel;
+  }
+  if (elements.myPostsBodyInput) {
+    elements.myPostsBodyInput.placeholder = selectedType.bodyPlaceholder;
+  }
+  if (elements.myPostsHelpCopy) {
+    elements.myPostsHelpCopy.textContent = `${selectedType.label}. Your post will go to the admin dashboard first for approval.`;
+  }
+}
+
 async function submitVoicePost() {
   if (!currentUserCanCreatePosts()) {
     showToast("Your posting access is currently disabled.");
@@ -5403,6 +5571,58 @@ async function submitRecognitionPost() {
     showToast("Recognition post created.");
   } catch (error) {
     showToast(error.message || "Could not post recognition.");
+  }
+}
+
+async function submitMyPost() {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
+
+  const formData = new FormData(elements.myPostsForm);
+  const submissionKey = String(formData.get("submission_key") || "").trim();
+  const selectedType = MY_POST_TYPES.find((item) => item.key === submissionKey);
+  const title = String(formData.get("title") || "").trim();
+  const metaLine = String(formData.get("meta_line") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+
+  if (!selectedType || !title || !body) {
+    showToast("Choose the post type, add a headline, and write the details.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body,
+        module: "general",
+        kind: "update",
+        topic: "employee_submission",
+        metadata: {
+          bulletin_category: "employee_posts",
+          submission_key: selectedType.key,
+          submission_label: selectedType.label,
+          bulletin_meta_lines: metaLine ? [metaLine] : [],
+          user_submission: true,
+        },
+      },
+    });
+
+    if (payload.post) {
+      appData.myPosts.unshift(mapMyPostSubmission(payload.post));
+      elements.myPostsForm.reset();
+      syncMyPostsComposer();
+      renderMyPostsPanel();
+      showToast("Your post is now waiting for admin approval.");
+      return;
+    }
+
+    showToast("Your post was submitted.");
+  } catch (error) {
+    showToast(error.message || "Could not submit your post.");
   }
 }
 
