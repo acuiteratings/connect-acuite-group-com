@@ -34,8 +34,6 @@ services:
         value: connect.acuite-group.com
       - key: DJANGO_CSRF_TRUSTED_ORIGINS
         value: https://connect.acuite-group.com
-      - key: PLAYWRIGHT_BROWSERS_PATH
-        value: /opt/render/project/src/.playwright-browsers
       - key: DJANGO_TIME_ZONE
         value: Asia/Kolkata
       - key: USE_X_FORWARDED_HOST
