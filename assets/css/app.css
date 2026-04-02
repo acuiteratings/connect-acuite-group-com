@@ -2302,6 +2302,10 @@ select {
   gap: 18px;
 }
 
+.learning-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .stack-side {
   display: flex;
   flex-direction: column;
