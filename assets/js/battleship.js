@@ -24,6 +24,7 @@
     draft: [],
     pollTimer: 0,
     searchTimer: 0,
+    refreshTimer: 0,
   };
 
   const elements = {};
@@ -106,6 +107,25 @@
       await refreshLobby({ silent: true });
       schedulePoll();
     }, getPollIntervalMs());
+  }
+
+  function syncLobbyOpenMatch(match) {
+    if (!state.lobby) {
+      return;
+    }
+    state.lobby.viewer_open_match = match || null;
+    state.lobby.viewer_match = match || null;
+  }
+
+  function queueLobbyRefresh(delay = 1200) {
+    if (state.refreshTimer) {
+      window.clearTimeout(state.refreshTimer);
+      state.refreshTimer = 0;
+    }
+    state.refreshTimer = window.setTimeout(() => {
+      state.refreshTimer = 0;
+      void refreshLobby({ silent: true });
+    }, delay);
   }
 
   async function refreshLobby({ silent = false } = {}) {
@@ -262,8 +282,11 @@
         body: { invitee_user_id: Number(userId) },
       });
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       setAlert("Invitation sent.", "success");
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -280,13 +303,16 @@
         },
       );
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       setAlert(
         decision === "accept"
           ? "Invitation accepted. Place your fleet to begin."
           : "Invitation declined.",
         decision === "accept" ? "success" : "info",
       );
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -299,8 +325,13 @@
         `/api/battleship/matches/${state.match.id}/cancel/`,
         { method: "POST" },
       );
+      state.match = null;
+      syncLobbyOpenMatch(null);
+      state.draft = [];
       setAlert("Invitation cancelled.", "info");
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -323,8 +354,11 @@
       );
       clearPersistedDraft();
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       setAlert("Fleet locked in.", "success");
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -341,8 +375,11 @@
         },
       );
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       clearAlert();
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -356,8 +393,11 @@
         { method: "POST" },
       );
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       setAlert("Match resigned.", "info");
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
@@ -371,8 +411,11 @@
         { method: "POST" },
       );
       state.match = payload.match || null;
+      syncLobbyOpenMatch(state.match);
       setAlert("Rematch invitation sent.", "success");
-      await refreshLobby({ silent: true });
+      render();
+      schedulePoll();
+      queueLobbyRefresh();
     });
   }
 
