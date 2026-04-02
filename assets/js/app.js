@@ -1207,10 +1207,6 @@ const defaultState = {
   directoryQuery: "",
   selectedKudosTagId: "analysis",
   likedPostIds: [],
-  homeAnnouncementLiked: false,
-  homeAnnouncementInterested: false,
-  homeAnnouncementBooked: false,
-  homeAnnouncementCalendarBlocked: false,
   joinedClubIds: appData.clubs.filter((club) => club.defaultJoined).map((club) => club.id),
   upvotedPitchIds: appData.pitches.filter((pitch) => pitch.defaultUpvoted).map((pitch) => pitch.id),
   bookmarkedKnowledgeIds: appData.knowledgeItems.filter((item) => item.savedByDefault).map((item) => item.id),
@@ -1753,42 +1749,6 @@ async function handleDocumentClick(event) {
     if (actionName === "open-launcher") {
       switchTab("tools");
       showToast("Jumped to the Tool Hub.");
-      return;
-    }
-
-    if (actionName === "book-home-announcement") {
-      state.homeAnnouncementBooked = !state.homeAnnouncementBooked;
-      if (state.homeAnnouncementBooked) {
-        state.homeAnnouncementInterested = true;
-      }
-      saveState();
-      renderHomeAnnouncement();
-      showToast(state.homeAnnouncementBooked ? "Your seat is booked." : "Your booking has been removed.");
-      return;
-    }
-
-    if (actionName === "block-home-announcement") {
-      downloadAnnouncementCalendarInvite();
-      state.homeAnnouncementCalendarBlocked = true;
-      saveState();
-      renderHomeAnnouncement();
-      showToast("Calendar block downloaded.");
-      return;
-    }
-
-    if (actionName === "interest-home-announcement") {
-      state.homeAnnouncementInterested = !state.homeAnnouncementInterested;
-      saveState();
-      renderHomeAnnouncement();
-      showToast(state.homeAnnouncementInterested ? "Marked as interested." : "Interest removed.");
-      return;
-    }
-
-    if (actionName === "like-home-announcement") {
-      state.homeAnnouncementLiked = !state.homeAnnouncementLiked;
-      saveState();
-      renderHomeAnnouncement();
-      showToast(state.homeAnnouncementLiked ? "Announcement liked." : "Like removed.");
       return;
     }
 
@@ -5410,10 +5370,6 @@ function hydrateState() {
         )
         : {}),
     },
-    homeAnnouncementLiked: Boolean(saved.homeAnnouncementLiked),
-    homeAnnouncementInterested: Boolean(saved.homeAnnouncementInterested),
-    homeAnnouncementBooked: Boolean(saved.homeAnnouncementBooked),
-    homeAnnouncementCalendarBlocked: Boolean(saved.homeAnnouncementCalendarBlocked),
     likedPostIds: Array.isArray(saved.likedPostIds) ? saved.likedPostIds : defaultState.likedPostIds.slice(),
     joinedClubIds: Array.isArray(saved.joinedClubIds) ? saved.joinedClubIds : defaultState.joinedClubIds.slice(),
     upvotedPitchIds: Array.isArray(saved.upvotedPitchIds) ? saved.upvotedPitchIds : defaultState.upvotedPitchIds.slice(),
@@ -5443,50 +5399,6 @@ function saveState() {
 
 function toggleArrayValue(items, value) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
-}
-
-function downloadAnnouncementCalendarInvite() {
-  const calendar = FEATURED_HOME_ANNOUNCEMENT.calendar;
-  const content = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Acuite Connect//EN",
-    "BEGIN:VEVENT",
-    `UID:${FEATURED_HOME_ANNOUNCEMENT.id}@connect.acuite-group.com`,
-    `DTSTAMP:${toICSDateTime(new Date().toISOString())}`,
-    `DTSTART:${toICSDateTime(calendar.start)}`,
-    `DTEND:${toICSDateTime(calendar.end)}`,
-    `SUMMARY:${escapeICS(calendar.title)}`,
-    `DESCRIPTION:${escapeICS(calendar.description)}`,
-    `LOCATION:${escapeICS(calendar.location)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-
-  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
-  const objectUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = "acuite-connect-town-hall.ics";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => {
-    window.URL.revokeObjectURL(objectUrl);
-  }, 1000);
-}
-
-function toICSDateTime(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-}
-
-function escapeICS(value) {
-  return String(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("\n", "\\n")
-    .replaceAll(",", "\\,")
-    .replaceAll(";", "\\;");
 }
 
 function createDirectoryFilterOptions() {
