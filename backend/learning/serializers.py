@@ -18,9 +18,18 @@ def serialize_book(book, *, requester=None):
 
     return {
         "id": book.id,
+        "catalog_number": book.catalog_number,
+        "slug": book.slug,
         "title": book.title,
         "author": book.author,
+        "category": book.category,
         "summary": book.summary,
+        "review_quote": book.review_quote,
+        "review_source": book.review_source,
+        "cover_url": book.cover_url,
+        "office_location": book.office_location,
+        "shelf_area": book.shelf_area,
+        "shelf_label": book.shelf_label,
         "total_copies": book.total_copies,
         "open_requisition_count": open_requisition_count,
         "available_copies": available_copies,

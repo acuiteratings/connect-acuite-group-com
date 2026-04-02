@@ -5,9 +5,18 @@ from django.utils import timezone
 
 
 class Book(models.Model):
+    catalog_number = models.CharField(max_length=32, blank=True)
+    slug = models.SlugField(max_length=90, blank=True)
     title = models.CharField(max_length=220)
     author = models.CharField(max_length=180)
+    category = models.CharField(max_length=80, blank=True)
     summary = models.TextField(blank=True)
+    review_quote = models.TextField(blank=True)
+    review_source = models.CharField(max_length=180, blank=True)
+    cover_url = models.URLField(blank=True)
+    office_location = models.CharField(max_length=120, blank=True)
+    shelf_area = models.CharField(max_length=120, blank=True)
+    shelf_label = models.CharField(max_length=120, blank=True)
     total_copies = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -80,4 +89,3 @@ class BookRequisition(models.Model):
         self.admin_note = admin_note
         self.reviewed_at = timezone.now()
         self.save(update_fields=["status", "admin_note", "reviewed_at", "updated_at"])
-
