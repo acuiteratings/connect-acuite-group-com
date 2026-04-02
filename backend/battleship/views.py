@@ -219,12 +219,12 @@ def match_cancel(request, match_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     try:
-        match = cancel_invitation(match_id, request.user, request=request)
+        cancel_invitation(match_id, request.user, request=request)
     except BattleshipMatch.DoesNotExist:
         return _missing_match_response()
     except BattleshipRuleError as exc:
         return _error_response(exc)
-    return JsonResponse({"match": serialize_match_for_viewer(match, request.user)})
+    return JsonResponse({"ok": True, "detail": "Invitation cancelled."})
 
 
 def match_placement(request, match_id):

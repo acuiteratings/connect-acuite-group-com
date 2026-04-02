@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "backend:dev": "cd backend && ../.venv/bin/python manage.py runserver 127.0.0.1:8240 --noreload",
+    "backend:dev": "cd backend && ../.venv/bin/python manage.py runserver 127.0.0.1:8240",
     "backend:collectstatic": "cd backend && ../.venv/bin/python manage.py collectstatic --noinput",
     "backend:check": "cd backend && ../.venv/bin/python manage.py check",
     "backend:migrate": "cd backend && ../.venv/bin/python manage.py migrate",

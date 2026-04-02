@@ -11,6 +11,7 @@ from accounts.models import User
 from .models import BattleshipMatch, BattleshipShot
 from .services import (
     BattleshipRuleError,
+    cancel_invitation,
     create_invitation,
     fire_turn,
     respond_to_invitation,
@@ -212,3 +213,15 @@ class BattleshipServiceTests(TestCase):
         self.client.force_login(outsider, backend=SESSION_AUTH_BACKEND)
         response = self.client.get(f"/api/battleship/matches/{active.id}/state/")
         self.assertEqual(response.status_code, 403)
+
+    def test_inviter_can_cancel_pending_invitation_via_endpoint(self):
+        invite = create_invitation(self.alice, self.bob, now=self.make_time(8, 0))
+        self.client.force_login(self.alice, backend=SESSION_AUTH_BACKEND)
+
+        with mock.patch("battleship.services.get_now", return_value=self.make_time(8, 5)):
+            response = self.client.post(f"/api/battleship/matches/{invite.id}/cancel/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["ok"], True)
+        invite.refresh_from_db()
+        self.assertEqual(invite.status, BattleshipMatch.Status.CANCELLED)

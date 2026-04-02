@@ -744,7 +744,11 @@
 
   function renderCandidateResults() {
     const blocked = Boolean(state.lobby?.office_policy?.blocked);
+    const query = String(state.inviteQuery || "").trim();
     const candidates = state.lobby?.candidate_people || [];
+    if (query.length < 2) {
+      return `<div class="muted-copy">Type at least 2 characters to search and select one employee.</div>`;
+    }
     if (!candidates.length) {
       return `<div class="muted-copy">No employee matches found for this search yet.</div>`;
     }
