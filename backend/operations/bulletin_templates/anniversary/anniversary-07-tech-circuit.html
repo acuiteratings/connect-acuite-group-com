@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary Card - Tech Circuit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a1628;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2332 50%, #0d1f2d 100%);
+            overflow: hidden;
+        }
+
+        /* Animated circuit grid background */
+        svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.15;
+        }
+
+        .circuit-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(0, 255, 100, 0.05) 25%, rgba(0, 255, 100, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 100, 0.05) 75%, rgba(0, 255, 100, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 200, 150, 0.05) 25%, rgba(0, 200, 150, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 200, 150, 0.05) 75%, rgba(0, 200, 150, 0.05) 76%, transparent 77%, transparent);
+            background-size: 80px 80px;
+            opacity: 0.8;
+        }
+
+        /* Glow orbs */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(40px);
+        }
+
+        .glow-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #00ff64 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+
+        .glow-2 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #00c8f0 0%, transparent 70%);
+            bottom: -150px;
+            right: -150px;
+        }
+
+        .glow-3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, #00d9ff 0%, transparent 70%);
+            top: 250px;
+            right: 50px;
+        }
+
+        /* Card content */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: rgba(15, 35, 50, 0.9);
+            padding: 60px;
+            border-radius: 10px;
+            border: 2px solid rgba(0, 255, 200, 0.3);
+            box-shadow: 0 0 40px rgba(0, 255, 200, 0.2), inset 0 0 30px rgba(0, 255, 200, 0.05);
+            text-align: center;
+            max-width: 850px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        .title {
+            font-size: 56px;
+            font-weight: 700;
+            color: #00ff64;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 100, 0.5);
+            text-transform: uppercase;
+        }
+
+        .title-sub {
+            font-size: 20px;
+            color: #00c8f0;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .photo-wrapper {
+            margin: 35px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00c8f0 0%, #00ff64 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0a1628;
+            font-size: 14px;
+            font-weight: 600;
+            border: 3px solid #00ff64;
+            box-shadow: 0 0 30px rgba(0, 255, 100, 0.6), inset 0 0 20px rgba(0, 200, 240, 0.2);
+            background-image: url('{{PHOTO_URL}}');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .photo::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #00ff64;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 100, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(0, 255, 100, 0); }
+        }
+
+        .name {
+            font-size: 44px;
+            font-weight: 600;
+            color: #00d9ff;
+            font-family: 'Arial', sans-serif;
+            margin: 25px 0;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .date {
+            font-size: 16px;
+            color: #00ff64;
+            font-family: 'Courier New', monospace;
+            margin-top: 15px;
+            letter-spacing: 1px;
+        }
+
+        .decorative-dots {
+            margin: 20px 0;
+            font-size: 24px;
+            letter-spacing: 8px;
+            color: #00c8f0;
+        }
+
+        .celebration {
+            font-size: 40px;
+            letter-spacing: 10px;
+            margin-top: 20px;
+            color: #00ff64;
+            text-shadow: 0 0 15px rgba(0, 255, 100, 0.6);
+        }
+
+        /* Corner nodes */
+        .node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #00ff64;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 100, 0.8);
+        }
+
+        .node-line {
+            position: absolute;
+            background: linear-gradient(90deg, #00ff64, transparent);
+            height: 2px;
+        }
+
+        .node-1 { top: 40px; left: 40px; }
+        .node-2 { top: 40px; right: 40px; }
+        .node-3 { bottom: 40px; left: 40px; }
+        .node-4 { bottom: 40px; right: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="circuit-grid"></div>
+        <div class="glow-orb glow-1"></div>
+        <div class="glow-orb glow-2"></div>
+        <div class="glow-orb glow-3"></div>
+
+        <div class="node node-1"></div>
+        <div class="node node-2"></div>
+        <div class="node node-3"></div>
+        <div class="node node-4"></div>
+
+        <div class="card">
+            <div class="title">ANNIVERSARY</div>
+            <div class="title-sub">>>> SYSTEM MILESTONE <<<</div>
+
+            <div class="photo-wrapper">
+                <div class="photo"></div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="decorative-dots">• • •</div>
+
+            <div class="date">{{DATE}}</div>
+
+            <div class="celebration">🎖️ ⚡ 🏅</div>
+        </div>
+    </div>
+</body>
+</html>

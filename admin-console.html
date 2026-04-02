@@ -30,224 +30,56 @@
       <div class="admin-console-card-head">
         <div>
           <span class="admin-console-index">01</span>
-          <h2>Onboard a new employee</h2>
-          <p>Capture the basic details required to create an employee account and publish it into the directory.</p>
+          <h2>Birthdays</h2>
+          <p>Review today’s birthdays, generate a card, and post it after checking the preview.</p>
         </div>
       </div>
-      <form id="admin-onboard-form" class="admin-form">
-        <div class="admin-form-grid two">
-          <label class="admin-field">
-            <span>Employee name</span>
-            <input type="text" name="display_name" maxlength="120" placeholder="Full name" required>
-          </label>
-          <label class="admin-field">
-            <span>Email ID</span>
-            <input type="email" name="email" maxlength="160" placeholder="employee@acuite.in" required>
-          </label>
+      <div class="admin-form celebration-admin-layout">
+        <div class="celebration-list-column">
+          <div class="admin-mini-head">
+            <h3>Today’s birthdays</h3>
+            <span id="admin-birthday-results-meta">Loading today’s birthdays...</span>
+          </div>
+          <div class="celebration-list" id="admin-birthday-list"></div>
         </div>
-        <div class="admin-form-grid three">
-          <label class="admin-field">
-            <span>Company</span>
-            <select name="company_name">
-              <option value="Acuite">Acuité</option>
-              <option value="SMERA">SMERA</option>
-              <option value="ESGRisk.ai">ESGRisk.ai</option>
-            </select>
-          </label>
-          <label class="admin-field">
-            <span>Employee code</span>
-            <input type="text" name="employee_code" maxlength="32" placeholder="e.g. 2154">
-          </label>
-          <label class="admin-field">
-            <span>Access level</span>
-            <select name="access_level">
-              <option value="employee">Employee</option>
-              <option value="moderator">Moderator</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
+        <div class="celebration-preview-column">
+          <div class="admin-mini-head">
+            <h3>Birthday card preview</h3>
+            <span id="admin-birthday-preview-meta">Choose a person to generate a card.</span>
+          </div>
+          <div class="celebration-preview-shell" id="admin-birthday-preview-shell">
+            <div class="admin-selected-user">Choose a birthday entry and click Generate card.</div>
+          </div>
         </div>
-        <div class="admin-form-grid two">
-          <label class="admin-field">
-            <span>Title / designation</span>
-            <input type="text" name="title" maxlength="150" placeholder="Analyst / Associate Director / Manager">
-          </label>
-          <label class="admin-field">
-            <span>Department</span>
-            <input type="text" name="department" maxlength="150" placeholder="Technology / Compliance / Ratings">
-          </label>
-        </div>
-        <div class="admin-form-grid three">
-          <label class="admin-field">
-            <span>Function</span>
-            <input type="text" name="function_name" maxlength="150" placeholder="Rating Operations / Business Development">
-          </label>
-          <label class="admin-field">
-            <span>Location</span>
-            <input type="text" name="location" maxlength="120" placeholder="Mumbai / Kolkata / Ahmedabad">
-          </label>
-          <label class="admin-field">
-            <span>Mobile number</span>
-            <input type="text" name="mobile_number" maxlength="32" placeholder="Optional">
-          </label>
-        </div>
-        <label class="admin-check">
-          <input type="checkbox" name="can_post_in_connect" checked>
-          <span>Allow this employee to post in Connect immediately</span>
-        </label>
-        <div class="admin-form-actions">
-          <p>New accounts start with the first-time password and must change it at first successful login.</p>
-          <button type="submit" class="admin-btn admin-btn-primary">Create employee account</button>
-        </div>
-      </form>
+      </div>
     </section>
 
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
           <span class="admin-console-index">02</span>
-          <h2>Begin exit process for a resigned employee</h2>
-          <p>Track notice-period steps, complete clearances, and convert the employee into alumni state when the workflow is done.</p>
+          <h2>Work Anniversary</h2>
+          <p>Review today’s anniversaries, generate a card, and post it after checking the preview.</p>
         </div>
       </div>
-      <div class="admin-exit-layout">
-        <div class="admin-exit-column">
-          <label class="admin-field">
-            <span>Find employee</span>
-            <input type="text" id="admin-exit-search" placeholder="Search by name, email, title or code">
-          </label>
-          <p class="admin-search-help" id="admin-exit-search-help">Type at least 2 characters to search and select an employee.</p>
-          <div class="admin-search-results" id="admin-exit-search-results" hidden></div>
-          <form id="admin-exit-form" class="admin-form">
-            <input type="hidden" name="employee_id" id="admin-exit-employee-id">
-            <div class="admin-selected-user" id="admin-exit-selected-user">Select an employee to start or continue an exit workflow.</div>
-            <div class="admin-form-grid two">
-              <label class="admin-field">
-                <span>Resignation date</span>
-                <input type="date" name="resignation_date" required>
-              </label>
-              <label class="admin-field">
-                <span>Last working day</span>
-                <input type="date" name="last_working_day" required>
-              </label>
-            </div>
-            <label class="admin-field">
-              <span>Current stage</span>
-              <select name="stage" id="admin-exit-stage">
-                <option value="notice_received">Notice received</option>
-                <option value="knowledge_transfer">Knowledge transfer</option>
-                <option value="clearance">Clearance</option>
-                <option value="alumni_conversion">Alumni conversion</option>
-                <option value="completed">Completed</option>
-              </select>
-            </label>
-            <div class="admin-check-grid">
-              <label class="admin-check">
-                <input type="checkbox" name="resignation_acknowledged">
-                <span>Resignation acknowledged</span>
-              </label>
-              <label class="admin-check">
-                <input type="checkbox" name="knowledge_transfer_completed">
-                <span>Knowledge transfer completed</span>
-              </label>
-              <label class="admin-check">
-                <input type="checkbox" name="assets_returned">
-                <span>Assets returned</span>
-              </label>
-              <label class="admin-check">
-                <input type="checkbox" name="access_review_completed">
-                <span>Access review completed</span>
-              </label>
-            </div>
-            <label class="admin-field">
-              <span>Notes</span>
-              <textarea name="notes" rows="4" placeholder="Context for notice period, pending clearances or handover notes."></textarea>
-            </label>
-            <div class="admin-form-actions split-actions">
-              <p>Finalizing this workflow will move the person into alumni state and disable employee posting/login access.</p>
-              <div class="admin-inline-actions">
-                <button type="submit" class="admin-btn admin-btn-secondary">Save exit workflow</button>
-                <button type="button" class="admin-btn admin-btn-danger" data-action="finalize-exit-process">Convert to alumni state</button>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="admin-exit-column">
+      <div class="admin-form celebration-admin-layout">
+        <div class="celebration-list-column">
           <div class="admin-mini-head">
-            <h3>Open exit workflows</h3>
-            <span id="admin-exit-results-meta">Loading exit workflows...</span>
+            <h3>Today’s anniversaries</h3>
+            <span id="admin-anniversary-results-meta">Loading today’s anniversaries...</span>
           </div>
-          <div class="admin-process-list" id="admin-exit-process-list"></div>
+          <div class="celebration-list" id="admin-anniversary-list"></div>
+        </div>
+        <div class="celebration-preview-column">
+          <div class="admin-mini-head">
+            <h3>Anniversary card preview</h3>
+            <span id="admin-anniversary-preview-meta">Choose a person to generate a card.</span>
+          </div>
+          <div class="celebration-preview-shell" id="admin-anniversary-preview-shell">
+            <div class="admin-selected-user">Choose an anniversary entry and click Generate card.</div>
+          </div>
         </div>
       </div>
-    </section>
-
-    <section class="admin-console-card">
-      <div class="admin-console-card-head">
-        <div>
-          <span class="admin-console-index">03</span>
-          <h2>Post a Birthday wish</h2>
-          <p>Publish a birthday note to the bulletin board so employees can like and comment on it.</p>
-        </div>
-      </div>
-      <form id="admin-birthday-form" class="admin-form">
-        <div class="admin-form-grid three">
-          <label class="admin-field">
-            <span>Employee name</span>
-            <input type="text" name="employee_name" maxlength="120" placeholder="Whose birthday is being celebrated?" required>
-          </label>
-          <label class="admin-field">
-            <span>Team / role</span>
-            <input type="text" name="team_label" maxlength="150" placeholder="Department or role">
-          </label>
-          <label class="admin-field">
-            <span>Birthday date</span>
-            <input type="date" name="occasion_date">
-          </label>
-        </div>
-        <label class="admin-field">
-          <span>Message</span>
-          <textarea name="note" rows="4" placeholder="Write a warm but concise birthday message." required></textarea>
-        </label>
-        <div class="admin-form-actions">
-          <p>This will publish on the bulletin board as a company post with comments enabled.</p>
-          <button type="submit" class="admin-btn admin-btn-primary">Publish birthday wish</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="admin-console-card">
-      <div class="admin-console-card-head">
-        <div>
-          <span class="admin-console-index">04</span>
-          <h2>Post a Work Anniversary wish</h2>
-          <p>Publish a work anniversary note to the bulletin board so employees can like and comment on it.</p>
-        </div>
-      </div>
-      <form id="admin-anniversary-form" class="admin-form">
-        <div class="admin-form-grid three">
-          <label class="admin-field">
-            <span>Employee name</span>
-            <input type="text" name="employee_name" maxlength="120" placeholder="Whose work anniversary is being celebrated?" required>
-          </label>
-          <label class="admin-field">
-            <span>Years completed</span>
-            <input type="number" name="years_completed" min="1" max="50" placeholder="e.g. 5">
-          </label>
-          <label class="admin-field">
-            <span>Anniversary date</span>
-            <input type="date" name="occasion_date">
-          </label>
-        </div>
-        <label class="admin-field">
-          <span>Message</span>
-          <textarea name="note" rows="4" placeholder="Write a note that colleagues can celebrate with." required></textarea>
-        </label>
-        <div class="admin-form-actions">
-          <p>This will publish on the bulletin board as a company post with comments enabled.</p>
-          <button type="submit" class="admin-btn admin-btn-primary">Publish anniversary wish</button>
-        </div>
-      </form>
     </section>
 
     <section class="admin-console-card">
@@ -555,7 +387,7 @@
 
   <div class="admin-toast" id="admin-toast" aria-live="polite"></div>
 
-  <script src="{% static 'js/auth.js' %}" defer></script>
-  <script src="{% static 'js/admin.js' %}" defer></script>
+  <script src="{% static 'js/auth.js' %}?v={{ build_number }}" defer></script>
+  <script src="{% static 'js/admin.js' %}?v={{ build_number }}" defer></script>
 </body>
 </html>

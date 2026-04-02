@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Rainbow Wave</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card-container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg,
+                #fff5e1 0%,
+                #ffe0b2 12%,
+                #ffcc80 24%,
+                #ffb74d 36%,
+                #ffa726 48%,
+                #ff7043 60%,
+                #ff5252 72%,
+                #d946ef 84%,
+                #a78bfa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated wave patterns */
+        .wave {
+            position: absolute;
+            width: 200%;
+            height: 200px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,60 Q300,0 600,60 T1200,60' stroke='rgba(255,255,255,0.3)' stroke-width='3' fill='none'/%3E%3C/svg%3E") repeat-x;
+            opacity: 0.6;
+        }
+
+        .wave1 {
+            top: 10%;
+            animation: wave-move 8s linear infinite;
+        }
+
+        .wave2 {
+            top: 30%;
+            animation: wave-move 10s linear infinite reverse;
+            opacity: 0.4;
+        }
+
+        .wave3 {
+            top: 60%;
+            animation: wave-move 12s linear infinite;
+            opacity: 0.5;
+        }
+
+        .wave4 {
+            bottom: 5%;
+            animation: wave-move 15s linear infinite reverse;
+            opacity: 0.3;
+        }
+
+        @keyframes wave-move {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* Rainbow orbs */
+        .rainbow-orb {
+            position: absolute;
+            border-radius: 50%;
+            animation: float-orb 6s ease-in-out infinite;
+        }
+
+        .orb1 {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #ff6b6b, #ffaa00);
+            top: 15%;
+            left: 8%;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ffaa00, #00d4ff);
+            top: 25%;
+            right: 10%;
+            animation-delay: 1s;
+        }
+
+        .orb3 {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #00d4ff, #a78bfa);
+            bottom: 20%;
+            left: 15%;
+            animation-delay: 2s;
+            opacity: 0.6;
+        }
+
+        .orb4 {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #a78bfa, #ff6b6b);
+            bottom: 15%;
+            right: 12%;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes float-orb {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            }
+            50% {
+                transform: translateY(-30px) scale(1.1);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* Sparkle effects */
+        .sparkle {
+            position: absolute;
+            font-size: 24px;
+            animation: twinkle 1.5s ease-in-out infinite;
+        }
+
+        .sparkle1 {
+            top: 20%;
+            left: 25%;
+            animation-delay: 0s;
+        }
+
+        .sparkle2 {
+            top: 40%;
+            right: 20%;
+            animation-delay: 0.5s;
+        }
+
+        .sparkle3 {
+            bottom: 25%;
+            left: 35%;
+            animation-delay: 1s;
+        }
+
+        .sparkle4 {
+            bottom: 35%;
+            right: 25%;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes twinkle {
+            0%, 100% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .content {
+            position: relative;
+            z-index: 20;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 55px 75px;
+            border-radius: 35px;
+            box-shadow: 0 25px 75px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(8px);
+            max-width: 700px;
+        }
+
+        .happy-text {
+            font-size: 46px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff6b6b, #ffaa00, #00d4ff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .birthday-text {
+            font-size: 80px;
+            font-weight: 900;
+            background: linear-gradient(90deg,
+                #ff6b6b 0%,
+                #ffaa00 25%,
+                #00d4ff 50%,
+                #a78bfa 75%,
+                #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 30px;
+            letter-spacing: 3px;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                text-shadow: 0 0 10px rgba(255, 107, 107, 0.2);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+            }
+        }
+
+        .name-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .photo-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffaa00 25%, #00d4ff 50%, #a78bfa 75%, #ff6b6b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            border: 4px solid white;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15),
+                        0 0 30px rgba(255, 107, 107, 0.2);
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-circle::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .name-text {
+            font-size: 50px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #ff6b6b, #ffaa00, #00d4ff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+
+        .date-text {
+            font-size: 15px;
+            color: #888;
+            margin-top: 20px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Confetti corner elements */
+        .corner-confetti {
+            position: absolute;
+            z-index: 5;
+        }
+
+        .cc1 {
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            animation: bounce-confetti 2s ease-in-out infinite;
+        }
+
+        .cc2 {
+            bottom: 30px;
+            left: 40px;
+            font-size: 35px;
+            animation: bounce-confetti 2.5s ease-in-out infinite 0.5s;
+        }
+
+        @keyframes bounce-confetti {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-15px) rotate(15deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <div class="wave wave1"></div>
+        <div class="wave wave2"></div>
+        <div class="wave wave3"></div>
+        <div class="wave wave4"></div>
+
+        <div class="rainbow-orb orb1"></div>
+        <div class="rainbow-orb orb2"></div>
+        <div class="rainbow-orb orb3"></div>
+        <div class="rainbow-orb orb4"></div>
+
+        <div class="sparkle sparkle1">✨</div>
+        <div class="sparkle sparkle2">🌟</div>
+        <div class="sparkle sparkle3">✨</div>
+        <div class="sparkle sparkle4">🌟</div>
+
+        <div class="corner-confetti cc1">🎊</div>
+        <div class="corner-confetti cc2">🎉</div>
+
+        <div class="content">
+            <div class="happy-text">Happy</div>
+            <div class="birthday-text">BIRTHDAY</div>
+            <div class="name-section">
+                <div class="photo-circle">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" onerror="this.parentElement.textContent='🎈'">
+                </div>
+                <div class="name-text">{{NAME}}</div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,14 +1,19 @@
 import json
 import os
+from datetime import date
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.core.management import call_command
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from accounts.models import User
+from directory.models import DirectoryProfile
 from feed.models import Comment, Post
 
 from .builds import get_current_build_number
+from .celebrations import publish_daily_celebration_posts
 from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent
 
 
@@ -172,3 +177,153 @@ class ClearLiveDemoDataCommandTests(TestCase):
         self.assertEqual(AuditLog.objects.count(), 0)
         self.assertEqual(AnalyticsEvent.objects.count(), 0)
         self.assertEqual(ErrorEvent.objects.count(), 0)
+
+
+class DailyCelebrationPublishingTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="admin@acuite.in",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            access_level=User.AccessLevel.ADMIN,
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+        self.today = timezone.localdate()
+        self.birthday_user = User.objects.create_user(
+            email="birthday@acuite.in",
+            password="testpass123",
+            first_name="Priya",
+            last_name="Sharma",
+            department="Human Resource",
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+        DirectoryProfile.objects.create(
+            user=self.birthday_user,
+            date_of_birth=self.today,
+            is_visible=True,
+            profile_photos=["data:image/png;base64,AAAA"],
+        )
+        self.anniversary_user = User.objects.create_user(
+            email="anniversary@acuite.in",
+            password="testpass123",
+            first_name="Aman",
+            last_name="Patel",
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+        joined_on = date(self.today.year - 3, self.today.month, self.today.day)
+        DirectoryProfile.objects.create(
+            user=self.anniversary_user,
+            joined_on=joined_on,
+            is_visible=True,
+            profile_photos=["https://example.com/photo.jpg"],
+        )
+
+    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,MOCK")
+    def test_publish_daily_celebration_posts_creates_birthday_and_anniversary_posts(self, _renderer):
+        result = publish_daily_celebration_posts(reference_date=self.today)
+
+        self.assertEqual(len(result["created"]), 2)
+        posts = list(Post.objects.order_by("title"))
+        self.assertEqual(len(posts), 2)
+        self.assertTrue(all(post.moderation_status == Post.ModerationStatus.PUBLISHED for post in posts))
+        self.assertEqual(posts[0].metadata["bulletin_image_data_url"], "data:image/png;base64,MOCK")
+        self.assertEqual(posts[0].metadata["bulletin_category"], "hr")
+        self.assertEqual(AuditLog.objects.filter(action="post.auto_celebration.created").count(), 2)
+        self.assertEqual(AnalyticsEvent.objects.filter(event_name="auto_celebration_post_created").count(), 2)
+
+    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,MOCK")
+    def test_publish_daily_celebration_posts_is_idempotent_for_same_date(self, _renderer):
+        publish_daily_celebration_posts(reference_date=self.today)
+        second_result = publish_daily_celebration_posts(reference_date=self.today)
+
+        self.assertEqual(Post.objects.count(), 2)
+        self.assertEqual(len(second_result["created"]), 0)
+        self.assertEqual(len(second_result["skipped_existing"]), 2)
+
+
+class CelebrationAdminApiTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="admin@acuite.in",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            access_level=User.AccessLevel.ADMIN,
+            employment_status=User.EmploymentStatus.ACTIVE,
+            is_staff=True,
+        )
+        self.today = timezone.localdate()
+        self.birthday_user = User.objects.create_user(
+            email="birthday@acuite.in",
+            password="testpass123",
+            first_name="Riya",
+            last_name="Sen",
+            department="Human Resource",
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+        DirectoryProfile.objects.create(
+            user=self.birthday_user,
+            date_of_birth=self.today,
+            is_visible=True,
+            profile_photos=["data:image/png;base64,AAAA"],
+        )
+
+    def test_celebration_today_requires_admin(self):
+        response = self.client.get("/api/ops/celebrations/today/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_celebration_today_lists_birthdays(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get("/api/ops/celebrations/today/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["birthdays"]), 1)
+        self.assertEqual(payload["birthdays"][0]["name"], "Riya Sen")
+
+    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,PREVIEW")
+    def test_celebration_preview_returns_image_data(self, _renderer):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps({"kind": "birthday", "user_id": self.birthday_user.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["preview"]
+        self.assertEqual(payload["name"], "Riya Sen")
+        self.assertEqual(payload["image_data_url"], "data:image/png;base64,PREVIEW")
+        self.assertTrue(payload["template_file"].endswith(".html"))
+
+    @patch("operations.celebrations._render_template_image_data_url", return_value="data:image/png;base64,POSTED")
+    def test_celebration_publish_creates_post(self, _renderer):
+        self.client.force_login(self.admin)
+        preview_response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps({"kind": "birthday", "user_id": self.birthday_user.id}),
+            content_type="application/json",
+        )
+        template_file = preview_response.json()["preview"]["template_file"]
+
+        response = self.client.post(
+            "/api/ops/celebrations/publish/",
+            data=json.dumps(
+                {
+                    "kind": "birthday",
+                    "user_id": self.birthday_user.id,
+                    "template_file": template_file,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Post.objects.count(), 1)
+        post = Post.objects.get()
+        self.assertEqual(post.metadata["bulletin_image_data_url"], "data:image/png;base64,POSTED")
+        self.assertEqual(post.metadata["bulletin_template_file"], template_file)

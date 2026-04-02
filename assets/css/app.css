@@ -1045,6 +1045,21 @@ select {
   transition: all 0.3s;
 }
 
+.playtime-card {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg2);
+  appearance: none;
+  cursor: pointer;
+}
+
+.playtime-card .btn-link {
+  pointer-events: none;
+}
+
 .tool-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
@@ -1416,6 +1431,21 @@ select {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
+}
+
+.bulletin-card-image {
+  margin-top: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.bulletin-card-image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
 }
 
 .kudos-header {
@@ -3799,7 +3829,12 @@ select {
 }
 
 .battleship-layout {
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
   align-items: start;
+}
+
+.battleship-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .battleship-stage-card,
@@ -4153,6 +4188,14 @@ button.battleship-cell:hover:not(:disabled) {
 
 .battleship-rules-list li {
   line-height: 1.55;
+}
+
+#battleship-rules-card .battleship-rules-list {
+  color: var(--text2);
+}
+
+#battleship-rules-card h3 {
+  margin-bottom: 12px;
 }
 
 @media (max-width: 1320px) {

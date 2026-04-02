@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary Card - Abstract Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a0033 0%, #2d0052 40%, #1a1a3f 100%);
+            overflow: hidden;
+        }
+
+        /* Abstract flowing shapes */
+        .flow-shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.25;
+        }
+
+        .flow-1 {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #ff00ff, #ff1493);
+            top: -100px;
+            left: -100px;
+            animation: float1 6s ease-in-out infinite;
+        }
+
+        .flow-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #00bfff, #00ffff);
+            bottom: -150px;
+            right: -100px;
+            animation: float2 7s ease-in-out infinite;
+        }
+
+        .flow-3 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #ff00ff, #00bfff);
+            top: 150px;
+            right: 50px;
+            animation: float3 5.5s ease-in-out infinite;
+        }
+
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, 30px); }
+        }
+
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-40px, -40px); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-25px, 35px); }
+        }
+
+        /* Glowing particles */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: twinkle 3s infinite;
+        }
+
+        .particle-1 { top: 100px; left: 150px; background: #00ffff; animation-delay: 0s; }
+        .particle-2 { top: 300px; right: 200px; background: #ff00ff; animation-delay: 1s; }
+        .particle-3 { bottom: 150px; left: 300px; background: #00bfff; animation-delay: 2s; }
+        .particle-4 { top: 450px; right: 100px; background: #ff1493; animation-delay: 1.5s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.4; box-shadow: 0 0 10px currentColor; }
+            50% { opacity: 0.9; box-shadow: 0 0 25px currentColor; }
+        }
+
+        /* Card */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: rgba(26, 0, 51, 0.85);
+            padding: 60px;
+            border-radius: 15px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 25px 70px rgba(0, 255, 255, 0.15), inset 0 0 40px rgba(255, 0, 255, 0.05);
+            text-align: center;
+            max-width: 850px;
+            width: 90%;
+            backdrop-filter: blur(15px);
+        }
+
+        .title {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff00ff 0%, #00ffff 50%, #ff1493 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 0 20px rgba(255, 0, 255, 0.3));
+        }
+
+        .title-accent {
+            font-size: 20px;
+            background: linear-gradient(90deg, #00bfff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            margin-bottom: 25px;
+        }
+
+        .photo-wrapper {
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff00ff 0%, #00bfff 50%, #00ffff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a0033;
+            font-size: 14px;
+            font-weight: 600;
+            border: 4px solid #00ffff;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6), 0 0 60px rgba(255, 0, 255, 0.4);
+            background-image: url('{{PHOTO_URL}}');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .photo::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 0, 255, 0.5);
+            animation: rotate 8s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .name {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff1493 0%, #ff00ff 50%, #00ffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 25px 0;
+            letter-spacing: 1px;
+            filter: drop-shadow(0 0 15px rgba(255, 0, 255, 0.3));
+        }
+
+        .divider {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            margin: 22px auto;
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        .date {
+            font-size: 16px;
+            background: linear-gradient(90deg, #00bfff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .celebration {
+            font-size: 40px;
+            letter-spacing: 10px;
+            margin-top: 22px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+                transform: scale(1);
+            }
+            50% {
+                filter: drop-shadow(0 0 25px rgba(255, 0, 255, 0.6));
+                transform: scale(1.05);
+            }
+        }
+
+        /* Corner accents */
+        .corner-accent {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(0, 255, 255, 0.4);
+        }
+
+        .corner-tl {
+            top: 30px;
+            left: 30px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .corner-tr {
+            top: 30px;
+            right: 30px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .corner-bl {
+            bottom: 30px;
+            left: 30px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner-br {
+            bottom: 30px;
+            right: 30px;
+            border-left: none;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="flow-shape flow-1"></div>
+        <div class="flow-shape flow-2"></div>
+        <div class="flow-shape flow-3"></div>
+
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+
+        <div class="card">
+            <div class="corner-accent corner-tl"></div>
+            <div class="corner-accent corner-tr"></div>
+            <div class="corner-accent corner-bl"></div>
+            <div class="corner-accent corner-br"></div>
+
+            <div class="title">Happy Work</div>
+            <div class="title-accent">ANNIVERSARY</div>
+
+            <div class="photo-wrapper">
+                <div class="photo"></div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="divider"></div>
+
+            <div class="date">{{DATE}}</div>
+
+            <div class="celebration">🌟 ✨ 💫</div>
+        </div>
+    </div>
+</body>
+</html>

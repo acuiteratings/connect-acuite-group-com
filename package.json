@@ -11,5 +11,8 @@
     "backend:test": "cd backend && ../.venv/bin/python manage.py test",
     "dev": "wrangler pages dev .",
     "deploy": "wrangler pages deploy . --project-name acuite-connect"
+  },
+  "dependencies": {
+    "playwright": "^1.59.1"
   }
 }

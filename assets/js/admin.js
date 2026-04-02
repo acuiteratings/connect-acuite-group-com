@@ -3,6 +3,14 @@
     currentUser: null,
     users: [],
     exitProcesses: [],
+    celebrations: {
+      birthdays: [],
+      anniversaries: [],
+    },
+    previews: {
+      birthday: null,
+      anniversary: null,
+    },
     selectedExitEmployeeId: 0,
     toastTimer: null,
   };
@@ -29,7 +37,7 @@
     cacheElements();
     bindEvents();
     renderCurrentUser();
-    await Promise.all([loadUsers(), loadExitProcesses()]);
+    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations()]);
     renderAll();
   }
 
@@ -46,8 +54,14 @@
       exitSelectedUser: document.getElementById("admin-exit-selected-user"),
       exitProcessList: document.getElementById("admin-exit-process-list"),
       exitResultsMeta: document.getElementById("admin-exit-results-meta"),
-      birthdayForm: document.getElementById("admin-birthday-form"),
-      anniversaryForm: document.getElementById("admin-anniversary-form"),
+      birthdayList: document.getElementById("admin-birthday-list"),
+      birthdayResultsMeta: document.getElementById("admin-birthday-results-meta"),
+      birthdayPreviewShell: document.getElementById("admin-birthday-preview-shell"),
+      birthdayPreviewMeta: document.getElementById("admin-birthday-preview-meta"),
+      anniversaryList: document.getElementById("admin-anniversary-list"),
+      anniversaryResultsMeta: document.getElementById("admin-anniversary-results-meta"),
+      anniversaryPreviewShell: document.getElementById("admin-anniversary-preview-shell"),
+      anniversaryPreviewMeta: document.getElementById("admin-anniversary-preview-meta"),
       internalJobForm: document.getElementById("admin-internal-job-form"),
       vacancyForm: document.getElementById("admin-vacancy-form"),
       awardForm: document.getElementById("admin-award-form"),
@@ -76,10 +90,17 @@
     state.exitProcesses = Array.isArray(payload.results) ? payload.results : [];
   }
 
+  async function loadCelebrations() {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/celebrations/today/");
+    state.celebrations.birthdays = Array.isArray(payload.birthdays) ? payload.birthdays : [];
+    state.celebrations.anniversaries = Array.isArray(payload.anniversaries) ? payload.anniversaries : [];
+  }
+
   function renderAll() {
     renderExitSearchResults();
     renderExitProcessList();
     syncExitForm();
+    renderCelebrationSections();
   }
 
   function renderCurrentUser() {
@@ -125,6 +146,17 @@
 
     if (action.dataset.action === "finalize-exit-process") {
       void submitExitProcess({ finalize: true });
+      return;
+    }
+
+    if (action.dataset.action === "generate-celebration-card") {
+      void generateCelebrationPreview(action.dataset.kind, Number(action.dataset.userId || 0));
+      return;
+    }
+
+    if (action.dataset.action === "post-celebration-card") {
+      void publishCelebrationPreview(action.dataset.kind);
+      return;
     }
   }
 
@@ -138,18 +170,6 @@
     if (event.target === elements.exitForm) {
       event.preventDefault();
       void submitExitProcess({ finalize: false });
-      return;
-    }
-
-    if (event.target === elements.birthdayForm) {
-      event.preventDefault();
-      void submitBirthdayWish();
-      return;
-    }
-
-    if (event.target === elements.anniversaryForm) {
-      event.preventDefault();
-      void submitWorkAnniversaryWish();
       return;
     }
 
@@ -288,6 +308,121 @@
         </div>
       </button>
     `).join("");
+  }
+
+  function renderCelebrationSections() {
+    renderCelebrationList("birthday");
+    renderCelebrationList("anniversary");
+    renderCelebrationPreview("birthday");
+    renderCelebrationPreview("anniversary");
+  }
+
+  function renderCelebrationList(kind) {
+    const list = kind === "birthday" ? elements.birthdayList : elements.anniversaryList;
+    const meta = kind === "birthday" ? elements.birthdayResultsMeta : elements.anniversaryResultsMeta;
+    if (!list || !meta) {
+      return;
+    }
+    const items = kind === "birthday" ? state.celebrations.birthdays : state.celebrations.anniversaries;
+    meta.textContent = items.length
+      ? `${items.length} employee${items.length === 1 ? "" : "s"} today`
+      : "No employees for today";
+    if (!items.length) {
+      list.innerHTML = `<div class="celebration-empty">No ${kind === "birthday" ? "birthdays" : "anniversaries"} fall today.</div>`;
+      return;
+    }
+    list.innerHTML = items.map((item) => `
+      <article class="celebration-row">
+        <div class="celebration-row-head">
+          <div>
+            <h4>${escapeHtml(item.name)}</h4>
+            <p>${escapeHtml([item.title, item.department || item.team_label, item.email].filter(Boolean).join(" | "))}</p>
+          </div>
+          <span class="admin-process-stage">${escapeHtml(kind === "birthday" ? "Birthday" : "Anniversary")}</span>
+        </div>
+        <div class="celebration-row-meta">
+          <span class="admin-flag">${escapeHtml(item.date_label)}</span>
+          ${item.years_completed ? `<span class="admin-flag">${escapeHtml(`${item.years_completed} years`)}</span>` : ""}
+        </div>
+        <div class="celebration-preview-actions">
+          <button type="button" class="admin-btn admin-btn-secondary" data-action="generate-celebration-card" data-kind="${kind}" data-user-id="${item.user_id}">Generate card</button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function renderCelebrationPreview(kind) {
+    const preview = state.previews[kind];
+    const shell = kind === "birthday" ? elements.birthdayPreviewShell : elements.anniversaryPreviewShell;
+    const meta = kind === "birthday" ? elements.birthdayPreviewMeta : elements.anniversaryPreviewMeta;
+    if (!shell || !meta) {
+      return;
+    }
+    if (!preview) {
+      meta.textContent = "Choose a person to generate a card.";
+      shell.innerHTML = `<div class="admin-selected-user">Choose ${kind === "birthday" ? "a birthday" : "an anniversary"} entry and click Generate card.</div>`;
+      return;
+    }
+    meta.textContent = `${preview.name} | ${preview.template_file}`;
+    shell.innerHTML = `
+      <div class="celebration-preview-card">
+        <div class="celebration-preview-image">
+          <img src="${escapeHtml(preview.image_data_url)}" alt="${escapeHtml(preview.image_alt)}">
+        </div>
+        <div class="celebration-preview-details">
+          <h4>${escapeHtml(preview.title)}</h4>
+          <p>${escapeHtml(preview.body)}</p>
+          <div class="celebration-row-meta">
+            ${preview.meta_lines.map((line) => `<span class="admin-flag">${escapeHtml(line)}</span>`).join("")}
+          </div>
+        </div>
+        <div class="celebration-preview-actions">
+          <button type="button" class="admin-btn admin-btn-secondary" data-action="generate-celebration-card" data-kind="${kind}" data-user-id="${preview.user_id}">Regenerate</button>
+          <button type="button" class="admin-btn admin-btn-primary" data-action="post-celebration-card" data-kind="${kind}">Post</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function generateCelebrationPreview(kind, userId) {
+    if (!userId) {
+      return;
+    }
+    try {
+      const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/celebrations/preview/", {
+        method: "POST",
+        body: { kind, user_id: userId },
+      });
+      state.previews[kind] = payload.preview || null;
+      renderCelebrationPreview(kind);
+      showToast("Card generated. Review it before posting.");
+    } catch (error) {
+      showToast(error.message || "Could not generate the celebration card.");
+    }
+  }
+
+  async function publishCelebrationPreview(kind) {
+    const preview = state.previews[kind];
+    if (!preview) {
+      showToast("Generate a card first.");
+      return;
+    }
+    try {
+      await window.AcuiteConnectAuth.apiRequest("/api/ops/celebrations/publish/", {
+        method: "POST",
+        body: {
+          kind,
+          user_id: preview.user_id,
+          template_file: preview.template_file,
+        },
+      });
+      state.previews[kind] = null;
+      await loadCelebrations();
+      renderCelebrationSections();
+      showToast(`${kind === "birthday" ? "Birthday" : "Anniversary"} post published to the bulletin board.`);
+    } catch (error) {
+      showToast(error.message || "Could not publish the celebration post.");
+    }
   }
 
   function syncExitForm() {

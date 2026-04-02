@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary Card - Sunset Horizon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg,
+                #fff5e6 0%,
+                #ffe8cc 15%,
+                #ffd4a3 35%,
+                #ffb366 55%,
+                #ff9a66 70%,
+                #d4a5ff 85%,
+                #b084ff 100%);
+            overflow: hidden;
+        }
+
+        /* Layered cloud shapes */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 100px;
+            filter: blur(30px);
+        }
+
+        .cloud-1 {
+            width: 400px;
+            height: 80px;
+            top: 80px;
+            left: -50px;
+            background: linear-gradient(90deg, transparent, rgba(255, 200, 150, 0.4), transparent);
+        }
+
+        .cloud-2 {
+            width: 350px;
+            height: 70px;
+            top: 180px;
+            right: -30px;
+            background: linear-gradient(90deg, transparent, rgba(255, 180, 120, 0.35), transparent);
+        }
+
+        .cloud-3 {
+            width: 380px;
+            height: 85px;
+            bottom: 120px;
+            left: 100px;
+            background: linear-gradient(90deg, transparent, rgba(255, 150, 100, 0.3), transparent);
+        }
+
+        .cloud-4 {
+            width: 420px;
+            height: 90px;
+            bottom: 200px;
+            right: 50px;
+            background: linear-gradient(90deg, transparent, rgba(212, 165, 255, 0.25), transparent);
+        }
+
+        /* Horizon line */
+        .horizon {
+            position: absolute;
+            bottom: 280px;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 150, 80, 0.5) 20%,
+                rgba(255, 100, 60, 0.6) 50%,
+                rgba(200, 100, 150, 0.5) 80%,
+                transparent);
+            box-shadow: 0 0 30px rgba(255, 100, 60, 0.4);
+        }
+
+        /* Sun/glow */
+        .sun {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            bottom: 180px;
+            right: 200px;
+            background: radial-gradient(circle at 40% 40%, rgba(255, 220, 100, 0.3), transparent);
+            filter: blur(50px);
+            opacity: 0.6;
+        }
+
+        /* Card */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 55px;
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 850px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        .title {
+            font-size: 54px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff9a66 0%, #ff6b9d 50%, #c644fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Segoe UI', sans-serif;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .title-line {
+            font-size: 18px;
+            color: #ff8866;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .photo-wrapper {
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffb366 0%, #ff9a66 50%, #d4a5ff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            border: 6px solid white;
+            box-shadow: 0 12px 35px rgba(255, 100, 60, 0.3);
+            background-image: url('{{PHOTO_URL}}');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .name {
+            font-size: 44px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff8844 0%, #ff6b9d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+            letter-spacing: 1px;
+        }
+
+        .divider {
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ffb366, transparent);
+            margin: 20px auto;
+        }
+
+        .date {
+            font-size: 18px;
+            color: #8B6F47;
+            font-family: 'Georgia', serif;
+            margin-top: 15px;
+            font-style: italic;
+            letter-spacing: 0.5px;
+        }
+
+        .celebration {
+            font-size: 38px;
+            letter-spacing: 8px;
+            margin-top: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        <div class="cloud cloud-4"></div>
+
+        <div class="horizon"></div>
+        <div class="sun"></div>
+
+        <div class="card">
+            <div class="title">Happy Work</div>
+            <div class="title-line">ANNIVERSARY</div>
+
+            <div class="photo-wrapper">
+                <div class="photo"></div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="divider"></div>
+
+            <div class="date">{{DATE}}</div>
+
+            <div class="celebration">🌅 ✨ 🎉</div>
+        </div>
+    </div>
+</body>
+</html>

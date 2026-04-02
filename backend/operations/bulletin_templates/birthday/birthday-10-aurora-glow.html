@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Aurora Glow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Tahoma', sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg, #0a0e27 0%, #1a1e3f 20%, #2d1b4e 40%, #0f3a4a 60%, #1a2a3f 80%, #0a0e27 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Aurora wave effects */
+        .aurora-wave {
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            opacity: 0.6;
+            filter: blur(50px);
+        }
+
+        .wave-purple {
+            top: -30%;
+            left: -20%;
+            background: radial-gradient(ellipse at 30% 40%, rgba(155, 89, 182, 0.5), transparent);
+            animation: wave-move 8s ease-in-out infinite;
+        }
+
+        .wave-green {
+            top: 10%;
+            right: -30%;
+            background: radial-gradient(ellipse at 60% 50%, rgba(46, 204, 113, 0.4), transparent);
+            animation: wave-move 10s ease-in-out infinite reverse;
+        }
+
+        .wave-blue {
+            bottom: -20%;
+            left: 10%;
+            background: radial-gradient(ellipse at 40% 60%, rgba(52, 152, 219, 0.4), transparent);
+            animation: wave-move 12s ease-in-out infinite;
+        }
+
+        .wave-pink {
+            top: 50%;
+            right: 5%;
+            background: radial-gradient(ellipse at 50% 50%, rgba(233, 108, 141, 0.3), transparent);
+            animation: wave-move 9s ease-in-out infinite reverse;
+        }
+
+        @keyframes wave-move {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(30px, -30px); }
+            50% { transform: translate(-20px, 40px); }
+            75% { transform: translate(40px, 20px); }
+        }
+
+        /* Glowing orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.5;
+        }
+
+        .orb-1 {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(155, 89, 182, 0.6), transparent);
+            top: 50px;
+            left: 100px;
+            animation: orb-float 10s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(46, 204, 113, 0.5), transparent);
+            bottom: -50px;
+            right: 50px;
+            animation: orb-float 12s ease-in-out infinite reverse;
+        }
+
+        .orb-3 {
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(52, 152, 219, 0.6), transparent);
+            bottom: 100px;
+            left: 200px;
+            animation: orb-float 11s ease-in-out infinite;
+        }
+
+        @keyframes orb-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-40px); }
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .happy-birthday {
+            font-size: 72px;
+            font-weight: 300;
+            letter-spacing: 6px;
+            color: #E0F2FE;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 30px rgba(155, 89, 182, 0.8),
+                0 0 60px rgba(46, 204, 113, 0.6),
+                0 0 90px rgba(52, 152, 219, 0.4);
+            filter: drop-shadow(0 0 20px rgba(155, 89, 182, 0.6));
+        }
+
+        .photo-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.3), rgba(46, 204, 113, 0.3));
+            border: 3px solid rgba(233, 108, 141, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow:
+                0 0 30px rgba(155, 89, 182, 0.6),
+                inset 0 0 30px rgba(46, 204, 113, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .photo-circle::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            border-radius: 50%;
+            animation: shine 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.4), rgba(52, 152, 219, 0.4));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(224, 242, 254, 0.5);
+            z-index: 1;
+        }
+
+        .name {
+            font-size: 58px;
+            font-weight: 300;
+            color: #E0F2FE;
+            text-shadow:
+                0 0 20px rgba(46, 204, 113, 0.8),
+                0 0 40px rgba(52, 152, 219, 0.5);
+            letter-spacing: 3px;
+        }
+
+        .date {
+            font-size: 24px;
+            color: #E0F2FE;
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.2), rgba(46, 204, 113, 0.2));
+            padding: 12px 30px;
+            border: 2px solid rgba(233, 108, 141, 0.6);
+            border-radius: 30px;
+            backdrop-filter: blur(15px);
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+        }
+
+        /* Floating lights */
+        .light {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, rgba(233, 108, 141, 0.8), transparent);
+            border-radius: 50%;
+            animation: float-up 4s infinite ease-in;
+            box-shadow: 0 0 15px rgba(233, 108, 141, 0.8);
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 0;
+                transform: translateY(0) translateX(0);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-200px) translateX(100px);
+            }
+        }
+
+        .light-1 { top: 500px; left: 150px; animation-delay: 0s; }
+        .light-2 { top: 500px; left: 300px; animation-delay: 1s; }
+        .light-3 { top: 500px; left: 450px; animation-delay: 2s; }
+        .light-4 { top: 500px; left: 700px; animation-delay: 1.5s; }
+        .light-5 { top: 500px; left: 900px; animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Aurora wave background -->
+        <div class="aurora-wave wave-purple"></div>
+        <div class="aurora-wave wave-green"></div>
+        <div class="aurora-wave wave-blue"></div>
+        <div class="aurora-wave wave-pink"></div>
+
+        <!-- Glowing orbs -->
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+
+        <!-- Floating particles of light -->
+        <div class="light light-1"></div>
+        <div class="light light-2"></div>
+        <div class="light light-3"></div>
+        <div class="light light-4"></div>
+        <div class="light light-5"></div>
+
+        <div class="content">
+            <div class="happy-birthday">HAPPY BIRTHDAY</div>
+
+            <div class="photo-circle" style="background-image: url('{{PHOTO_URL}}');">
+                <div class="photo-placeholder">👤</div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

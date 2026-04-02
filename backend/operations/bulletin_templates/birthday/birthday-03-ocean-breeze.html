@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Ocean Breeze</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg, #00d4ff 0%, #0099cc 40%, #006699 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Animated bubbles */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+        }
+
+        .bubble:nth-child(1) { width: 60px; height: 60px; left: 10%; bottom: 150px; animation: rise 4s ease-in infinite; }
+        .bubble:nth-child(2) { width: 45px; height: 45px; left: 20%; bottom: 100px; animation: rise 5s ease-in infinite 0.5s; }
+        .bubble:nth-child(3) { width: 75px; height: 75px; left: 30%; bottom: 50px; animation: rise 4.5s ease-in infinite 1s; }
+        .bubble:nth-child(4) { width: 50px; height: 50px; right: 25%; bottom: 120px; animation: rise 4.8s ease-in infinite 0.3s; }
+        .bubble:nth-child(5) { width: 65px; height: 65px; right: 15%; bottom: 80px; animation: rise 5.2s ease-in infinite 0.7s; }
+
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 0.6; }
+            50% { transform: translateY(-200px) translateX(30px); opacity: 0.8; }
+            100% { transform: translateY(-400px) translateX(0); opacity: 0; }
+        }
+
+        /* Wave patterns at bottom */
+        .waves {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 150, 150, 0.4) 80%, #00cccc 100%);
+        }
+
+        .wave-1 {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 120px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,40 Q300,10 600,40 T1200,40 L1200,120 L0,120 Z' fill='%2300cccc' opacity='0.3'/%3E%3C/svg%3E") repeat-x;
+            animation: wave 6s linear infinite;
+        }
+
+        .wave-2 {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 200%;
+            height: 100px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,50 Q300,20 600,50 T1200,50 L1200,100 L0,100 Z' fill='%230099cc' opacity='0.2'/%3E%3C/svg%3E") repeat-x;
+            animation: wave 8s linear infinite reverse;
+        }
+
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Content area */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .happy-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 3px 3px 8px rgba(0, 50, 100, 0.5), 0 0 20px rgba(0, 255, 255, 0.3);
+            letter-spacing: 2px;
+        }
+
+        .name {
+            font-size: 64px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 6px rgba(0, 50, 100, 0.6);
+            margin: 10px 0;
+        }
+
+        .photo-container {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(0, 200, 255, 0.15) 100%);
+            border: 5px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 50, 100, 0.4);
+            margin: 20px 0;
+            position: relative;
+            z-index: 11;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0099cc 0%, #00cccc 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            color: white;
+        }
+
+        .photo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .date-text {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        /* Floating fish and shells */
+        .fish {
+            position: absolute;
+            font-size: 32px;
+            opacity: 0.6;
+        }
+
+        .fish:nth-child(6) { left: 80px; top: 150px; animation: swim 6s ease-in-out infinite; }
+        .fish:nth-child(7) { right: 100px; top: 250px; animation: swim-reverse 7s ease-in-out infinite 0.5s; }
+
+        @keyframes swim {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(100px); }
+        }
+
+        @keyframes swim-reverse {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-100px); }
+        }
+
+        /* Coral decoration */
+        .coral {
+            position: absolute;
+            font-size: 40px;
+            opacity: 0.5;
+        }
+
+        .coral:nth-child(8) { left: 50px; bottom: 160px; }
+        .coral:nth-child(9) { right: 60px; bottom: 170px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Bubbles -->
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+
+        <!-- Fish -->
+        <div class="fish">🐠</div>
+        <div class="fish">🐟</div>
+
+        <!-- Coral -->
+        <div class="coral">🪸</div>
+        <div class="coral">🪸</div>
+
+        <!-- Main content -->
+        <div class="content">
+            <div class="happy-text">Happy Birthday</div>
+            <div class="name">{{NAME}}</div>
+            <div class="photo-container">
+                <div class="photo-placeholder">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" style="display: none;">
+                </div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+
+        <!-- Waves -->
+        <div class="waves">
+            <div class="wave-1"></div>
+            <div class="wave-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load photo if URL is provided
+        const photoUrl = '{{PHOTO_URL}}';
+        if (photoUrl && photoUrl !== '{{PHOTO_URL}}') {
+            const img = document.querySelector('.photo-placeholder img');
+            img.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

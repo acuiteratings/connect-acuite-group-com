@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Golden Milestone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2c1810 0%, #4a3728 25%, #6b5a47 50%, #8b7355 75%, #d4af37 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background decorative elements */
+        .bg-decor {
+            position: absolute;
+            opacity: 0.15;
+        }
+
+        .star-lg {
+            font-size: 120px;
+            color: #ffd700;
+            top: 20px;
+            right: 80px;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        .star-sm {
+            font-size: 60px;
+            color: #ffd700;
+            bottom: 100px;
+            left: 50px;
+            animation: twinkle 4s ease-in-out 1s infinite;
+        }
+
+        .trophy {
+            font-size: 100px;
+            color: #ffd700;
+            top: 120px;
+            left: 60px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .greeting {
+            font-size: 48px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+            letter-spacing: 1px;
+        }
+
+        .greeting-accent {
+            color: #ffd700;
+            display: block;
+            font-size: 56px;
+            margin-top: 5px;
+        }
+
+        .photo-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe6cc 100%);
+            border: 6px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle::before {
+            content: "📸";
+            font-size: 50px;
+            position: absolute;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 44px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+            letter-spacing: 0.5px;
+        }
+
+        .milestone-badge {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #ffd700;
+            border-radius: 30px;
+            padding: 12px 30px;
+            font-size: 16px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .date-text {
+            font-size: 18px;
+            color: #ffe6cc;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* Corner ribbons */
+        .ribbon-left {
+            position: absolute;
+            left: -30px;
+            top: 50px;
+            width: 120px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            transform: rotate(-45deg);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #8b7355;
+            font-size: 12px;
+        }
+
+        .ribbon-right {
+            position: absolute;
+            right: -35px;
+            bottom: 80px;
+            width: 130px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%);
+            transform: rotate(-45deg);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #8b7355;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bg-decor star-lg">⭐</div>
+        <div class="bg-decor star-sm">✨</div>
+        <div class="bg-decor trophy">🏆</div>
+
+        <div class="ribbon-left">MILESTONE</div>
+        <div class="ribbon-right">ACHIEVED</div>
+
+        <div class="content">
+            <div class="greeting">
+                Happy Work
+                <span class="greeting-accent">Anniversary</span>
+            </div>
+
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}" onerror="this.style.display='none'">
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="milestone-badge">⭐ Celebrating Success ⭐</div>
+
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

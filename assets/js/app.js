@@ -2165,6 +2165,7 @@ function currentUserCanAdministerConnect() {
 
 function renderPanels() {
   const canAdminister = currentUserCanAdministerConnect();
+  const activeSidebarTab = state.activeTab === "battleship" ? "playtime" : state.activeTab;
   if (state.activeTab === "admin") {
     state.activeTab = "home";
     saveState();
@@ -2184,7 +2185,7 @@ function renderPanels() {
     panel.classList.toggle("active", panel.id === `panel-${state.activeTab}`);
   });
   document.querySelectorAll(".sidebar-left .tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.switchTab === state.activeTab);
+    tab.classList.toggle("active", tab.dataset.switchTab === activeSidebarTab);
   });
 }
 
@@ -5052,6 +5053,8 @@ function mapBulletinPost(post) {
       : [],
     ctaLabel: String(metadata.bulletin_cta_label || "").trim(),
     ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
+    imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
+    imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
     initials: author.initials || initialsFromName(authorName),
@@ -6086,6 +6089,13 @@ function renderBulletinPostCard(post) {
           <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
         </div>
       </div>
+      ${
+        post.imageDataUrl
+          ? `<div class="bulletin-card-image">
+              <img src="${escapeHtml(post.imageDataUrl)}" alt="${escapeHtml(post.imageAlt)}" loading="lazy">
+            </div>`
+          : ""
+      }
       <div class="card-body">
         <div class="card-title">${escapeHtml(post.title)}</div>
         ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}

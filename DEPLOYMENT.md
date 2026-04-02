@@ -12,10 +12,10 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 
 ## Deployment files
 
-- [render.yaml](/Users/sankarchakraborti/Documents/New%20project%203/acuite-connect/render.yaml)
-- [build.sh](/Users/sankarchakraborti/Documents/New%20project%203/acuite-connect/build.sh)
-- [backend/config/settings.py](/Users/sankarchakraborti/Documents/New%20project%203/acuite-connect/backend/config/settings.py)
-- [backend/requirements.txt](/Users/sankarchakraborti/Documents/New%20project%203/acuite-connect/backend/requirements.txt)
+- `render.yaml`
+- `build.sh`
+- `backend/config/settings.py`
+- `backend/requirements.txt`
 
 ## Render deploy flow
 
@@ -38,8 +38,32 @@ cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.Uvic
 ## Local backend preview
 
 ```bash
-cd /Users/sankarchakraborti/Documents/New\ project\ 3/acuite-connect/backend
+cd /Users/headit/Documents/GitHub/connect-acuite-group-com/backend
 ../.venv/bin/python manage.py runserver 127.0.0.1:8241 --noreload
+```
+
+## Employee SSO production settings
+
+Render must define these environment variables for live Employee SSO login:
+
+- `EMPLOYEE_SSO_BASE_URL=https://sso.acuite-group.com`
+- `EMPLOYEE_SSO_CLIENT_ID=acuite-connect`
+- `EMPLOYEE_SSO_CLIENT_SECRET=...`
+- `EMPLOYEE_SSO_AUTHORIZE_URL=https://sso.acuite-group.com/oauth/authorize`
+- `EMPLOYEE_SSO_TOKEN_URL=https://sso.acuite-group.com/oauth/token`
+- `EMPLOYEE_SSO_USERINFO_URL=https://sso.acuite-group.com/oauth/userinfo`
+- `EMPLOYEE_SSO_CALLBACK_URL=https://connect.acuite-group.com/api/accounts/auth/employee-sso/callback/`
+- `EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL=https://connect.acuite-group.com/login.html`
+
+## Authorization model
+
+- Employee SSO is the central identity provider.
+- Acuité Connect remains the source of truth for Connect-specific authorization.
+- Existing Connect users should be linked by email so their local role and posting access continue after SSO login.
+- The one-time local backfill command for existing users is:
+
+```bash
+./.venv/bin/python backend/manage.py backfill_employee_sso_access --all-users
 ```
 
 ## Important note

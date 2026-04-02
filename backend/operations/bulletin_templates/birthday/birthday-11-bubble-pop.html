@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Bubble Pop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card-container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 50%, #f8b4d6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Floating bubbles */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .bubble1 {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 200, 124, 0.6);
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+            animation-duration: 7s;
+        }
+
+        .bubble2 {
+            width: 80px;
+            height: 80px;
+            background: rgba(100, 200, 255, 0.5);
+            top: 20%;
+            right: 15%;
+            animation-delay: 1s;
+            animation-duration: 8s;
+        }
+
+        .bubble3 {
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 182, 193, 0.4);
+            bottom: 15%;
+            left: 5%;
+            animation-delay: 2s;
+            animation-duration: 9s;
+        }
+
+        .bubble4 {
+            width: 100px;
+            height: 100px;
+            background: rgba(200, 150, 255, 0.5);
+            bottom: 20%;
+            right: 10%;
+            animation-delay: 0.5s;
+            animation-duration: 7.5s;
+        }
+
+        .bubble5 {
+            width: 60px;
+            height: 60px;
+            background: rgba(144, 238, 144, 0.6);
+            top: 50%;
+            right: 5%;
+            animation-delay: 1.5s;
+            animation-duration: 8.5s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) translateX(0px);
+            }
+            25% {
+                transform: translateY(-30px) translateX(20px);
+            }
+            50% {
+                transform: translateY(-60px) translateX(-20px);
+            }
+            75% {
+                transform: translateY(-30px) translateX(30px);
+            }
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 60px 80px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .happy-text {
+            font-size: 48px;
+            font-weight: 700;
+            color: #ff6b9d;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .birthday-text {
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            letter-spacing: 3px;
+        }
+
+        .name-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .photo-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            flex-shrink: 0;
+            border: 4px solid white;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            overflow: hidden;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .name-text {
+            font-size: 48px;
+            font-weight: 800;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .date-text {
+            font-size: 16px;
+            color: #999;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        .confetti {
+            position: absolute;
+            font-size: 24px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100px) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <div class="bubble bubble1"></div>
+        <div class="bubble bubble2"></div>
+        <div class="bubble bubble3"></div>
+        <div class="bubble bubble4"></div>
+        <div class="bubble bubble5"></div>
+
+        <div class="content">
+            <div class="happy-text">Happy</div>
+            <div class="birthday-text">BIRTHDAY</div>
+            <div class="name-section">
+                <div class="photo-circle">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" onerror="this.parentElement.textContent='🎉'">
+                </div>
+                <div class="name-text">{{NAME}}</div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

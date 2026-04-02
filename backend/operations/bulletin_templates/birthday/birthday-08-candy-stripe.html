@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Candy Stripe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', 'Trebuchet MS', cursive;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: repeating-linear-gradient(
+                90deg,
+                #FFB3BA 0px,
+                #FFB3BA 60px,
+                #FFCCCB 60px,
+                #FFCCCB 120px,
+                #FFE5B4 120px,
+                #FFE5B4 180px,
+                #B4E5FF 180px,
+                #B4E5FF 240px,
+                #C1FFD7 240px,
+                #C1FFD7 300px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Candy shapes */
+        .candy {
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .candy-1 {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #FF6B9D, #C00050);
+            top: 40px;
+            left: 60px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .candy-2 {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle at 30% 30%, #FFE66D, #FFA500);
+            top: 120px;
+            right: 80px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .candy-3 {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 30% 30%, #98FF98, #00AA00);
+            bottom: 80px;
+            left: 100px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .candy-4 {
+            width: 65px;
+            height: 65px;
+            background: radial-gradient(circle at 30% 30%, #87CEEB, #0099FF);
+            bottom: 120px;
+            right: 120px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Lollipops */
+        .lollipop {
+            position: absolute;
+            font-size: 50px;
+            opacity: 0.8;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+
+        .lollipop-1 { top: 50px; left: 150px; }
+        .lollipop-2 { top: 80px; right: 200px; }
+        .lollipop-3 { bottom: 100px; left: 250px; }
+        .lollipop-4 { bottom: 80px; right: 150px; }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 40px 60px;
+            border-radius: 30px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .happy-birthday {
+            font-size: 66px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #FF6B9D, #FFA500, #00AA00, #0099FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            filter: drop-shadow(0 2px 4px rgba(255, 107, 157, 0.3));
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFB3BA, #FFE5B4);
+            border: 5px dashed #FF6B9D;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(255, 107, 157, 0.3);
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFE5B4, #FFB3BA);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 107, 157, 0.5);
+        }
+
+        .name {
+            font-size: 52px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FF6B9D, #0099FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+
+        .date {
+            font-size: 22px;
+            font-weight: bold;
+            color: #FF6B9D;
+            background: linear-gradient(135deg, #FFE5B4, #C1FFD7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 3px solid #FF6B9D;
+            display: inline-block;
+        }
+
+        /* Sprinkles */
+        .sprinkle {
+            position: absolute;
+            font-size: 20px;
+            opacity: 0.7;
+        }
+
+        .sprinkle-1 { top: 100px; left: 200px; }
+        .sprinkle-2 { top: 200px; right: 180px; }
+        .sprinkle-3 { bottom: 150px; right: 100px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Candy decorations -->
+        <div class="candy candy-1"></div>
+        <div class="candy candy-2"></div>
+        <div class="candy candy-3"></div>
+        <div class="candy candy-4"></div>
+
+        <!-- Lollipops -->
+        <div class="lollipop lollipop-1">🍭</div>
+        <div class="lollipop lollipop-2">🍭</div>
+        <div class="lollipop lollipop-3">🍭</div>
+        <div class="lollipop lollipop-4">🍭</div>
+
+        <!-- Sprinkles -->
+        <div class="sprinkle sprinkle-1">🌈</div>
+        <div class="sprinkle sprinkle-2">🎉</div>
+        <div class="sprinkle sprinkle-3">✨</div>
+
+        <div class="content">
+            <div class="happy-birthday">HAPPY BIRTHDAY</div>
+
+            <div class="photo-circle" style="background-image: url('{{PHOTO_URL}}');">
+                <div class="photo-placeholder">👤</div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

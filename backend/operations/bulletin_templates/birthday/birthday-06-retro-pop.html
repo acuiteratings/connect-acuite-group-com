@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Retro Pop Art</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial Black', 'Helvetica', sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(135deg, #FFD700 0%, #FF6B6B 25%, #4ECDC4 50%, #FFE66D 75%, #FF6B6B 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Geometric shapes - background decoration */
+        .shape-1 {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: #FF1744;
+            top: -50px;
+            left: -50px;
+            transform: rotate(45deg);
+            opacity: 0.8;
+            border: 8px solid #000;
+        }
+
+        .shape-2 {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: #00BCD4;
+            bottom: -30px;
+            right: -30px;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+            opacity: 0.7;
+            border: 6px solid #000;
+        }
+
+        .shape-3 {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: #FFD700;
+            top: 50px;
+            right: 60px;
+            border-radius: 0;
+            opacity: 0.9;
+            border: 5px solid #000;
+        }
+
+        .shape-4 {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: #FF1744;
+            bottom: 100px;
+            left: 40px;
+            border-radius: 50%;
+            opacity: 0.8;
+            border: 5px solid #000;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .happy-birthday {
+            font-size: 72px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #000;
+            text-shadow:
+                4px 4px 0 #FF1744,
+                8px 8px 0 #FFD700,
+                12px 12px 0 #00BCD4;
+            transform: skewY(-5deg);
+        }
+
+        .photo-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B6B, #FFE66D);
+            border: 6px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23FF9800" width="100" height="100"/><path fill="%23fff" d="M50 30c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20M30 70c-7 5-15 8-20 8v2h80v-2c-5 0-13-3-20-8-10 5-19 8-30 8s-20-3-30-8z"/></svg>');
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .name {
+            font-size: 64px;
+            font-weight: 900;
+            color: #000;
+            text-shadow:
+                3px 3px 0 #00BCD4,
+                6px 6px 0 #FF6B6B;
+            letter-spacing: 2px;
+        }
+
+        .date {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000;
+            background: #FFD700;
+            padding: 10px 20px;
+            border: 3px solid #000;
+            border-radius: 20px;
+            display: inline-block;
+            transform: rotate(-5deg);
+        }
+
+        /* Comic book style dots */
+        .halftone {
+            position: absolute;
+            opacity: 0.3;
+        }
+
+        .dot-1 {
+            width: 8px;
+            height: 8px;
+            background: #000;
+            border-radius: 50%;
+            top: 100px;
+            left: 150px;
+        }
+
+        .dot-2 {
+            width: 6px;
+            height: 6px;
+            background: #000;
+            border-radius: 50%;
+            top: 200px;
+            right: 100px;
+        }
+
+        .dot-3 {
+            width: 5px;
+            height: 5px;
+            background: #000;
+            border-radius: 50%;
+            bottom: 150px;
+            right: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="shape-1"></div>
+        <div class="shape-2"></div>
+        <div class="shape-3"></div>
+        <div class="shape-4"></div>
+        <div class="halftone dot-1"></div>
+        <div class="halftone dot-2"></div>
+        <div class="halftone dot-3"></div>
+
+        <div class="content">
+            <div class="happy-birthday">HAPPY BIRTHDAY</div>
+
+            <div class="photo-circle" style="background-image: url('{{PHOTO_URL}}');">
+                <div class="photo-placeholder">👤</div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

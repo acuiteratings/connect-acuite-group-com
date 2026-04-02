@@ -4,6 +4,9 @@ from .views import (
     analytics_ingest,
     analytics_recent,
     audit_log_feed,
+    celebration_candidates_today,
+    celebration_preview,
+    celebration_publish,
     healthcheck,
     moderate_comment,
     moderate_post,
@@ -26,4 +29,7 @@ urlpatterns = [
     path("analytics/", analytics_recent, name="analytics-recent"),
     path("analytics/ingest/", analytics_ingest, name="analytics-ingest"),
     path("errors/", recent_errors, name="recent-errors"),
+    path("celebrations/today/", celebration_candidates_today, name="celebration-candidates-today"),
+    path("celebrations/preview/", celebration_preview, name="celebration-preview"),
+    path("celebrations/publish/", celebration_publish, name="celebration-publish"),
 ]

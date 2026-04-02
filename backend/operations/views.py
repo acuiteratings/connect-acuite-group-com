@@ -14,6 +14,11 @@ from feed.models import Comment, Post
 from feed.serializers import serialize_comment, serialize_post
 
 from .models import AnalyticsEvent, AuditLog, ErrorEvent
+from .celebrations import (
+    build_celebration_preview,
+    get_today_celebration_candidates,
+    publish_celebration_post_from_preview,
+)
 from .serializers import (
     moderation_counts_payload,
     serialize_analytics_event,
@@ -43,6 +48,15 @@ def _is_ops_user(user):
 
 def _forbidden(detail="Moderation access required."):
     return JsonResponse({"detail": detail}, status=403)
+
+
+def _is_admin_user(user):
+    return user.is_authenticated and (
+        user.is_staff
+        or getattr(user, "can_administer_connect", False)
+        or getattr(user, "access_level", "") == User.AccessLevel.ADMIN
+        or user.has_perm("accounts.manage_access_rights")
+    )
 
 
 def _moderation_counts():
@@ -279,6 +293,60 @@ def analytics_recent(request):
         queryset = queryset.filter(category=category)
     results = [serialize_analytics_event(event) for event in queryset[:limit]]
     return JsonResponse({"count": len(results), "results": results})
+
+
+def celebration_candidates_today(request):
+    if not _is_admin_user(request.user):
+        return _forbidden("Admin access required.")
+    return JsonResponse(get_today_celebration_candidates())
+
+
+@csrf_exempt
+def celebration_preview(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not _is_admin_user(request.user):
+        return _forbidden("Admin access required.")
+    try:
+        payload = _parse_json_body(request)
+        kind = str(payload.get("kind", "")).strip().lower()
+        user_id = int(payload.get("user_id") or 0)
+        template_name = str(payload.get("template_file", "")).strip()
+        preview = build_celebration_preview(
+            kind=kind,
+            user_id=user_id,
+            template_name=template_name,
+        )
+    except (ValueError, DirectoryProfile.DoesNotExist) as exc:
+        return JsonResponse({"detail": str(exc) or "Could not build the preview."}, status=400)
+    except RuntimeError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+    return JsonResponse({"preview": preview})
+
+
+@csrf_exempt
+def celebration_publish(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not _is_admin_user(request.user):
+        return _forbidden("Admin access required.")
+    try:
+        payload = _parse_json_body(request)
+        kind = str(payload.get("kind", "")).strip().lower()
+        user_id = int(payload.get("user_id") or 0)
+        template_name = str(payload.get("template_file", "")).strip()
+        if not template_name:
+            raise ValueError("Template file is required.")
+        post = publish_celebration_post_from_preview(
+            kind=kind,
+            user_id=user_id,
+            template_name=template_name,
+        )
+    except (ValueError, DirectoryProfile.DoesNotExist) as exc:
+        return JsonResponse({"detail": str(exc) or "Could not publish the celebration post."}, status=400)
+    except RuntimeError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+    return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
 @csrf_exempt

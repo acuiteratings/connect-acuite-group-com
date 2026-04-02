@@ -38,9 +38,6 @@
     elements.headStatus = document.getElementById("battleship-head-status");
     elements.officeSummary = document.getElementById("battleship-office-summary");
     elements.slotSummary = document.getElementById("battleship-slot-summary");
-    elements.playerSummary = document.getElementById("battleship-player-summary");
-    elements.sidebarCard = document.getElementById("battleship-sidebar-card");
-    elements.historyCard = document.getElementById("battleship-history-card");
     elements.rulesCard = document.getElementById("battleship-rules-card");
 
     bindEvents();
@@ -394,8 +391,6 @@
   function render() {
     renderSummaryCards();
     renderStage();
-    renderSidebar();
-    renderHistory();
     renderRulesCard();
     renderAlert();
   }
@@ -446,22 +441,6 @@
       `;
     }
 
-    if (elements.playerSummary) {
-      elements.playerSummary.innerHTML = `
-        <p class="widget-kicker">Your status</p>
-        <h3>${currentMatch ? escapeHtml(currentMatch.phase_label || currentMatch.status_label) : "No open match"}</h3>
-        <p class="muted-copy">${
-          currentMatch
-            ? escapeHtml(currentMatch.turn_status)
-            : "Invite a colleague when you want to start a new 2-player match."
-        }</p>
-        <div class="mini-item-meta">${
-          currentMatch
-            ? `Opponent: ${escapeHtml(currentMatch.opponent.name)}`
-            : "Refresh-safe and server-authoritative."
-        }</div>
-      `;
-    }
   }
 
   function renderStage() {
@@ -726,69 +705,6 @@
     `;
   }
 
-  function renderSidebar() {
-    if (!elements.sidebarCard) {
-      return;
-    }
-    const match = state.match;
-    const officePolicy = state.lobby?.office_policy;
-    if (!match) {
-      elements.sidebarCard.innerHTML = `
-        <p class="widget-kicker">Status</p>
-        <h3>No active Battleship session</h3>
-        <p class="muted-copy">The match state, moves and invitations are stored server-side, so games recover cleanly after refresh or reconnect.</p>
-        <div class="mini-item-meta">${
-          officePolicy?.blocked ? `Next play window: ${escapeHtml(officePolicy.next_allowed_label)}` : "Off-peak hours currently open."
-        }</div>
-      `;
-      return;
-    }
-
-    elements.sidebarCard.innerHTML = `
-      <p class="widget-kicker">Match details</p>
-      <h3>${escapeHtml(match.players.inviter.name)} vs ${escapeHtml(match.players.invitee.name)}</h3>
-      <div class="battleship-meta-list compact">
-        <div><span>Status</span><strong>${escapeHtml(match.status_label)}</strong></div>
-        <div><span>Turn count</span><strong>${escapeHtml(String(match.total_turns))}</strong></div>
-        <div><span>Started</span><strong>${match.started_at ? escapeHtml(formatDateTime(match.started_at)) : "Not started"}</strong></div>
-        <div><span>Duration</span><strong>${escapeHtml(formatDuration(match.duration_seconds || 0))}</strong></div>
-        <div><span>Inactivity deadline</span><strong>${match.inactive_deadline_at ? escapeHtml(formatDateTime(match.inactive_deadline_at)) : "n/a"}</strong></div>
-      </div>
-    `;
-  }
-
-  function renderHistory() {
-    if (!elements.historyCard) {
-      return;
-    }
-    const history = state.match?.history || [];
-    if (!history.length) {
-      elements.historyCard.innerHTML = `
-        <p class="widget-kicker">History</p>
-        <h3>No match log yet</h3>
-        <p class="muted-copy">Invite events, accepted turns, pauses and final results will appear here.</p>
-      `;
-      return;
-    }
-
-    elements.historyCard.innerHTML = `
-      <p class="widget-kicker">Move log</p>
-      <h3>Latest events</h3>
-      <div class="battleship-history-list">
-        ${history
-          .map(
-            (event) => `
-              <article class="battleship-history-item">
-                <div class="battleship-history-summary">${escapeHtml(event.summary)}</div>
-                <div class="battleship-history-meta">${escapeHtml(event.created_at_label)}</div>
-              </article>
-            `,
-          )
-          .join("")}
-      </div>
-    `;
-  }
-
   function renderRulesCard() {
     if (!elements.rulesCard) {
       return;
@@ -799,14 +715,14 @@
     ]).map((item) => item.label);
     elements.rulesCard.innerHTML = `
       <p class="widget-kicker">Rules</p>
-      <h3>How Battleship works inside Connect</h3>
+      <h3>Quick rules</h3>
       <ul class="battleship-rules-list">
-        <li>Only 2 authenticated employees may play a match.</li>
-        <li>Only one accepted Battleship match may occupy the live intranet slot at a time.</li>
-        <li>Blocked office windows: ${escapeHtml(windows.join(" and "))}.</li>
-        <li>Any live match pauses automatically during blocked hours and resumes after the window ends.</li>
-        <li>Board size: 10x10. Fleet: Carrier 5, Battleship 4, Cruiser 3, Submarine 3, Destroyer 2.</li>
-        <li>Each turn allows exactly one shot. Duplicate cells and duplicate turns are rejected server-side.</li>
+        <li>2 players only.</li>
+        <li>Only 1 live match can run across Connect at a time.</li>
+        <li>No play during office hours: ${escapeHtml(windows.join(" and "))}.</li>
+        <li>A paused match resumes automatically after blocked hours.</li>
+        <li>One turn means one shot.</li>
+        <li>Sink all enemy ships to win.</li>
       </ul>
     `;
   }

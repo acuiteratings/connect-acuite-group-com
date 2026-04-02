@@ -24,8 +24,11 @@ npm run backend:dev
 ## Employee access workflow
 
 - Accounts are provisioned manually by Acuité administrators.
-- Login order is fixed: employee email -> email OTP -> password.
-- First login and every 90-day password expiry force an inline password change before access completes.
+- Employee SSO is now the primary identity provider for Acuité Connect.
+- Employee SSO answers "Who is this user?" and Acuité Connect answers "What can this user do in Connect?"
+- Acuité Connect links SSO logins to local users by email and preserves Connect-specific local roles, posting rights, moderation rights, and admin rights.
+- If a user is authenticated by Employee SSO but does not yet have local Connect authorization, the app shows a dedicated access-denied page.
+- Existing local password and OTP code remains relevant only for legacy/manual auth flows and operational fallback, not as the primary production login path.
 - Bulk roster imports are supported with:
 
 ```bash
@@ -33,7 +36,30 @@ cd backend
 ../.venv/bin/python manage.py import_employee_accounts /path/to/employees.csv --temporary-password 'TempPass@123'
 ```
 
+## Employee SSO configuration
+
+Set these environment variables in `.env` for local work and in Render for production:
+
+- `EMPLOYEE_SSO_BASE_URL`
+- `EMPLOYEE_SSO_CLIENT_ID`
+- `EMPLOYEE_SSO_CLIENT_SECRET`
+- `EMPLOYEE_SSO_AUTHORIZE_URL`
+- `EMPLOYEE_SSO_TOKEN_URL`
+- `EMPLOYEE_SSO_USERINFO_URL`
+- `EMPLOYEE_SSO_CALLBACK_URL`
+- `EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL`
+
+Production callback URL:
+
+- `https://connect.acuite-group.com/api/accounts/auth/employee-sso/callback/`
+
+Local callback URL:
+
+- `http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/`
+
 ## Email OTP configuration
+
+Legacy/manual auth flow support still uses SMTP configuration:
 
 Set the SMTP-related environment variables in `.env` or Render before using live OTP delivery:
 
@@ -45,7 +71,7 @@ Set the SMTP-related environment variables in `.env` or Render before using live
 
 ## Important note
 
-For local development, OTP preview can be enabled with `AUTH_DEBUG_OTP_PREVIEW=true`. It is disabled by default in the Render blueprint.
+For local development, OTP preview can be enabled with `AUTH_DEBUG_OTP_PREVIEW=true` if the legacy/manual auth path is being tested. Employee SSO is the intended primary login path in production.
 
 ## Battleship module
 

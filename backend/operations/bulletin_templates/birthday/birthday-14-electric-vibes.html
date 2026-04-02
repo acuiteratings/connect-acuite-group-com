@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Electric Vibes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Futura', 'Arial', sans-serif;
+        }
+
+        .card-container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 25%, #2d0b69 50%, #1a0033 75%, #0a0e27 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Electric lightning patterns */
+        svg {
+            position: absolute;
+            opacity: 0.15;
+        }
+
+        .lightning1 {
+            top: 0;
+            left: 0;
+            animation: flicker 4s ease-in-out infinite;
+        }
+
+        .lightning2 {
+            bottom: 0;
+            right: 0;
+            animation: flicker 5s ease-in-out infinite 0.5s;
+        }
+
+        @keyframes flicker {
+            0%, 100% {
+                opacity: 0.1;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        /* Neon glow effect */
+        .neon-line {
+            position: absolute;
+            box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+        }
+
+        .line1 {
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            top: 15%;
+            left: 0;
+            animation: slide 8s ease-in-out infinite;
+        }
+
+        .line2 {
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ff00ff, transparent);
+            bottom: 20%;
+            right: 0;
+            animation: slide-reverse 7s ease-in-out infinite;
+        }
+
+        .line3 {
+            width: 250px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #7f00ff, transparent);
+            top: 50%;
+            right: 15%;
+            animation: slide 9s ease-in-out infinite 1s;
+        }
+
+        @keyframes slide {
+            0%, 100% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slide-reverse {
+            0%, 100% {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Pulsing orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        .orb1 {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #00ffff, transparent 70%);
+            top: 10%;
+            left: 10%;
+            animation: pulse-orb 3s ease-in-out infinite;
+        }
+
+        .orb2 {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #ff00ff, transparent 70%);
+            bottom: 15%;
+            right: 8%;
+            animation: pulse-orb 4s ease-in-out infinite 0.5s;
+        }
+
+        .orb3 {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #7f00ff, transparent 70%);
+            top: 50%;
+            right: 5%;
+            animation: pulse-orb 3.5s ease-in-out infinite 1s;
+        }
+
+        @keyframes pulse-orb {
+            0%, 100% {
+                box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
+                transform: scale(1.2);
+            }
+        }
+
+        .content {
+            position: relative;
+            z-index: 15;
+            text-align: center;
+            background: rgba(10, 14, 39, 0.8);
+            padding: 60px 80px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.2),
+                        0 0 80px rgba(255, 0, 255, 0.1),
+                        inset 0 0 40px rgba(127, 0, 255, 0.1);
+        }
+
+        .happy-text {
+            font-size: 45px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #7f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .birthday-text {
+            font-size: 85px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00ffff 0%, #ff00ff 50%, #7f00ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            letter-spacing: 4px;
+            filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
+        }
+
+        .name-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .photo-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00ffff 0%, #7f00ff 50%, #ff00ff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 65px;
+            color: white;
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5),
+                        0 0 60px rgba(255, 0, 255, 0.3),
+                        inset 0 0 30px rgba(127, 0, 255, 0.2);
+            overflow: hidden;
+            position: relative;
+            animation: glow-pulse 2s ease-in-out infinite;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.5),
+                            0 0 60px rgba(255, 0, 255, 0.3),
+                            inset 0 0 30px rgba(127, 0, 255, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(0, 255, 255, 0.8),
+                            0 0 100px rgba(255, 0, 255, 0.5),
+                            inset 0 0 50px rgba(127, 0, 255, 0.4);
+            }
+        }
+
+        .name-text {
+            font-size: 52px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+
+        .date-text {
+            font-size: 14px;
+            color: #00ffff;
+            margin-top: 15px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <svg width="300" height="400" class="lightning1" viewBox="0 0 300 400">
+            <path d="M 150 0 L 140 100 L 160 100 L 100 250 L 120 250 L 50 400"
+                  stroke="#00ffff" stroke-width="2" fill="none"/>
+            <path d="M 200 50 L 190 150 L 210 150 L 160 300"
+                  stroke="#ff00ff" stroke-width="2" fill="none"/>
+        </svg>
+
+        <svg width="400" height="300" class="lightning2" viewBox="0 0 400 300">
+            <path d="M 300 0 L 280 120 L 310 120 L 200 250 L 230 250 L 100 300"
+                  stroke="#7f00ff" stroke-width="2" fill="none"/>
+            <path d="M 150 0 L 140 100 L 160 100 L 80 300"
+                  stroke="#00ffff" stroke-width="2" fill="none"/>
+        </svg>
+
+        <div class="neon-line line1"></div>
+        <div class="neon-line line2"></div>
+        <div class="neon-line line3"></div>
+
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
+
+        <div class="content">
+            <div class="happy-text">Happy</div>
+            <div class="birthday-text">BIRTHDAY</div>
+            <div class="name-section">
+                <div class="photo-circle">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" onerror="this.parentElement.textContent='⚡'">
+                </div>
+                <div class="name-text">{{NAME}}</div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Neon Party</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0a0e27 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Neon background grid */
+        .grid-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 0, 200, 0.05) 25%, rgba(255, 0, 200, 0.05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 200, 0.05) 75%, rgba(255, 0, 200, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 0, 200, 0.05) 25%, rgba(255, 0, 200, 0.05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 200, 0.05) 75%, rgba(255, 0, 200, 0.05) 76%, transparent 77%, transparent);
+            background-size: 60px 60px;
+            opacity: 0.5;
+        }
+
+        /* Neon glow lines */
+        .glow-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.8), transparent);
+        }
+
+        .glow-line:nth-child(1) {
+            width: 100%;
+            height: 2px;
+            top: 30%;
+            left: 0;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .glow-line:nth-child(2) {
+            width: 100%;
+            height: 2px;
+            bottom: 30%;
+            left: 0;
+            animation: pulse-glow 2.5s ease-in-out infinite 0.3s;
+            background: linear-gradient(90deg, transparent, rgba(255, 0, 200, 0.8), transparent);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Floating neon orbs */
+        .neon-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .neon-orb:nth-child(3) {
+            width: 80px;
+            height: 80px;
+            left: 10%;
+            top: 15%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.6) 0%, rgba(0, 255, 255, 0.2) 70%, transparent);
+            box-shadow: 0 0 30px #00ffff, 0 0 60px rgba(0, 255, 255, 0.5);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .neon-orb:nth-child(4) {
+            width: 60px;
+            height: 60px;
+            right: 12%;
+            top: 20%;
+            background: radial-gradient(circle, rgba(255, 0, 200, 0.6) 0%, rgba(255, 0, 200, 0.2) 70%, transparent);
+            box-shadow: 0 0 25px #ff00c8, 0 0 50px rgba(255, 0, 200, 0.5);
+            animation: float 5s ease-in-out infinite 0.5s;
+        }
+
+        .neon-orb:nth-child(5) {
+            width: 70px;
+            height: 70px;
+            left: 8%;
+            bottom: 15%;
+            background: radial-gradient(circle, rgba(255, 255, 0, 0.6) 0%, rgba(255, 255, 0, 0.2) 70%, transparent);
+            box-shadow: 0 0 28px #ffff00, 0 0 55px rgba(255, 255, 0, 0.5);
+            animation: float 4.5s ease-in-out infinite 1s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-30px) translateX(20px); }
+            50% { transform: translateY(0) translateX(0); }
+            75% { transform: translateY(30px) translateX(-20px); }
+        }
+
+        /* Content area */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .happy-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: #00ffff;
+            text-shadow:
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 40px #0099ff;
+            letter-spacing: 3px;
+            animation: neon-flicker 0.15s infinite;
+        }
+
+        @keyframes neon-flicker {
+            0%, 18%, 22%, 25%, 54%, 56%, 100% {
+                text-shadow:
+                    0 0 10px #00ffff,
+                    0 0 20px #00ffff,
+                    0 0 40px #0099ff;
+            }
+            20%, 24%, 55% {
+                text-shadow:
+                    0 0 5px #00ffff,
+                    0 0 10px rgba(0, 255, 255, 0.5);
+            }
+        }
+
+        .name {
+            font-size: 64px;
+            font-weight: bold;
+            color: #ff00c8;
+            text-shadow:
+                0 0 10px #ff00c8,
+                0 0 20px #ff00c8,
+                0 0 40px #ff0080;
+            margin: 10px 0;
+        }
+
+        .photo-container {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 4px solid #00ffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow:
+                0 0 15px #00ffff,
+                0 0 30px rgba(0, 255, 255, 0.5),
+                inset 0 0 20px rgba(0, 255, 255, 0.2);
+            margin: 20px 0;
+            position: relative;
+            z-index: 11;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff00c8 0%, #00ffff 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            color: white;
+        }
+
+        .photo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .date-text {
+            font-size: 18px;
+            color: #ffff00;
+            font-weight: 600;
+            margin-top: 5px;
+            text-shadow: 0 0 10px #ffff00;
+        }
+
+        /* Neon stars */
+        .neon-star {
+            position: absolute;
+            font-size: 28px;
+            filter: drop-shadow(0 0 8px #ffff00);
+        }
+
+        .neon-star:nth-child(6) { left: 120px; top: 80px; animation: star-pulse 1.5s ease-in-out infinite; }
+        .neon-star:nth-child(7) { right: 140px; top: 100px; animation: star-pulse 1.8s ease-in-out infinite 0.3s; }
+        .neon-star:nth-child(8) { left: 100px; bottom: 120px; animation: star-pulse 1.6s ease-in-out infinite 0.6s; }
+        .neon-star:nth-child(9) { right: 110px; bottom: 100px; animation: star-pulse 1.7s ease-in-out infinite 0.2s; }
+
+        @keyframes star-pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Grid background -->
+        <div class="grid-background"></div>
+
+        <!-- Glow lines -->
+        <div class="glow-line"></div>
+        <div class="glow-line"></div>
+
+        <!-- Neon orbs -->
+        <div class="neon-orb"></div>
+        <div class="neon-orb"></div>
+        <div class="neon-orb"></div>
+
+        <!-- Neon stars -->
+        <div class="neon-star">✦</div>
+        <div class="neon-star">✦</div>
+        <div class="neon-star">✦</div>
+        <div class="neon-star">✦</div>
+
+        <!-- Main content -->
+        <div class="content">
+            <div class="happy-text">Happy Birthday</div>
+            <div class="name">{{NAME}}</div>
+            <div class="photo-container">
+                <div class="photo-placeholder">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" style="display: none;">
+                </div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+
+    <script>
+        // Load photo if URL is provided
+        const photoUrl = '{{PHOTO_URL}}';
+        if (photoUrl && photoUrl !== '{{PHOTO_URL}}') {
+            const img = document.querySelector('.photo-placeholder img');
+            img.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

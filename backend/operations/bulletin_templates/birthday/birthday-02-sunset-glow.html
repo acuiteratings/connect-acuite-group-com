@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Sunset Glow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg, #ff6b35 0%, #f7931e 20%, #fdb913 50%, #fdb913 70%, #ff9500 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Sun rays */
+        .sun-ray {
+            position: absolute;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+        }
+
+        .sun-ray:nth-child(1) {
+            width: 300px;
+            height: 8px;
+            left: -100px;
+            top: 200px;
+            transform: rotate(15deg);
+        }
+
+        .sun-ray:nth-child(2) {
+            width: 250px;
+            height: 6px;
+            left: -80px;
+            top: 280px;
+            transform: rotate(-10deg);
+        }
+
+        .sun-ray:nth-child(3) {
+            width: 280px;
+            height: 7px;
+            right: -100px;
+            top: 150px;
+            transform: rotate(-25deg);
+        }
+
+        .sun-ray:nth-child(4) {
+            width: 320px;
+            height: 8px;
+            right: -120px;
+            top: 350px;
+            transform: rotate(20deg);
+        }
+
+        /* Circular sun glow */
+        .sun-glow {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 200, 0.4) 0%, rgba(255, 200, 100, 0.2) 100%);
+            top: -80px;
+            right: -60px;
+            box-shadow: 0 0 100px 50px rgba(255, 200, 100, 0.3);
+        }
+
+        /* Content area */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .happy-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 3px 3px 8px rgba(139, 69, 19, 0.4), 0 0 20px rgba(255, 255, 255, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .name {
+            font-size: 64px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 6px rgba(139, 69, 19, 0.5);
+            margin: 10px 0;
+        }
+
+        .photo-container {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 200, 100, 0.2) 100%);
+            border: 5px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(139, 69, 19, 0.3);
+            margin: 20px 0;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff9500 0%, #fdb913 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            color: white;
+        }
+
+        .photo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .date-text {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        /* Star decorations */
+        .star {
+            position: absolute;
+            color: #ffd700;
+            font-size: 24px;
+            opacity: 0.7;
+        }
+
+        .star:nth-child(5) { left: 80px; top: 100px; animation: twinkle 1.5s infinite; }
+        .star:nth-child(6) { right: 100px; top: 120px; animation: twinkle 1.8s infinite 0.3s; }
+        .star:nth-child(7) { left: 120px; bottom: 100px; animation: twinkle 1.6s infinite 0.6s; }
+        .star:nth-child(8) { right: 80px; bottom: 80px; animation: twinkle 1.7s infinite 0.2s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 0.2; }
+        }
+
+        /* Flowing waves at bottom */
+        .wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.15) 100%);
+        }
+
+        .wave::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,30 Q300,0 600,30 T1200,30 L1200,120 L0,120 Z' fill='%23ffdb4d' opacity='0.1'/%3E%3C/svg%3E");
+            animation: wave 8s linear infinite;
+        }
+
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sun glow -->
+        <div class="sun-glow"></div>
+
+        <!-- Sun rays -->
+        <div class="sun-ray"></div>
+        <div class="sun-ray"></div>
+        <div class="sun-ray"></div>
+        <div class="sun-ray"></div>
+
+        <!-- Stars -->
+        <div class="star">⭐</div>
+        <div class="star">✨</div>
+        <div class="star">⭐</div>
+        <div class="star">✨</div>
+
+        <!-- Main content -->
+        <div class="content">
+            <div class="happy-text">Happy Birthday</div>
+            <div class="name">{{NAME}}</div>
+            <div class="photo-container">
+                <div class="photo-placeholder">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" style="display: none;">
+                </div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+
+        <!-- Wave animation -->
+        <div class="wave"></div>
+    </div>
+
+    <script>
+        // Load photo if URL is provided
+        const photoUrl = '{{PHOTO_URL}}';
+        if (photoUrl && photoUrl !== '{{PHOTO_URL}}') {
+            const img = document.querySelector('.photo-placeholder img');
+            img.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

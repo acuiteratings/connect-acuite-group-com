@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary Card - Ribbon Wave</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f5f1ed;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f5f1ed 0%, #faf8f5 100%);
+            overflow: hidden;
+        }
+
+        /* Ribbon waves background */
+        .ribbon {
+            position: absolute;
+            opacity: 0.6;
+        }
+
+        .ribbon-1 {
+            top: 15%;
+            left: -100px;
+            width: 1400px;
+            height: 120px;
+            background: linear-gradient(90deg, transparent, #d4af37, #c41e3a, #d4af37, transparent);
+            transform: skewY(-3deg);
+            clip-path: polygon(0 30%, 5% 20%, 10% 35%, 15% 15%, 20% 40%, 25% 20%, 30% 35%, 35% 25%, 40% 40%, 45% 22%, 50% 38%, 55% 18%, 60% 42%, 65% 20%, 70% 39%, 75% 19%, 80% 41%, 85% 21%, 90% 38%, 95% 20%, 100% 35%, 100% 70%, 95% 75%, 90% 65%, 85% 75%, 80% 60%, 75% 75%, 70% 62%, 65% 75%, 60% 58%, 55% 72%, 50% 62%, 45% 78%, 40% 60%, 35% 75%, 30% 65%, 25% 80%, 20% 60%, 15% 85%, 10% 65%, 5% 80%, 0 70%);
+        }
+
+        .ribbon-2 {
+            top: 50%;
+            left: -50px;
+            width: 1400px;
+            height: 100px;
+            background: linear-gradient(90deg, transparent, #d4af37, #c41e3a, #d4af37, transparent);
+            transform: skewY(2deg);
+            clip-path: polygon(0 35%, 8% 25%, 16% 40%, 24% 20%, 32% 45%, 40% 22%, 48% 40%, 56% 25%, 64% 42%, 72% 24%, 80% 39%, 88% 28%, 96% 38%, 100% 32%, 100% 68%, 96% 72%, 88% 72%, 80% 61%, 72% 76%, 64% 58%, 56% 75%, 48% 60%, 40% 78%, 32% 55%, 24% 80%, 16% 60%, 8% 75%, 0 65%);
+        }
+
+        /* Content card */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: white;
+            padding: 60px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+            text-align: center;
+            max-width: 900px;
+            width: 90%;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: 300;
+            color: #2c2c2c;
+            font-family: 'Georgia', serif;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .title-accent {
+            color: #c41e3a;
+            font-weight: 400;
+        }
+
+        .photo-wrapper {
+            margin: 40px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #d4af37 0%, #c41e3a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            border: 5px solid #f5f1ed;
+            box-shadow: 0 10px 30px rgba(196, 30, 58, 0.2);
+            background-image: url('{{PHOTO_URL}}');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .name {
+            font-size: 42px;
+            font-weight: 500;
+            color: #c41e3a;
+            font-family: 'Georgia', serif;
+            margin: 20px 0;
+            letter-spacing: 1px;
+        }
+
+        .date {
+            font-size: 18px;
+            color: #666;
+            font-family: 'Georgia', serif;
+            font-style: italic;
+            margin-top: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .decorative-line {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+            margin: 20px auto;
+        }
+
+        .celebration {
+            font-size: 32px;
+            letter-spacing: 8px;
+            margin-top: 20px;
+            color: #d4af37;
+        }
+
+        /* Corner accents */
+        .corner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #d4af37;
+            opacity: 0.3;
+        }
+
+        .corner-top-left {
+            top: 30px;
+            left: 30px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .corner-top-right {
+            top: 30px;
+            right: 30px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .corner-bottom-left {
+            bottom: 30px;
+            left: 30px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner-bottom-right {
+            bottom: 30px;
+            right: 30px;
+            border-left: none;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ribbon ribbon-1"></div>
+        <div class="ribbon ribbon-2"></div>
+
+        <div class="corner corner-top-left"></div>
+        <div class="corner corner-top-right"></div>
+        <div class="corner corner-bottom-left"></div>
+        <div class="corner corner-bottom-right"></div>
+
+        <div class="card">
+            <div class="title">
+                Happy <span class="title-accent">Work</span><br>Anniversary
+            </div>
+
+            <div class="photo-wrapper">
+                <div class="photo"></div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="decorative-line"></div>
+
+            <div class="date">{{DATE}}</div>
+
+            <div class="celebration">✨ ⭐ 🏆</div>
+        </div>
+    </div>
+</body>
+</html>

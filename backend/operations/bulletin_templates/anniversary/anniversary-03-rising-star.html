@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Rising Star</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #001a4d 0%, #003d99 25%, #0055cc 50%, #4da6ff 75%, #80ccff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated stars in background */
+        .star-field {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .star {
+            position: absolute;
+            color: #ffd700;
+            font-size: 24px;
+            opacity: 0.6;
+        }
+
+        .star:nth-child(1) { left: 5%; top: 10%; animation: twinkle 3s ease-in-out infinite; }
+        .star:nth-child(2) { left: 15%; top: 25%; animation: twinkle 4s ease-in-out 0.5s infinite; }
+        .star:nth-child(3) { left: 85%; top: 15%; animation: twinkle 3.5s ease-in-out 1s infinite; }
+        .star:nth-child(4) { left: 92%; top: 50%; animation: twinkle 4.5s ease-in-out 0.3s infinite; }
+        .star:nth-child(5) { left: 10%; top: 80%; animation: twinkle 3.2s ease-in-out 1.5s infinite; }
+        .star:nth-child(6) { left: 75%; top: 85%; animation: twinkle 4.2s ease-in-out 0.8s infinite; }
+        .star:nth-child(7) { left: 50%; top: 5%; animation: twinkle 3.8s ease-in-out 1.2s infinite; }
+        .star:nth-child(8) { left: 30%; top: 70%; animation: twinkle 4s ease-in-out 0.6s infinite; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Rising motion */
+        @keyframes rise {
+            0% {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            animation: rise 1s ease-out;
+        }
+
+        .greeting {
+            font-size: 46px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 3px 3px 12px rgba(0, 0, 0, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .greeting-accent {
+            color: #ffd700;
+            display: block;
+            font-size: 54px;
+            margin-top: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .photo-circle {
+            width: 145px;
+            height: 145px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe6cc 100%);
+            border: 6px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 50px rgba(255, 215, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle::before {
+            content: "⭐";
+            font-size: 48px;
+            position: absolute;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 46px;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+            letter-spacing: 0.8px;
+        }
+
+        .tagline {
+            font-size: 20px;
+            color: #ffd700;
+            font-weight: 600;
+            margin: 8px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .date-text {
+            font-size: 17px;
+            color: #80ccff;
+            font-weight: 500;
+            margin-top: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        /* Decorative star accents */
+        .star-accent {
+            position: absolute;
+            color: #ffd700;
+            opacity: 0.8;
+            animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        .star-left {
+            font-size: 48px;
+            left: 80px;
+            top: 200px;
+        }
+
+        .star-right {
+            font-size: 48px;
+            right: 80px;
+            bottom: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="star-field">
+            <div class="star">⭐</div>
+            <div class="star">✨</div>
+            <div class="star">⭐</div>
+            <div class="star">✨</div>
+            <div class="star">⭐</div>
+            <div class="star">✨</div>
+            <div class="star">⭐</div>
+            <div class="star">✨</div>
+        </div>
+
+        <div class="star-accent star-left">⭐</div>
+        <div class="star-accent star-right">⭐</div>
+
+        <div class="content">
+            <div class="greeting">
+                Happy
+                <span class="greeting-accent">Work Anniversary</span>
+            </div>
+
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}" onerror="this.style.display='none'">
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="tagline">Your Rise to Success Continues</div>
+
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

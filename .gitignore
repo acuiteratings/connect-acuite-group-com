@@ -1,8 +1,10 @@
 .env
+.build-number
 .venv/
 .wrangler/
 .DS_Store
 __pycache__/
 *.py[cod]
 backend/db.sqlite3
+node_modules/
 staticfiles/

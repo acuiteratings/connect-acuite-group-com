@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Fireworks Celebration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #0f1428 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fireworks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.6;
+        }
+
+        .burst {
+            position: absolute;
+            font-size: 20px;
+            animation: burst-out 2s ease-out forwards;
+        }
+
+        .burst:nth-child(1) {
+            top: 15%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+
+        .burst:nth-child(2) {
+            top: 10%;
+            right: 15%;
+            animation-delay: 0.3s;
+        }
+
+        .burst:nth-child(3) {
+            bottom: 20%;
+            left: 25%;
+            animation-delay: 0.6s;
+        }
+
+        .burst:nth-child(4) {
+            bottom: 15%;
+            right: 20%;
+            animation-delay: 0.9s;
+        }
+
+        .burst:nth-child(5) {
+            top: 45%;
+            left: 10%;
+            animation-delay: 1.2s;
+        }
+
+        .burst:nth-child(6) {
+            top: 35%;
+            right: 12%;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes burst-out {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+            }
+        }
+
+        .burst:nth-child(1) {
+            --tx: 80px;
+            --ty: -100px;
+        }
+
+        .burst:nth-child(2) {
+            --tx: -100px;
+            --ty: -80px;
+        }
+
+        .burst:nth-child(3) {
+            --tx: 90px;
+            --ty: 100px;
+        }
+
+        .burst:nth-child(4) {
+            --tx: -110px;
+            --ty: 90px;
+        }
+
+        .burst:nth-child(5) {
+            --tx: 120px;
+            --ty: 0px;
+        }
+
+        .burst:nth-child(6) {
+            --tx: -130px;
+            --ty: -50px;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 900px;
+            background: rgba(26, 31, 58, 0.6);
+            padding: 50px 60px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #ff6b9d 0%, #feca57 50%, #48dbfb 100%);
+            border: 4px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(255, 107, 157, 0.6);
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+        }
+
+        .anniversary-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #fff;
+            margin: 20px 0;
+            letter-spacing: 1px;
+        }
+
+        .accent-sparkles {
+            font-size: 28px;
+            margin: 10px 0;
+            letter-spacing: 8px;
+        }
+
+        .name {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff6b9d, #feca57, #48dbfb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 15px 0;
+            letter-spacing: 1px;
+        }
+
+        .date {
+            font-size: 20px;
+            color: #b0c4e3;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
+        }
+
+        .accent-line {
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b9d, #feca57, #48dbfb);
+            margin: 20px auto;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="fireworks">
+            <div class="burst">🎆</div>
+            <div class="burst">✨</div>
+            <div class="burst">🎇</div>
+            <div class="burst">💥</div>
+            <div class="burst">⭐</div>
+            <div class="burst">🌟</div>
+        </div>
+
+        <div class="content">
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}">
+            </div>
+            <div class="anniversary-title">Happy Work Anniversary</div>
+            <div class="accent-sparkles">✨ 🎉 ✨</div>
+            <div class="accent-line"></div>
+            <div class="name">{{NAME}}</div>
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

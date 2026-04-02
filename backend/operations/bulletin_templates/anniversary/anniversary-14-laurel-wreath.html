@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Laurel Wreath</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d9c8 50%, #d9cfc2 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .wreath-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 20px;
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 5;
+            top: 85px;
+            background: linear-gradient(135deg, #d4af7a 0%, #c9a96e 100%);
+            border: 5px solid #f5e6d3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #8b7355;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .anniversary-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #5a4a3a;
+            margin: 30px 0 10px;
+            letter-spacing: 1px;
+        }
+
+        .name {
+            font-size: 56px;
+            font-weight: 800;
+            color: #8b6f47;
+            margin: 15px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .date {
+            font-size: 20px;
+            color: #6b5a47;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
+        }
+
+        .medal-accent {
+            font-size: 36px;
+            margin: 15px 0;
+            letter-spacing: 12px;
+        }
+
+        .accent-line {
+            width: 150px;
+            height: 3px;
+            background: #8b6f47;
+            margin: 20px auto;
+            border-radius: 2px;
+        }
+
+        .corner-flourish {
+            position: absolute;
+            font-size: 32px;
+            opacity: 0.6;
+        }
+
+        .corner-flourish.top-left {
+            top: 40px;
+            left: 80px;
+            transform: rotate(-15deg);
+        }
+
+        .corner-flourish.top-right {
+            top: 40px;
+            right: 80px;
+            transform: rotate(15deg);
+        }
+
+        .corner-flourish.bottom-left {
+            bottom: 100px;
+            left: 100px;
+            transform: rotate(25deg);
+        }
+
+        .corner-flourish.bottom-right {
+            bottom: 100px;
+            right: 100px;
+            transform: rotate(-25deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="corner-flourish top-left">🌿</div>
+        <div class="corner-flourish top-right">🌿</div>
+        <div class="corner-flourish bottom-left">🍃</div>
+        <div class="corner-flourish bottom-right">🍃</div>
+
+        <div class="content">
+            <div class="wreath-container">
+                <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;">
+                    <!-- Left wreath -->
+                    <path d="M 80 150 Q 70 100 100 80 Q 120 70 140 90 Q 130 110 120 130 Q 110 150 100 170 Q 80 180 70 170" fill="none" stroke="#8b6f47" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+
+                    <!-- Right wreath -->
+                    <path d="M 220 150 Q 230 100 200 80 Q 180 70 160 90 Q 170 110 180 130 Q 190 150 200 170 Q 220 180 230 170" fill="none" stroke="#8b6f47" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+
+                    <!-- Decorative leaves -->
+                    <circle cx="75" cy="120" r="4" fill="#8b6f47" opacity="0.8"/>
+                    <circle cx="225" cy="120" r="4" fill="#8b6f47" opacity="0.8"/>
+                    <circle cx="85" cy="160" r="4" fill="#d4af7a" opacity="0.8"/>
+                    <circle cx="215" cy="160" r="4" fill="#d4af7a" opacity="0.8"/>
+                </svg>
+
+                <div class="photo-circle">
+                    <img src="{{PHOTO_URL}}" alt="{{NAME}}">
+                </div>
+            </div>
+
+            <div class="medal-accent">🏆 ⭐ 🏆</div>
+            <div class="anniversary-title">Happy Work Anniversary</div>
+            <div class="accent-line"></div>
+            <div class="name">{{NAME}}</div>
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>Login | Acuité Connect</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ build_number }}">
 </head>
 <body class="connect-auth-body">
   <div class="connect-auth-shell">
@@ -83,7 +83,7 @@
     <span id="build-number-display">Built with care by Sankar Chakraborti | BUILD {{ build_number }}</span>
   </footer>
 
-  <script src="{% static 'js/auth.js' %}" defer></script>
+  <script src="{% static 'js/auth.js' %}?v={{ build_number }}" defer></script>
   <script src="{% static 'js/login.js' %}" defer></script>
 </body>
 </html>

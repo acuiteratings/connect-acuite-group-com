@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Anniversary Card - Emerald Prestige</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0d4a2f 0%, #1a6b47 50%, #0f5538 100%);
+            overflow: hidden;
+        }
+
+        /* Ornamental corner patterns */
+        .corner-ornament {
+            position: absolute;
+            font-size: 80px;
+            opacity: 0.15;
+        }
+
+        .corner-tl {
+            top: 20px;
+            left: 20px;
+        }
+
+        .corner-tr {
+            top: 20px;
+            right: 20px;
+            transform: scaleX(-1);
+        }
+
+        .corner-bl {
+            bottom: 20px;
+            left: 20px;
+            transform: scaleY(-1);
+        }
+
+        .corner-br {
+            bottom: 20px;
+            right: 20px;
+            transform: scaleX(-1) scaleY(-1);
+        }
+
+        /* Background accent shapes */
+        .accent-shape {
+            position: absolute;
+            opacity: 0.08;
+        }
+
+        .accent-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #d4af37, transparent);
+            top: -200px;
+            right: -200px;
+            border-radius: 50%;
+        }
+
+        .accent-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #d4af37, transparent);
+            bottom: -150px;
+            left: -150px;
+            border-radius: 50%;
+        }
+
+        /* Card */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(13, 74, 47, 0.95) 0%, rgba(26, 107, 71, 0.95) 100%);
+            padding: 60px;
+            border-radius: 8px;
+            border: 3px solid #d4af37;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4), inset 0 0 30px rgba(212, 175, 55, 0.1);
+            text-align: center;
+            max-width: 850px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Border decoration */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, transparent 50%, rgba(212, 175, 55, 0.1) 100%);
+            border-radius: 8px;
+            z-index: -1;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #d4af37;
+            font-family: 'Georgia', serif;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .title-sub {
+            font-size: 20px;
+            color: #a8d959;
+            font-family: 'Georgia', serif;
+            letter-spacing: 2px;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        .divider-ornate {
+            width: 100%;
+            margin: 25px 0;
+            text-align: center;
+            color: #d4af37;
+            font-size: 20px;
+            letter-spacing: 8px;
+            opacity: 0.6;
+        }
+
+        .photo-wrapper {
+            margin: 35px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #d4af37 0%, #a8d959 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0d4a2f;
+            font-size: 14px;
+            font-weight: 600;
+            border: 5px solid #d4af37;
+            box-shadow: 0 0 0 3px #0d4a2f, 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image: url('{{PHOTO_URL}}');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .photo::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid #a8d959;
+            opacity: 0.4;
+        }
+
+        .name {
+            font-size: 46px;
+            font-weight: 700;
+            color: #a8d959;
+            font-family: 'Georgia', serif;
+            margin: 25px 0;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .date {
+            font-size: 18px;
+            color: #d4af37;
+            font-family: 'Georgia', serif;
+            margin-top: 15px;
+            letter-spacing: 1px;
+            font-style: italic;
+            opacity: 0.9;
+        }
+
+        .celebration {
+            font-size: 42px;
+            letter-spacing: 10px;
+            margin-top: 20px;
+            color: #d4af37;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Inner corner flourishes */
+        .flourish {
+            position: absolute;
+            color: #d4af37;
+            opacity: 0.4;
+            font-size: 24px;
+        }
+
+        .flourish-tl {
+            top: 25px;
+            left: 25px;
+        }
+
+        .flourish-tr {
+            top: 25px;
+            right: 25px;
+        }
+
+        .flourish-bl {
+            bottom: 25px;
+            left: 25px;
+        }
+
+        .flourish-br {
+            bottom: 25px;
+            right: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="corner-ornament corner-tl">◆</div>
+        <div class="corner-ornament corner-tr">◆</div>
+        <div class="corner-ornament corner-bl">◆</div>
+        <div class="corner-ornament corner-br">◆</div>
+
+        <div class="accent-shape accent-1"></div>
+        <div class="accent-shape accent-2"></div>
+
+        <div class="card">
+            <div class="flourish flourish-tl">✦</div>
+            <div class="flourish flourish-tr">✦</div>
+            <div class="flourish flourish-bl">✦</div>
+            <div class="flourish flourish-br">✦</div>
+
+            <div class="title">Happy Work</div>
+            <div class="title-sub">Anniversary</div>
+
+            <div class="divider-ornate">◆ ✦ ◆</div>
+
+            <div class="photo-wrapper">
+                <div class="photo"></div>
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="date">{{DATE}}</div>
+
+            <div class="celebration">👑 🏆 ⭐</div>
+        </div>
+    </div>
+</body>
+</html>

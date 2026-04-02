@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Corporate Confetti</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, #001f3f 0%, #003d7a 50%, #ffffff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Confetti pieces */
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            opacity: 0.8;
+        }
+
+        .confetti-red {
+            background: #ff4444;
+            border-radius: 2px;
+        }
+
+        .confetti-blue {
+            background: #0066ff;
+            border-radius: 2px;
+        }
+
+        .confetti-green {
+            background: #00cc44;
+            border-radius: 2px;
+        }
+
+        .confetti-yellow {
+            background: #ffcc00;
+            border-radius: 2px;
+        }
+
+        .confetti-purple {
+            background: #9933ff;
+            border-radius: 2px;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .confetti:nth-child(1) { left: 10%; animation: fall 3s linear infinite; }
+        .confetti:nth-child(2) { left: 20%; animation: fall 3.5s linear 0.2s infinite; }
+        .confetti:nth-child(3) { left: 30%; animation: fall 4s linear 0.4s infinite; }
+        .confetti:nth-child(4) { left: 40%; animation: fall 3.2s linear 0.1s infinite; }
+        .confetti:nth-child(5) { left: 50%; animation: fall 3.8s linear 0.3s infinite; }
+        .confetti:nth-child(6) { left: 60%; animation: fall 3.6s linear 0.5s infinite; }
+        .confetti:nth-child(7) { left: 70%; animation: fall 4.1s linear 0.2s infinite; }
+        .confetti:nth-child(8) { left: 80%; animation: fall 3.3s linear 0.4s infinite; }
+        .confetti:nth-child(9) { left: 90%; animation: fall 3.9s linear 0.1s infinite; }
+        .confetti:nth-child(10) { left: 15%; animation: fall 4.2s linear 0.3s infinite; }
+        .confetti:nth-child(11) { left: 25%; animation: fall 3.4s linear 0.6s infinite; }
+        .confetti:nth-child(12) { left: 35%; animation: fall 3.7s linear 0.2s infinite; }
+        .confetti:nth-child(13) { left: 45%; animation: fall 3.9s linear 0.5s infinite; }
+        .confetti:nth-child(14) { left: 55%; animation: fall 3.5s linear 0.1s infinite; }
+        .confetti:nth-child(15) { left: 65%; animation: fall 4.3s linear 0.4s infinite; }
+        .confetti:nth-child(16) { left: 75%; animation: fall 3.6s linear 0.3s infinite; }
+        .confetti:nth-child(17) { left: 85%; animation: fall 3.8s linear 0.6s infinite; }
+        .confetti:nth-child(18) { left: 95%; animation: fall 4s linear 0.2s infinite; }
+        .confetti:nth-child(19) { left: 5%; animation: fall 3.3s linear 0.5s infinite; }
+        .confetti:nth-child(20) { left: 50%; animation: fall 4.1s linear 0.3s infinite; }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .greeting {
+            font-size: 44px;
+            font-weight: 700;
+            color: #001f3f;
+            letter-spacing: 1px;
+        }
+
+        .greeting-accent {
+            color: #0066ff;
+            display: block;
+            font-size: 52px;
+            margin-top: 8px;
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e8f0ff 0%, #f0e8ff 100%);
+            border: 5px solid #0066ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 30px rgba(0, 102, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle::before {
+            content: "👤";
+            font-size: 50px;
+            position: absolute;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 42px;
+            font-weight: 700;
+            color: #001f3f;
+            letter-spacing: 0.5px;
+        }
+
+        .congratulations {
+            font-size: 18px;
+            color: #003d7a;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+
+        .date-text {
+            font-size: 16px;
+            color: #0066ff;
+            font-weight: 500;
+            padding-top: 10px;
+        }
+
+        .accent-line {
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(to right, #ff4444, #0066ff, #00cc44, #ffcc00);
+            border-radius: 2px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Confetti pieces -->
+        <div class="confetti confetti-red"></div>
+        <div class="confetti confetti-blue"></div>
+        <div class="confetti confetti-green"></div>
+        <div class="confetti confetti-yellow"></div>
+        <div class="confetti confetti-purple"></div>
+        <div class="confetti confetti-red"></div>
+        <div class="confetti confetti-blue"></div>
+        <div class="confetti confetti-green"></div>
+        <div class="confetti confetti-yellow"></div>
+        <div class="confetti confetti-purple"></div>
+        <div class="confetti confetti-red"></div>
+        <div class="confetti confetti-blue"></div>
+        <div class="confetti confetti-green"></div>
+        <div class="confetti confetti-yellow"></div>
+        <div class="confetti confetti-purple"></div>
+        <div class="confetti confetti-red"></div>
+        <div class="confetti confetti-blue"></div>
+        <div class="confetti confetti-green"></div>
+        <div class="confetti confetti-yellow"></div>
+        <div class="confetti confetti-purple"></div>
+
+        <div class="content">
+            <div class="greeting">
+                Happy
+                <span class="greeting-accent">Work Anniversary</span>
+            </div>
+
+            <div class="accent-line"></div>
+
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}" onerror="this.style.display='none'">
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="congratulations">Congratulations on reaching this milestone!</div>
+
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

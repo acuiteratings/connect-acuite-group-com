@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Champagne Toast</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2a2520 0%, #4a3f35 20%, #d4a574 40%, #e6c9a0 60%, #f5e6d3 80%, #fffbf0 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Bubble sparkles */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 215, 0, 0.2));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            opacity: 0.7;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 0;
+                transform: translateY(0) translateX(0);
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-200px) translateX(50px);
+            }
+        }
+
+        .bubble:nth-child(1) { width: 20px; height: 20px; left: 15%; bottom: 10%; animation: float-up 3s ease-out infinite; }
+        .bubble:nth-child(2) { width: 30px; height: 30px; left: 25%; bottom: 5%; animation: float-up 4s ease-out 0.5s infinite; }
+        .bubble:nth-child(3) { width: 15px; height: 15px; left: 35%; bottom: 8%; animation: float-up 3.5s ease-out 1s infinite; }
+        .bubble:nth-child(4) { width: 25px; height: 25px; left: 65%; bottom: 12%; animation: float-up 4.2s ease-out 0.3s infinite; }
+        .bubble:nth-child(5) { width: 18px; height: 18px; left: 75%; bottom: 6%; animation: float-up 3.8s ease-out 0.8s infinite; }
+        .bubble:nth-child(6) { width: 22px; height: 22px; left: 85%; bottom: 10%; animation: float-up 4.5s ease-out 1.2s infinite; }
+        .bubble:nth-child(7) { width: 16px; height: 16px; left: 45%; bottom: 7%; animation: float-up 3.3s ease-out 0.6s infinite; }
+        .bubble:nth-child(8) { width: 28px; height: 28px; left: 55%; bottom: 9%; animation: float-up 4s ease-out 1.1s infinite; }
+
+        /* Sparkle elements */
+        .sparkle {
+            position: absolute;
+            color: #ffd700;
+            opacity: 0.8;
+            font-size: 20px;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .sparkle:nth-child(9) { left: 20%; top: 15%; animation: shimmer 2s ease-in-out infinite; }
+        .sparkle:nth-child(10) { right: 25%; top: 20%; animation: shimmer 2.5s ease-in-out 0.5s infinite; }
+        .sparkle:nth-child(11) { left: 50%; top: 10%; animation: shimmer 2.2s ease-in-out 1s infinite; }
+        .sparkle:nth-child(12) { right: 15%; bottom: 30%; animation: shimmer 2.8s ease-in-out 0.3s infinite; }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+        }
+
+        .greeting {
+            font-size: 44px;
+            font-weight: 700;
+            color: #2a2520;
+            text-shadow: 1px 1px 3px rgba(255, 215, 0, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .greeting-accent {
+            color: #c8a882;
+            display: block;
+            font-size: 52px;
+            margin-top: 8px;
+            font-weight: 800;
+        }
+
+        .photo-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe6cc 100%);
+            border: 6px solid #d4a574;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 45px rgba(212, 165, 116, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle::before {
+            content: "🥂";
+            font-size: 52px;
+            position: absolute;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 44px;
+            font-weight: 700;
+            color: #2a2520;
+            letter-spacing: 0.6px;
+        }
+
+        .toast-message {
+            font-size: 20px;
+            color: #8b7355;
+            font-style: italic;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+
+        .date-text {
+            font-size: 17px;
+            color: #c8a882;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        /* Decorative lines */
+        .decor-line {
+            width: 180px;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #d4a574, transparent);
+            margin: 15px 0;
+        }
+
+        /* Bottle decoration */
+        .bottle-accent {
+            position: absolute;
+            left: 50px;
+            top: 100px;
+            font-size: 80px;
+            opacity: 0.15;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        .glass-accent {
+            position: absolute;
+            right: 60px;
+            bottom: 120px;
+            font-size: 80px;
+            opacity: 0.15;
+            animation: shimmer 3.5s ease-in-out 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Bubbles -->
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+
+        <!-- Sparkles -->
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+
+        <!-- Decorative elements -->
+        <div class="bottle-accent">🍾</div>
+        <div class="glass-accent">🥂</div>
+
+        <div class="content">
+            <div class="greeting">
+                Happy Work
+                <span class="greeting-accent">Anniversary</span>
+            </div>
+
+            <div class="decor-line"></div>
+
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}" onerror="this.style.display='none'">
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="toast-message">Here's to another year of excellence!</div>
+
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

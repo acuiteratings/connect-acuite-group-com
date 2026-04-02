@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Gradient Blocks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .block {
+            position: absolute;
+            opacity: 0.85;
+        }
+
+        .block-1 {
+            width: 320px;
+            height: 320px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -50px;
+            left: -80px;
+            border-radius: 30px;
+            transform: rotate(25deg);
+        }
+
+        .block-2 {
+            width: 280px;
+            height: 280px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            top: 50px;
+            right: -60px;
+            border-radius: 25px;
+            transform: rotate(-15deg);
+        }
+
+        .block-3 {
+            width: 240px;
+            height: 240px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            bottom: -40px;
+            left: 100px;
+            border-radius: 20px;
+            transform: rotate(35deg);
+        }
+
+        .block-4 {
+            width: 260px;
+            height: 260px;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            bottom: -30px;
+            right: 80px;
+            border-radius: 25px;
+            transform: rotate(-25deg);
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 50px 60px;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(20px);
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f5576c 100%);
+            border: 5px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+        }
+
+        .anniversary-title {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f5576c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+            letter-spacing: 1px;
+        }
+
+        .name {
+            font-size: 56px;
+            font-weight: 800;
+            color: #2a2a4a;
+            margin: 15px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .date {
+            font-size: 20px;
+            color: #667eea;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
+        }
+
+        .accent-dots {
+            font-size: 24px;
+            margin: 15px 0;
+            letter-spacing: 8px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f5576c, #43e97b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .decorative-line {
+            width: 150px;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f5576c, #43e97b);
+            margin: 20px auto;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="block block-1"></div>
+        <div class="block block-2"></div>
+        <div class="block block-3"></div>
+        <div class="block block-4"></div>
+
+        <div class="content">
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}">
+            </div>
+            <div class="anniversary-title">Happy Work Anniversary</div>
+            <div class="decorative-line"></div>
+            <div class="accent-dots">● ● ●</div>
+            <div class="name">{{NAME}}</div>
+            <div class="date">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

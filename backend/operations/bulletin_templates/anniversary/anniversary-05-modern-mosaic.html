@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Work Anniversary - Modern Mosaic</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f3a4a 0%, #1a5a6b 25%, #2b8099 50%, #3fa3bb 75%, #6bc7d8 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mosaic pattern background */
+        .mosaic-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.2;
+        }
+
+        .mosaic-tile {
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .tile-1 { width: 150px; height: 150px; left: 5%; top: 5%; background: linear-gradient(135deg, #00ff88 0%, #00cc88 100%); }
+        .tile-2 { width: 120px; height: 120px; left: 15%; top: 25%; background: linear-gradient(135deg, #00cc99 0%, #00aa88 100%); }
+        .tile-3 { width: 160px; height: 160px; right: 8%; top: 10%; background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); }
+        .tile-4 { width: 140px; height: 140px; right: 20%; top: 35%; background: linear-gradient(135deg, #ffd700 0%, #ffcc00 100%); }
+        .tile-5 { width: 130px; height: 130px; left: 8%; bottom: 15%; background: linear-gradient(135deg, #ff9100 0%, #ff7700 100%); }
+        .tile-6 { width: 110px; height: 110px; left: 35%; bottom: 10%; background: linear-gradient(135deg, #ff6b9d 0%, #ff4081 100%); }
+        .tile-7 { width: 150px; height: 150px; right: 15%; bottom: 8%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .tile-8 { width: 120px; height: 120px; left: 60%; bottom: 25%; background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%); }
+
+        @keyframes drift {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(15px); }
+        }
+
+        .tile-1 { animation: drift 4s ease-in-out infinite; }
+        .tile-2 { animation: drift 4.5s ease-in-out 0.3s infinite; }
+        .tile-3 { animation: drift 4.2s ease-in-out 0.6s infinite; }
+        .tile-4 { animation: drift 5s ease-in-out 0.9s infinite; }
+        .tile-5 { animation: drift 4.8s ease-in-out 0.2s infinite; }
+        .tile-6 { animation: drift 4.3s ease-in-out 0.7s infinite; }
+        .tile-7 { animation: drift 5.2s ease-in-out 0.4s infinite; }
+        .tile-8 { animation: drift 4.6s ease-in-out 1s infinite; }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: rgba(15, 58, 74, 0.92);
+            padding: 45px 50px;
+            border-radius: 15px;
+            border: 2px solid rgba(107, 199, 216, 0.5);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .greeting {
+            font-size: 44px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .greeting-accent {
+            color: #00ff88;
+            display: block;
+            font-size: 52px;
+            margin-top: 8px;
+            font-weight: 800;
+        }
+
+        .photo-circle {
+            width: 135px;
+            height: 135px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+            border: 5px solid #00ff88;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px rgba(0, 255, 136, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-circle::before {
+            content: "✓";
+            font-size: 48px;
+            color: #0f3a4a;
+            position: absolute;
+            font-weight: 800;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 44px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.6px;
+        }
+
+        .achievement-message {
+            font-size: 18px;
+            color: #6bc7d8;
+            font-weight: 600;
+            margin: 10px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .date-text {
+            font-size: 16px;
+            color: #00ff88;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+
+        /* Mosaic accent elements - corner badges */
+        .corner-badge {
+            position: absolute;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .badge-tl {
+            width: 70px;
+            height: 70px;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, #ff9100 0%, #ff7700 100%);
+            border-radius: 10px;
+            font-size: 24px;
+        }
+
+        .badge-br {
+            width: 70px;
+            height: 70px;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            font-size: 24px;
+        }
+
+        /* Animated pulse effect */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .badge-tl {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .badge-br {
+            animation: pulse 2.5s ease-in-out 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Mosaic pattern background -->
+        <div class="mosaic-bg">
+            <div class="mosaic-tile tile-1"></div>
+            <div class="mosaic-tile tile-2"></div>
+            <div class="mosaic-tile tile-3"></div>
+            <div class="mosaic-tile tile-4"></div>
+            <div class="mosaic-tile tile-5"></div>
+            <div class="mosaic-tile tile-6"></div>
+            <div class="mosaic-tile tile-7"></div>
+            <div class="mosaic-tile tile-8"></div>
+        </div>
+
+        <!-- Corner badges -->
+        <div class="corner-badge badge-tl">⭐</div>
+        <div class="corner-badge badge-br">✓</div>
+
+        <div class="content">
+            <div class="greeting">
+                Happy
+                <span class="greeting-accent">Work Anniversary</span>
+            </div>
+
+            <div class="photo-circle">
+                <img src="{{PHOTO_URL}}" alt="{{NAME}}" onerror="this.style.display='none'">
+            </div>
+
+            <div class="name">{{NAME}}</div>
+
+            <div class="achievement-message">Celebrating Your Achievements</div>
+
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Geometric Festival</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .card-container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(45deg, #0f2027, #203a43, #2c5364);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Geometric shapes */
+        .geo-shape {
+            position: absolute;
+            opacity: 0.7;
+        }
+
+        .triangle {
+            width: 0;
+            height: 0;
+        }
+
+        .tri1 {
+            border-left: 80px solid transparent;
+            border-right: 80px solid transparent;
+            border-bottom: 140px solid #ff6b6b;
+            top: -30px;
+            left: 50px;
+            animation: rotate-shape 8s linear infinite;
+        }
+
+        .tri2 {
+            border-left: 60px solid transparent;
+            border-right: 60px solid transparent;
+            border-bottom: 105px solid #ffd93d;
+            bottom: 40px;
+            right: 80px;
+            animation: rotate-shape-reverse 10s linear infinite;
+        }
+
+        .tri3 {
+            border-left: 70px solid transparent;
+            border-right: 70px solid transparent;
+            border-bottom: 120px solid #6bcf7f;
+            top: 100px;
+            right: 40px;
+            animation: rotate-shape 12s linear infinite;
+        }
+
+        .hexagon {
+            width: 80px;
+            height: 92px;
+            background: linear-gradient(60deg, #ff6b6b 25%, #ff6b6b 50%, #ff4757 50%, #ff4757 75%);
+            position: absolute;
+            bottom: 80px;
+            left: 100px;
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+            animation: bounce-shape 3s ease-in-out infinite;
+        }
+
+        .hexagon2 {
+            width: 100px;
+            height: 115px;
+            background: linear-gradient(60deg, #4ecdc4 25%, #4ecdc4 50%, #45b8a8 50%, #45b8a8 75%);
+            position: absolute;
+            top: 80px;
+            left: 120px;
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+            animation: bounce-shape 4s ease-in-out infinite 0.5s;
+        }
+
+        .circle-geo {
+            position: absolute;
+            border-radius: 50%;
+            border: 4px solid #ffd93d;
+        }
+
+        .circle-geo1 {
+            width: 120px;
+            height: 120px;
+            top: 30px;
+            right: 100px;
+            animation: pulse-shape 2s ease-in-out infinite;
+        }
+
+        .circle-geo2 {
+            width: 90px;
+            height: 90px;
+            bottom: 50px;
+            right: 300px;
+            border-color: #ff6b6b;
+            animation: pulse-shape 2.5s ease-in-out infinite 0.5s;
+        }
+
+        @keyframes rotate-shape {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rotate-shape-reverse {
+            0% {
+                transform: rotate(360deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes bounce-shape {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @keyframes pulse-shape {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .content {
+            position: relative;
+            z-index: 20;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 50px 70px;
+            border-radius: 20px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            max-width: 650px;
+        }
+
+        .happy-text {
+            font-size: 44px;
+            font-weight: 700;
+            color: #ff6b6b;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .birthday-text {
+            font-size: 80px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 50%, #4ecdc4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+        }
+
+        .name-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .photo-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            border: 5px solid #fff;
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.3);
+            overflow: hidden;
+        }
+
+        .photo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .name-text {
+            font-size: 52px;
+            font-weight: 900;
+            color: #2c5364;
+            letter-spacing: 1px;
+        }
+
+        .date-text {
+            font-size: 14px;
+            color: #888;
+            margin-top: 15px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .corner-accent {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #ffd93d;
+            opacity: 0.6;
+        }
+
+        .corner-accent1 {
+            top: 20px;
+            right: 20px;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+
+        .corner-accent2 {
+            bottom: 20px;
+            left: 20px;
+            clip-path: polygon(100% 100%, 0 100%, 100% 0);
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        <div class="corner-accent corner-accent1"></div>
+        <div class="corner-accent corner-accent2"></div>
+
+        <div class="triangle tri1"></div>
+        <div class="triangle tri2"></div>
+        <div class="triangle tri3"></div>
+        <div class="hexagon"></div>
+        <div class="hexagon2"></div>
+        <div class="circle-geo circle-geo1"></div>
+        <div class="circle-geo circle-geo2"></div>
+
+        <div class="content">
+            <div class="happy-text">Happy</div>
+            <div class="birthday-text">BIRTHDAY</div>
+            <div class="name-section">
+                <div class="photo-circle">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" onerror="this.parentElement.textContent='🎊'">
+                </div>
+                <div class="name-text">{{NAME}}</div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+    </div>
+</body>
+</html>

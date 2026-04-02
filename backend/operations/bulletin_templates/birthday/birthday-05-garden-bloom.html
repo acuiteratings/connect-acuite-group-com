@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday - Garden Bloom</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            width: 1200px;
+            height: 675px;
+            background: linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Grass at bottom */
+        .grass {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(180deg, #81c784 0%, #66bb6a 100%);
+            overflow: hidden;
+        }
+
+        .grass-blade {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #66bb6a 0%, #43a047 100%);
+        }
+
+        /* CSS flowers */
+        .flower {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 5;
+        }
+
+        /* Flower petals using pseudo elements */
+        .petal {
+            position: absolute;
+            width: 20px;
+            height: 30px;
+            border-radius: 50% 50% 50% 0;
+            left: 50%;
+            top: 50%;
+            margin-left: -10px;
+            margin-top: -15px;
+        }
+
+        /* Flower 1 - Pink flower top left */
+        .flower:nth-child(1) {
+            left: 50px;
+            top: 80px;
+            animation: sway 3s ease-in-out infinite;
+        }
+
+        .flower:nth-child(1) .petal:nth-child(1) { background: #ff69b4; transform: rotate(0deg) translateY(-25px); }
+        .flower:nth-child(1) .petal:nth-child(2) { background: #ff1493; transform: rotate(72deg) translateY(-25px); }
+        .flower:nth-child(1) .petal:nth-child(3) { background: #ff69b4; transform: rotate(144deg) translateY(-25px); }
+        .flower:nth-child(1) .petal:nth-child(4) { background: #ff1493; transform: rotate(216deg) translateY(-25px); }
+        .flower:nth-child(1) .petal:nth-child(5) { background: #ff69b4; transform: rotate(288deg) translateY(-25px); }
+
+        .flower:nth-child(1) .center {
+            width: 15px;
+            height: 15px;
+            background: #ffd700;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -7.5px;
+            margin-top: -7.5px;
+        }
+
+        /* Flower 2 - Yellow flower top right */
+        .flower:nth-child(2) {
+            right: 60px;
+            top: 120px;
+            animation: sway 3.5s ease-in-out infinite 0.5s;
+        }
+
+        .flower:nth-child(2) .petal:nth-child(1) { background: #ffff00; transform: rotate(0deg) translateY(-28px); }
+        .flower:nth-child(2) .petal:nth-child(2) { background: #ffd700; transform: rotate(72deg) translateY(-28px); }
+        .flower:nth-child(2) .petal:nth-child(3) { background: #ffff00; transform: rotate(144deg) translateY(-28px); }
+        .flower:nth-child(2) .petal:nth-child(4) { background: #ffd700; transform: rotate(216deg) translateY(-28px); }
+        .flower:nth-child(2) .petal:nth-child(5) { background: #ffff00; transform: rotate(288deg) translateY(-28px); }
+
+        .flower:nth-child(2) .center {
+            width: 18px;
+            height: 18px;
+            background: #ff8c00;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -9px;
+            margin-top: -9px;
+        }
+
+        /* Flower 3 - Purple flower bottom left */
+        .flower:nth-child(3) {
+            left: 80px;
+            bottom: 120px;
+            animation: sway 2.8s ease-in-out infinite 1s;
+        }
+
+        .flower:nth-child(3) .petal:nth-child(1) { background: #da70d6; transform: rotate(0deg) translateY(-26px); }
+        .flower:nth-child(3) .petal:nth-child(2) { background: #ba55d3; transform: rotate(72deg) translateY(-26px); }
+        .flower:nth-child(3) .petal:nth-child(3) { background: #da70d6; transform: rotate(144deg) translateY(-26px); }
+        .flower:nth-child(3) .petal:nth-child(4) { background: #ba55d3; transform: rotate(216deg) translateY(-26px); }
+        .flower:nth-child(3) .petal:nth-child(5) { background: #da70d6; transform: rotate(288deg) translateY(-26px); }
+
+        .flower:nth-child(3) .center {
+            width: 16px;
+            height: 16px;
+            background: #ff69b4;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+        }
+
+        /* Flower 4 - Pink flower bottom right */
+        .flower:nth-child(4) {
+            right: 80px;
+            bottom: 100px;
+            animation: sway 3.2s ease-in-out infinite 0.3s;
+        }
+
+        .flower:nth-child(4) .petal:nth-child(1) { background: #ffb6c1; transform: rotate(0deg) translateY(-24px); }
+        .flower:nth-child(4) .petal:nth-child(2) { background: #ff69b4; transform: rotate(72deg) translateY(-24px); }
+        .flower:nth-child(4) .petal:nth-child(3) { background: #ffb6c1; transform: rotate(144deg) translateY(-24px); }
+        .flower:nth-child(4) .petal:nth-child(4) { background: #ff69b4; transform: rotate(216deg) translateY(-24px); }
+        .flower:nth-child(4) .petal:nth-child(5) { background: #ffb6c1; transform: rotate(288deg) translateY(-24px); }
+
+        .flower:nth-child(4) .center {
+            width: 14px;
+            height: 14px;
+            background: #ff8c00;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -7px;
+            margin-top: -7px;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(3deg); }
+        }
+
+        /* Content area */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .happy-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: #2e7d32;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .name {
+            font-size: 64px;
+            font-weight: bold;
+            color: #c2185b;
+            text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.5);
+            margin: 10px 0;
+        }
+
+        .photo-container {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(200, 230, 201, 0.3) 100%);
+            border: 5px solid #c2185b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(198, 40, 40, 0.2);
+            margin: 20px 0;
+            position: relative;
+            z-index: 11;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #c2185b 0%, #e91e63 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            color: white;
+        }
+
+        .photo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .date-text {
+            font-size: 18px;
+            color: #558b2f;
+            font-weight: 600;
+            margin-top: 5px;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.4);
+        }
+
+        /* Butterflies */
+        .butterfly {
+            position: absolute;
+            font-size: 28px;
+            opacity: 0.8;
+        }
+
+        .butterfly:nth-child(5) { left: 120px; top: 200px; animation: flutter 2s ease-in-out infinite; }
+        .butterfly:nth-child(6) { right: 130px; top: 150px; animation: flutter-reverse 2.5s ease-in-out infinite 0.3s; }
+
+        @keyframes flutter {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-20px) translateX(10px); }
+            50% { transform: translateY(0) translateX(0); }
+            75% { transform: translateY(20px) translateX(10px); }
+        }
+
+        @keyframes flutter-reverse {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-20px) translateX(-10px); }
+            50% { transform: translateY(0) translateX(0); }
+            75% { transform: translateY(20px) translateX(-10px); }
+        }
+
+        /* Small leaf decorations */
+        .leaf {
+            position: absolute;
+            font-size: 24px;
+            opacity: 0.6;
+        }
+
+        .leaf:nth-child(7) { left: 150px; top: 250px; animation: leaf-float 3s ease-in-out infinite; }
+        .leaf:nth-child(8) { right: 170px; top: 300px; animation: leaf-float-reverse 3.5s ease-in-out infinite 0.5s; }
+
+        @keyframes leaf-float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(15deg); }
+        }
+
+        @keyframes leaf-float-reverse {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(-15deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Flowers -->
+        <div class="flower">
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="center"></div>
+        </div>
+
+        <div class="flower">
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="center"></div>
+        </div>
+
+        <div class="flower">
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="center"></div>
+        </div>
+
+        <div class="flower">
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="center"></div>
+        </div>
+
+        <!-- Butterflies -->
+        <div class="butterfly">🦋</div>
+        <div class="butterfly">🦋</div>
+
+        <!-- Leaves -->
+        <div class="leaf">🍃</div>
+        <div class="leaf">🍃</div>
+
+        <!-- Main content -->
+        <div class="content">
+            <div class="happy-text">Happy Birthday</div>
+            <div class="name">{{NAME}}</div>
+            <div class="photo-container">
+                <div class="photo-placeholder">
+                    <img src="{{PHOTO_URL}}" alt="Birthday person" style="display: none;">
+                </div>
+            </div>
+            <div class="date-text">{{DATE}}</div>
+        </div>
+
+        <!-- Grass -->
+        <div class="grass"></div>
+    </div>
+
+    <script>
+        // Load photo if URL is provided
+        const photoUrl = '{{PHOTO_URL}}';
+        if (photoUrl && photoUrl !== '{{PHOTO_URL}}') {
+            const img = document.querySelector('.photo-placeholder img');
+            img.style.display = 'block';
+        }
+
+        // Dynamically create grass blades
+        const grassElement = document.querySelector('.grass');
+        for (let i = 0; i < 150; i++) {
+            const blade = document.createElement('div');
+            blade.className = 'grass-blade';
+            blade.style.left = (i * 8) + 'px';
+            blade.style.height = (Math.random() * 60 + 40) + 'px';
+            blade.style.opacity = Math.random() * 0.6 + 0.4;
+            grassElement.appendChild(blade);
+        }
+    </script>
+</body>
+</html>
