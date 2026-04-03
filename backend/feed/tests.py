@@ -57,19 +57,30 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Published post")
 
-    def test_authenticated_user_can_create_post(self):
+    def test_authenticated_user_can_submit_employee_post_for_review(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
             "/api/feed/posts/",
-            data=json.dumps({"title": "Hello", "body": "First backend post"}),
+            data=json.dumps(
+                {
+                    "title": "Hello",
+                    "body": "First backend post",
+                    "module": Post.Module.EMPLOYEE_POSTS,
+                    "topic": "employee_submission",
+                }
+            ),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
         self.assertEqual(payload["post"]["title"], "Hello")
-        self.assertEqual(payload["post"]["module"], Post.Module.GENERAL)
+        self.assertEqual(payload["post"]["module"], Post.Module.EMPLOYEE_POSTS)
+        self.assertEqual(
+            payload["post"]["moderation_status"],
+            Post.ModerationStatus.PENDING_REVIEW,
+        )
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual(AuditLog.objects.filter(action="post.created").count(), 1)
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="post_created").count(), 1)
@@ -107,30 +118,30 @@ class FeedApiTests(TestCase):
     def test_feed_can_filter_posts_by_module(self):
         Post.objects.create(
             author=self.user,
-            title="Marketplace post",
-            body="Selling a chair",
-            module=Post.Module.COMMUNITY,
-            topic="marketplace",
+            title="Bulletin post",
+            body="Town hall note",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
             moderation_status=Post.ModerationStatus.PUBLISHED,
         )
         Post.objects.create(
             author=self.user,
-            title="Business note",
-            body="Quarter close update",
-            module=Post.Module.BUSINESS,
-            topic="updates",
+            title="Employee submission",
+            body="Looking for a room mate in Mumbai.",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
         )
 
-        response = self.client.get("/api/feed/posts/?module=community")
+        response = self.client.get("/api/feed/posts/?module=bulletin")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["count"], 1)
-        self.assertEqual(payload["results"][0]["title"], "Marketplace post")
-        self.assertEqual(payload["results"][0]["topic"], "marketplace")
+        self.assertEqual(payload["results"][0]["title"], "Bulletin post")
+        self.assertEqual(payload["results"][0]["topic"], "announcements")
 
-    def test_community_posts_auto_publish_for_authenticated_employee(self):
+    def test_employee_submissions_stay_pending_review_for_authenticated_employee(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -139,12 +150,11 @@ class FeedApiTests(TestCase):
                 {
                     "title": "Need a flatmate in Mumbai",
                     "body": "Looking near Lower Parel from April.",
-                    "module": "community",
-                    "topic": "housing",
+                    "module": "employee_posts",
+                    "topic": "employee_submission",
                     "metadata": {
-                        "community_type": "looking_for_roommate",
-                        "city": "Mumbai",
-                        "meta_line": "Budget up to Rs 22,000",
+                        "submission_key": "looking_for_roommate",
+                        "bulletin_category": "employee_posts",
                     },
                 }
             ),
@@ -153,37 +163,15 @@ class FeedApiTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload["post"]["module"], "community")
-        self.assertEqual(payload["post"]["topic"], "housing")
+        self.assertEqual(payload["post"]["module"], "employee_posts")
+        self.assertEqual(payload["post"]["topic"], "employee_submission")
         self.assertEqual(
             payload["post"]["moderation_status"],
-            Post.ModerationStatus.PUBLISHED,
+            Post.ModerationStatus.PENDING_REVIEW,
         )
-        self.assertEqual(payload["post"]["metadata"]["city"], "Mumbai")
+        self.assertEqual(payload["post"]["metadata"]["submission_key"], "looking_for_roommate")
 
-    def test_ideas_voice_posts_auto_publish_for_authenticated_employee(self):
-        self.client.force_login(self.user)
-
-        response = self.client.post(
-            "/api/feed/posts/",
-            data=json.dumps(
-                {
-                    "title": "Idea for better sector sharing",
-                    "body": "Create monthly cross-sector review circles.",
-                    "module": "ideas_voice",
-                    "topic": "idea",
-                }
-            ),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(
-            response.json()["post"]["moderation_status"],
-            Post.ModerationStatus.PUBLISHED,
-        )
-
-    def test_ceo_corner_posts_require_staff_publish_access(self):
+    def test_non_admin_cannot_publish_directly_to_bulletin(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -192,17 +180,19 @@ class FeedApiTests(TestCase):
                 {
                     "title": "Leadership note",
                     "body": "A direct note to everyone.",
-                    "module": "ideas_voice",
-                    "topic": "ceo_corner",
+                    "module": "bulletin",
+                    "topic": "announcements",
                 }
             ),
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(Post.objects.count(), 0)
+        self.assertEqual(
+            response.status_code,
+            403,
+        )
 
-    def test_admin_can_post_ceo_corner_as_company(self):
+    def test_admin_can_publish_to_bulletin_as_company(self):
         self.client.force_login(self.admin_user)
 
         response = self.client.post(
@@ -211,8 +201,8 @@ class FeedApiTests(TestCase):
                 {
                     "title": "Leadership note",
                     "body": "A direct note to everyone.",
-                    "module": "ideas_voice",
-                    "topic": "ceo_corner",
+                    "module": "bulletin",
+                    "topic": "announcements",
                     "post_as_company": True,
                 }
             ),
@@ -253,8 +243,8 @@ class FeedApiTests(TestCase):
             author=self.user,
             title="Recognition post",
             body="Visible post",
-            module=Post.Module.RECOGNITION,
-            topic="kudos",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
             moderation_status=Post.ModerationStatus.PUBLISHED,
         )
         self.client.force_login(self.user)
@@ -334,7 +324,7 @@ class FeedApiTests(TestCase):
             author=self.user,
             title="My pending post",
             body="Still waiting",
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PENDING_REVIEW,
         )
@@ -342,13 +332,13 @@ class FeedApiTests(TestCase):
             author=self.admin_user,
             title="Other pending post",
             body="Should stay hidden",
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PENDING_REVIEW,
         )
         self.client.force_login(self.user)
 
-        response = self.client.get(f"/api/feed/posts/?module=general&topic=employee_submission&author_id={self.user.id}")
+        response = self.client.get(f"/api/feed/posts/?module=employee_posts&topic=employee_submission&author_id={self.user.id}")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()

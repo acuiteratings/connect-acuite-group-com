@@ -161,38 +161,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     for row in (
         Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.IDEAS_VOICE,
-            topic="idea",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-        )
-        .values("author_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["author_id"]
-        amount = row["count"] * COIN_RULES["idea_shared"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for post in Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.IDEAS_VOICE,
-            topic="idea",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-        ).select_related("author"):
-            _append_entry(
-                entries_by_user,
-                post.author_id,
-                occurred_at=post.published_at or post.created_at,
-                amount=COIN_RULES["idea_shared"]["coins"],
-                label=COIN_RULES["idea_shared"]["label"],
-                summary=f"Shared '{post.title}'",
-                kind="earned",
-            )
-
-    for row in (
-        Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__submission_key="share_idea",
@@ -207,7 +176,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     if include_register:
         for post in Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__submission_key="share_idea",
@@ -225,7 +194,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     for row in (
         Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__ceo_desk_request=True,
@@ -240,7 +209,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     if include_register:
         for post in Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__ceo_desk_request=True,
@@ -258,7 +227,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     for row in (
         Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__town_hall_response=True,
@@ -273,7 +242,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     if include_register:
         for post in Post.objects.filter(
             author_id__in=user_ids,
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             metadata__town_hall_response=True,

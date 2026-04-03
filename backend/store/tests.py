@@ -46,8 +46,8 @@ class BrandStoreApiTests(TestCase):
             author=self.user,
             title="Recognition post",
             body="Great teamwork on rollout.",
-            module=Post.Module.RECOGNITION,
-            topic="kudos",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             published_at=timezone.now(),
         )
@@ -174,7 +174,7 @@ class BrandStoreApiTests(TestCase):
             author=self.user,
             title="Town hall response",
             body="I have a question.",
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PENDING_REVIEW,
             metadata={
@@ -202,7 +202,7 @@ class BrandStoreApiTests(TestCase):
             author=self.user,
             title="Idea to improve workflow",
             body="Share review checklist improvements.",
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PENDING_REVIEW,
             metadata={
@@ -227,7 +227,7 @@ class BrandStoreApiTests(TestCase):
             author=self.user,
             title="Ready for a cup of masala chai with me?",
             body="Employee selected: Ready for a cup of masala chai with me?",
-            module=Post.Module.GENERAL,
+            module=Post.Module.EMPLOYEE_POSTS,
             topic="employee_submission",
             moderation_status=Post.ModerationStatus.PENDING_REVIEW,
             metadata={

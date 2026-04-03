@@ -88,7 +88,7 @@
         </svg>
         Playtime
       </button>
-      <button type="button" class="tab" data-switch-tab="clubs-learning">
+      <button type="button" class="tab" data-switch-tab="library">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
         </svg>
@@ -248,82 +248,6 @@
         </div>
       </section>
 
-      <section class="panel" id="panel-community">
-        <div class="section-head">
-          <div>
-            <h2>Community Exchange</h2>
-            <p>Marketplace, housing help and life updates shared across the employee network.</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="community">
-            <button type="button" class="active" data-filter="all">All boards</button>
-            <button type="button" data-filter="marketplace">Marketplace</button>
-            <button type="button" data-filter="housing">Housing</button>
-            <button type="button" data-filter="life_moments">Life moments</button>
-          </div>
-        </div>
-
-        <div class="dashboard-grid" id="community-summary-grid"></div>
-
-        <div class="two-column-layout community-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Live board</p>
-                <h2>Community posts</h2>
-                <div class="mini-item-meta" id="community-results-meta">Loading the live community board...</div>
-              </div>
-            </div>
-            <div class="community-feed" id="community-feed"></div>
-          </section>
-
-          <aside class="stack-side">
-            <form class="story-form" id="community-form">
-              <p class="widget-kicker">New post</p>
-              <h3>Share with the community</h3>
-              <div class="story-form-grid split">
-                <label class="field">
-                  <span>Board</span>
-                  <select name="board" id="community-board-select">
-                    <option value="marketplace">Marketplace</option>
-                    <option value="housing">Housing</option>
-                    <option value="life_moments">Life moments</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span>Type</span>
-                  <select name="community_type" id="community-type-select"></select>
-                </label>
-              </div>
-              <div class="story-form-grid split">
-                <label class="field">
-                  <span>City</span>
-                  <input type="text" name="city" maxlength="80" placeholder="Mumbai, Kolkata, Ahmedabad..." required>
-                </label>
-                <label class="field">
-                  <span id="community-meta-label">Price or exchange note</span>
-                  <input type="text" name="meta_line" id="community-meta-input" maxlength="120" placeholder="Free pickup | Rs 2,000 | Swap for books">
-                </label>
-              </div>
-              <label class="field">
-                <span>Title</span>
-                <input type="text" name="title" maxlength="120" placeholder="What are you sharing or looking for?" required>
-              </label>
-              <label class="field">
-                <span>Details</span>
-                <textarea name="details" rows="5" maxlength="500" placeholder="Add the context someone would need before responding." required></textarea>
-              </label>
-              <div class="form-actions">
-                <p>Posts are shared live with employees inside Connect.</p>
-                <button type="submit" class="btn-warm">Post to Community</button>
-              </div>
-            </form>
-
-            <div class="widget-card" id="community-guide-card"></div>
-            <div class="widget-card" id="community-city-card"></div>
-          </aside>
-        </div>
-      </section>
-
       <section class="panel" id="panel-playtime">
         <div class="section-head">
           <div>
@@ -465,7 +389,7 @@
         </div>
       </section>
 
-      <section class="panel" id="panel-clubs-learning">
+      <section class="panel" id="panel-library">
         <div class="section-head">
           <div>
             <h2>Library</h2>
@@ -502,131 +426,6 @@
         </div>
       </section>
 
-      <section class="panel" id="panel-ideas-voice">
-        <div class="section-head">
-          <div>
-            <h2>Ideas &amp; Voice</h2>
-            <p>Employee ideas, CEO corner, CSR recommendations and quick pulse-taking.</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="voice">
-            <button type="button" class="active" data-filter="all">All voices</button>
-            <button type="button" data-filter="idea">Ideas</button>
-            <button type="button" data-filter="ceo_corner">CEO corner</button>
-            <button type="button" data-filter="csr">CSR</button>
-          </div>
-        </div>
-
-        <div class="dashboard-grid" id="voice-summary-grid"></div>
-
-        <div class="two-column-layout voice-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Live voices</p>
-                <h2>Ideas, leadership notes and CSR proposals</h2>
-                <div class="mini-item-meta" id="voice-results-meta">Loading Ideas &amp; Voice...</div>
-              </div>
-            </div>
-            <div class="voice-feed" id="voice-feed"></div>
-          </section>
-
-          <aside class="stack-side">
-            <form class="story-form" id="voice-form">
-              <p class="widget-kicker">New post</p>
-              <h3>Post to Ideas &amp; Voice</h3>
-              <label class="field">
-                <span>Channel</span>
-                <select name="topic" id="voice-topic-select"></select>
-              </label>
-              <label class="field">
-                <span>Title</span>
-                <input type="text" name="title" maxlength="140" placeholder="What should people notice, discuss or act on?" required>
-              </label>
-              <label class="field">
-                <span>Message</span>
-                <textarea name="body" rows="5" maxlength="600" placeholder="Share the idea, proposal or note clearly and directly." required></textarea>
-              </label>
-              <div class="form-actions">
-                <p>Ideas and CSR posts go live immediately. CEO corner remains staff-led.</p>
-                <button type="submit" class="btn-warm">Post to Voice</button>
-              </div>
-            </form>
-
-            <div class="widget-card" id="voice-poll-card"></div>
-            <div class="widget-card" id="voice-guidance-card"></div>
-          </aside>
-        </div>
-      </section>
-
-      <section class="panel" id="panel-recognition">
-        <div class="section-head">
-          <div>
-            <h2>Recognition &amp; Rewards</h2>
-            <p>Appreciation, celebrations and the engagement economy of Connect.</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="recognition">
-            <button type="button" class="active" data-filter="all">All recognition</button>
-            <button type="button" data-filter="kudos">Kudos</button>
-            <button type="button" data-filter="milestone">Milestones</button>
-          </div>
-        </div>
-
-        <div class="dashboard-grid" id="recognition-summary-grid"></div>
-
-        <div class="two-column-layout recognition-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Live recognition</p>
-                <h2>Kudos, milestones and visible appreciation</h2>
-                <div class="mini-item-meta" id="recognition-results-meta">Loading live recognition...</div>
-              </div>
-            </div>
-            <div class="voice-feed" id="recognition-feed"></div>
-          </section>
-
-          <aside class="stack-side">
-            <form class="story-form" id="recognition-form">
-              <p class="widget-kicker">New recognition</p>
-              <h3>Celebrate someone inside Connect</h3>
-              <div class="story-form-grid split">
-                <label class="field">
-                  <span>Type</span>
-                  <select name="topic" id="recognition-topic-select">
-                    <option value="kudos">Kudos</option>
-                    <option value="milestone">Milestone</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span id="recognition-tag-label">Recognition tag</span>
-                  <select name="tag" id="recognition-tag-select"></select>
-                </label>
-              </div>
-              <label class="field">
-                <span>Recipient</span>
-                <select name="recipient_user_id" id="recognition-recipient-select" required></select>
-              </label>
-              <label class="field">
-                <span>Title</span>
-                <input type="text" name="title" maxlength="140" placeholder="What should people celebrate?" required>
-              </label>
-              <label class="field">
-                <span>Note</span>
-                <textarea name="body" rows="5" maxlength="500" placeholder="Be specific about what happened and why it mattered." required></textarea>
-              </label>
-              <div class="form-actions">
-                <p>Recognition goes live immediately and starts feeding reward points.</p>
-                <button type="submit" class="btn-warm">Post recognition</button>
-              </div>
-            </form>
-
-            <div class="widget-card" id="recognition-leaderboard-card"></div>
-            <div class="widget-card" id="recognition-celebrations-card"></div>
-            <div class="widget-card" id="recognition-rewards-card"></div>
-          </aside>
-        </div>
-      </section>
-
       <section class="panel" id="panel-store">
         <div class="section-head">
           <div>
@@ -652,71 +451,6 @@
           </div>
           <div class="store-catalog-grid" id="store-catalog-grid"></div>
         </section>
-      </section>
-
-      <section class="panel" id="panel-business">
-        <div class="section-head">
-          <div>
-            <h2>Business Desk</h2>
-            <p>Business updates, client testimonials and leadership messages that matter to the company.</p>
-          </div>
-        </div>
-
-        <div class="dashboard-grid">
-          <article class="mini-panel">
-            <p class="widget-kicker">Updates</p>
-            <h3>Business-related announcements</h3>
-            <p class="muted-copy">Quarterly progress, mandates, internal wins and important operating developments.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Clients</p>
-            <h3>Testimonials</h3>
-            <p class="muted-copy">A dedicated space to preserve and celebrate trust voiced by clients and partners.</p>
-          </article>
-          <article class="mini-panel">
-            <p class="widget-kicker">Leadership</p>
-            <h3>High-signal communication</h3>
-            <p class="muted-copy">A cleaner home for messages that should stay visible beyond the fast-moving social stream.</p>
-          </article>
-        </div>
-
-        <div class="two-column-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Bridge from today</p>
-                <h2>What can anchor this module first</h2>
-              </div>
-            </div>
-            <div class="tool-grid compact">
-              <article class="tool-card landing-card">
-                <h3>Business updates stream</h3>
-                <p>Important company announcements, launch notes and internal signals now have a cleaner dedicated bulletin lane.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="bulletin">Open bulletin board</button>
-                </div>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Testimonial shelf</h3>
-                <p>A curated archive of client appreciation and trust signals, searchable over time.</p>
-              </article>
-              <article class="tool-card landing-card">
-                <h3>Leadership pack</h3>
-                <p>Town halls, commentary and supporting material can connect naturally with Knowledge Hub assets.</p>
-                <div class="landing-actions">
-                  <button type="button" class="btn-ghost" data-switch-tab="knowledge">Open current Knowledge layer</button>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <aside class="stack-side">
-            <div class="widget-card">
-              <h3>Why this needs its own page</h3>
-              <p>Business communication should feel durable, credible and easy to revisit. It should not get lost inside a social feed.</p>
-            </div>
-          </aside>
-        </div>
       </section>
 
       <section class="panel" id="panel-bulletin">
@@ -821,147 +555,6 @@
         </div>
       </section>
 
-      <section class="panel" id="panel-wall">
-        <div class="section-head">
-          <div>
-            <h2>The Wall</h2>
-            <p>Recognise great work and make appreciation visible</p>
-          </div>
-        </div>
-
-        <div class="two-column-layout">
-          <div>
-            <form class="kudos-form" id="kudos-form">
-              <h3>Give someone a shoutout</h3>
-              <div class="kudos-tags" id="kudos-tags"></div>
-              <label class="field">
-                <span>Who are you recognising?</span>
-                <input type="text" name="recipient" maxlength="60" placeholder="Colleague name" required>
-              </label>
-              <label class="field">
-                <span>What did they do that was awesome?</span>
-                <textarea name="message" rows="4" maxlength="320" placeholder="Make it specific so the recognition feels meaningful." required></textarea>
-              </label>
-              <div class="form-actions">
-                <p>Recognition posts are also reflected back onto Home.</p>
-                <button type="submit" class="btn-warm">Post kudos</button>
-              </div>
-            </form>
-
-            <div id="wall-feed"></div>
-          </div>
-
-          <aside class="stack-side">
-            <div class="widget-card" id="leaderboard-card"></div>
-            <div class="widget-card">
-              <h3>Prompts that work well</h3>
-              <ul class="simple-list">
-                <li>Call out the situation, not just the person.</li>
-                <li>Explain the impact on the team or client.</li>
-                <li>Link the recognition to an Acuité value or behavior.</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <section class="panel" id="panel-clubs">
-        <div class="section-head">
-          <div>
-            <h2>Clubs</h2>
-            <p>Find your people beyond the desk</p>
-          </div>
-        </div>
-        <div class="clubs-grid" id="clubs-grid"></div>
-      </section>
-
-      <section class="panel" id="panel-spotlight">
-        <div class="section-head">
-          <div>
-            <h2>Spotlight</h2>
-            <p>Getting to know Acuité's people a little better</p>
-          </div>
-          <button type="button" class="btn-ghost" data-action="nominate-spotlight">Nominate a colleague</button>
-        </div>
-        <div id="spotlight-feature"></div>
-        <div class="prev-spotlights" id="previous-spotlights"></div>
-      </section>
-
-      <section class="panel" id="panel-pitch">
-        <div class="section-head">
-          <div>
-            <h2>The Pitch</h2>
-            <p>Your ideas, voted on by everyone</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="pitch">
-            <button type="button" class="active" data-filter="trending">Trending</button>
-            <button type="button" data-filter="new">New</button>
-            <button type="button" data-filter="done">Done</button>
-          </div>
-        </div>
-
-        <form class="story-form" id="pitch-form">
-          <div class="story-form-grid split">
-            <label class="field">
-              <span>Idea title</span>
-              <input type="text" name="title" maxlength="80" placeholder="What should we build or improve?" required>
-            </label>
-            <label class="field">
-              <span>Impact area</span>
-              <select name="impact">
-                <option value="people">People</option>
-                <option value="productivity">Productivity</option>
-                <option value="learning">Learning</option>
-                <option value="culture">Culture</option>
-              </select>
-            </label>
-          </div>
-          <label class="field">
-            <span>What problem does it solve?</span>
-            <textarea name="description" rows="4" maxlength="320" placeholder="A short description helps people vote with context." required></textarea>
-          </label>
-          <div class="form-actions">
-            <p>Ideas start as submitted and can move through review and implementation.</p>
-            <button type="submit" class="btn-warm">Submit idea</button>
-          </div>
-        </form>
-
-        <div id="pitch-list"></div>
-      </section>
-
-      <section class="panel" id="panel-moments">
-        <div class="section-head">
-          <div>
-            <h2>Moments</h2>
-            <p>Life at Acuité, from events to everyday snapshots</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="moments">
-            <button type="button" class="active" data-filter="all">All</button>
-            <button type="button" data-filter="events">Events</button>
-            <button type="button" data-filter="office">Office</button>
-            <button type="button" data-filter="outings">Outings</button>
-          </div>
-        </div>
-        <div class="moments-grid" id="moments-grid"></div>
-      </section>
-
-      <section class="panel" id="panel-alumni">
-        <div class="section-head">
-          <div>
-            <h2>Alumni Network</h2>
-            <p>Once Acuité, always Acuité</p>
-          </div>
-        </div>
-        <div class="alumni-hero">
-          <div class="alumni-hero-copy">
-            <h3>Stay connected with former colleagues</h3>
-            <p>Reconnect, explore career journeys, and keep the Acuité network active long after the last working day.</p>
-          </div>
-          <button type="button" class="btn-inv" data-action="invite-alumni">Invite alumni</button>
-        </div>
-        <div class="alumni-grid" id="alumni-grid"></div>
-      </section>
-
       <section class="panel" id="panel-directory">
         <div class="section-head">
           <div>
@@ -978,57 +571,6 @@
         <div class="directory-grid" id="directory-grid"></div>
       </section>
 
-      <section class="panel" id="panel-tools">
-        <div class="section-head">
-          <div>
-            <h2>Tool Hub</h2>
-            <p>Internal apps, launch status and workflow runway</p>
-          </div>
-        </div>
-
-        <div class="tool-summary-grid" id="tool-summary-grid"></div>
-        <div class="tool-grid" id="tool-grid"></div>
-
-        <section class="section-card">
-          <div class="section-card-head">
-            <div>
-              <p class="widget-kicker">Workflow runway</p>
-              <h2>What Connect can bring together next</h2>
-            </div>
-          </div>
-          <div class="workflow-list" id="workflow-list"></div>
-        </section>
-      </section>
-
-      <section class="panel" id="panel-knowledge">
-        <div class="section-head">
-          <div>
-            <h2>Knowledge Hub</h2>
-            <p>Templates, policies, decks and playbooks in one place</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="knowledge">
-            <button type="button" class="active" data-filter="all">All</button>
-            <button type="button" data-filter="policy">Policy</button>
-            <button type="button" data-filter="template">Template</button>
-            <button type="button" data-filter="learning">Learning</button>
-            <button type="button" data-filter="research">Research</button>
-          </div>
-        </div>
-
-        <div class="knowledge-layout">
-          <div class="knowledge-list" id="knowledge-list"></div>
-          <aside class="stack-side">
-            <div class="widget-card">
-              <h3>Why this matters</h3>
-              <p>Knowledge becomes more useful when it is searchable, current, and close to the conversations and people who use it.</p>
-            </div>
-            <div class="widget-card">
-              <h3>Saved resources</h3>
-              <div id="knowledge-saved-list"></div>
-            </div>
-          </aside>
-        </div>
-      </section>
     </main>
 
     <aside class="sidebar-right">
@@ -1039,15 +581,15 @@
         <div class="profile-stats">
           <div>
             <div class="num" id="profile-kudos">0</div>
-            <div class="label">Kudos</div>
+            <div class="label">Posts</div>
           </div>
           <div>
             <div class="num" id="profile-clubs">0</div>
-            <div class="label">Clubs</div>
+            <div class="label">Coins</div>
           </div>
           <div>
             <div class="num" id="profile-pitches">0</div>
-            <div class="label">Pitches</div>
+            <div class="label">Requests</div>
           </div>
         </div>
       </div>

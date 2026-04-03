@@ -181,11 +181,13 @@ def build_recognition_overview(for_user):
             my_points = match["points"]
 
     recognition_posts = Post.objects.filter(
-        module=Post.Module.RECOGNITION,
+        module=Post.Module.EMPLOYEE_POSTS,
         moderation_status=Post.ModerationStatus.PUBLISHED,
+        topic="employee_submission",
+        metadata__submission_key="praise_someone",
     )
-    kudos_count = recognition_posts.filter(topic="kudos").count()
-    milestone_count = recognition_posts.filter(topic="milestone").count()
+    kudos_count = recognition_posts.count()
+    milestone_count = 0
 
     return {
         "current_user_points": my_points,

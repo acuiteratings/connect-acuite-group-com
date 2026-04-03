@@ -104,7 +104,7 @@
   }
 
   async function loadEmployeePosts() {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=general&topic=employee_submission");
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=employee_posts&topic=employee_submission");
     state.employeePosts = Array.isArray(payload.results)
       ? payload.results.filter((post) => String(post.moderation_status || "").toLowerCase() === "pending_review")
       : [];
@@ -710,7 +710,7 @@
           title,
           body,
           kind: "announcement",
-          module: "general",
+          module: "bulletin",
           topic: category,
           post_as_company: true,
           allow_comments: true,

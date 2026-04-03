@@ -12,12 +12,8 @@ class Post(models.Model):
         RESOURCE = "resource", "Resource"
 
     class Module(models.TextChoices):
-        GENERAL = "general", "General"
-        COMMUNITY = "community", "Community Exchange"
-        CLUBS_LEARNING = "clubs_learning", "Clubs & Learning"
-        IDEAS_VOICE = "ideas_voice", "Ideas & Voice"
-        RECOGNITION = "recognition", "Recognition"
-        BUSINESS = "business", "Business Desk"
+        BULLETIN = "bulletin", "Bulletin Board"
+        EMPLOYEE_POSTS = "employee_posts", "Employee Posts"
 
     class Visibility(models.TextChoices):
         COMPANY = "company", "Company-wide"
@@ -42,7 +38,7 @@ class Post(models.Model):
     module = models.CharField(
         max_length=32,
         choices=Module.choices,
-        default=Module.GENERAL,
+        default=Module.BULLETIN,
     )
     topic = models.CharField(max_length=64, blank=True, default="")
     metadata = models.JSONField(default=dict, blank=True)

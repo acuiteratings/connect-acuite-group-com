@@ -122,7 +122,7 @@ def posts_collection(request):
         return JsonResponse({"detail": "Both title and body are required."}, status=400)
 
     kind = payload.get("kind") or Post.PostType.UPDATE
-    module = payload.get("module") or Post.Module.GENERAL
+    module = payload.get("module") or Post.Module.BULLETIN
     if module not in Post.Module.values:
         return JsonResponse({"detail": "Invalid module supplied."}, status=400)
 
@@ -160,13 +160,13 @@ def posts_collection(request):
 
     visibility = payload.get("visibility") or Post.Visibility.COMPANY
     can_publish = _can_publish(request.user)
-    if module == Post.Module.IDEAS_VOICE and topic == "ceo_corner" and not can_publish:
-        return JsonResponse({"detail": "Only staff can publish to the CEO corner."}, status=403)
+    if module == Post.Module.BULLETIN and not can_publish:
+        return JsonResponse(
+            {"detail": "Only admins can publish directly to the Bulletin Board."},
+            status=403,
+        )
 
-    auto_publish = can_publish or (
-        module in {Post.Module.COMMUNITY, Post.Module.IDEAS_VOICE, Post.Module.RECOGNITION}
-        and topic != "ceo_corner"
-    )
+    auto_publish = can_publish
     post = Post.objects.create(
         author=request.user,
         title=title,

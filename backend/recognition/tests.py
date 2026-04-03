@@ -45,10 +45,11 @@ class RecognitionOverviewTests(TestCase):
             author=self.user,
             title="Priya's recognition",
             body="Celebrating collaboration.",
-            module=Post.Module.RECOGNITION,
-            topic="kudos",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
             moderation_status=Post.ModerationStatus.PUBLISHED,
             published_at=timezone.now(),
+            metadata={"submission_key": "praise_someone"},
         )
         Comment.objects.create(
             post=self.post,
