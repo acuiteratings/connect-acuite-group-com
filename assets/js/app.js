@@ -3052,6 +3052,22 @@ function getFilteredStoreItems() {
   return appData.storeItems.filter((item) => item.category === state.storeFilter);
 }
 
+function switchTab(tabId) {
+  state.activeTab = ENABLED_TABS.has(tabId) ? tabId : "home";
+  saveState();
+  hideSearchResults();
+  renderPanels();
+  window.requestAnimationFrame(() => {
+    try {
+      renderAll();
+    } catch (error) {
+      console.error("Could not fully render the selected tab.", error);
+      renderPanels();
+    }
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 function isOpenLearningStatus(status) {
   return ["requested", "approved", "issued"].includes(status);
 }
@@ -3434,6 +3450,38 @@ function renderSidebarEvents() {
       <span>${escapeHtml(formatMonthDay(item.date))}</span>
     </article>
   `).join("");
+}
+
+function syncFilterButtons() {
+  const filterMap = {
+    store: state.storeFilter,
+    bulletin: state.bulletinFilter,
+  };
+
+  document.querySelectorAll("[data-filter-group]").forEach((group) => {
+    const groupName = group.dataset.filterGroup;
+    const activeValue = filterMap[groupName];
+    group.querySelectorAll("button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.filter === activeValue);
+    });
+  });
+}
+
+function toggleTheme() {
+  state.theme = state.theme === "dark" ? "" : "dark";
+  saveState();
+  applyTheme();
+  renderPanels();
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.theme);
+  document.querySelectorAll(".connect-brand-logo[data-light-src][data-dark-src]").forEach((logo) => {
+    const targetSrc = state.theme === "dark" ? logo.dataset.darkSrc : logo.dataset.lightSrc;
+    if (logo.getAttribute("src") !== targetSrc) {
+      logo.setAttribute("src", targetSrc);
+    }
+  });
 }
 
 function formatRelativeTime(value) {
