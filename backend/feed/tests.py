@@ -1,6 +1,6 @@
 import json
 
-from django.test import TestCase
+from django.test import Client, TestCase
 
 from accounts.models import User
 from operations.models import AnalyticsEvent, AuditLog
@@ -10,6 +10,7 @@ from .models import Comment, Post, PostReaction
 
 class FeedApiTests(TestCase):
     def setUp(self):
+        self.csrf_client = Client(enforce_csrf_checks=True)
         self.user = User.objects.create_user(
             email="rahul.mehta@acuite.in",
             password="testpass123",
@@ -72,6 +73,18 @@ class FeedApiTests(TestCase):
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual(AuditLog.objects.filter(action="post.created").count(), 1)
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="post_created").count(), 1)
+
+    def test_post_creation_requires_csrf_token(self):
+        self.csrf_client.force_login(self.user)
+
+        response = self.csrf_client.post(
+            "/api/feed/posts/",
+            data=json.dumps({"title": "Hello", "body": "First backend post"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Post.objects.count(), 0)
 
     def test_user_with_posting_disabled_cannot_create_post(self):
         self.user.can_post_in_connect = False

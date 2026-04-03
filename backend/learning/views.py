@@ -4,7 +4,6 @@ from django.db.models import Count, Exists, F, IntegerField, OuterRef, Q, Value
 from django.db.models.functions import Greatest
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from operations.services import record_analytics_event, record_audit_event
@@ -28,7 +27,6 @@ def _can_manage_learning(user):
     )
 
 
-@csrf_exempt
 def books_collection(request):
     if request.method == "POST":
         if not _can_manage_learning(request.user):
@@ -128,7 +126,6 @@ def books_collection(request):
     )
 
 
-@csrf_exempt
 def requisitions_collection(request):
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "Authentication required."}, status=403)
@@ -188,7 +185,6 @@ def requisitions_collection(request):
     return JsonResponse({"requisition": serialize_requisition(requisition)}, status=201)
 
 
-@csrf_exempt
 def requisition_detail(request, requisition_id):
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "Authentication required."}, status=403)

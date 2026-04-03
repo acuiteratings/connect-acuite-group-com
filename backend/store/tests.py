@@ -89,6 +89,53 @@ class BrandStoreApiTests(TestCase):
         self.assertEqual(BrandStoreRedemption.objects.count(), 1)
         self.assertEqual(response.json()["redemption"]["item"]["name"], "Acuite Mug")
 
+    def test_pending_redemption_counts_against_new_request_eligibility(self):
+        second_item = BrandStoreItem.objects.create(
+            name="Acuite Pen",
+            category=BrandStoreItem.Category.DESK,
+            description="Premium pen",
+            point_cost=10,
+            stock_units=5,
+            is_active=True,
+        )
+        self.client.force_login(self.user)
+
+        first_response = self.client.post(
+            "/api/store/redemptions/",
+            data=json.dumps({"item_id": self.item.id}),
+            content_type="application/json",
+        )
+        second_response = self.client.post(
+            "/api/store/redemptions/",
+            data=json.dumps({"item_id": second_item.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 400)
+        self.assertEqual(
+            second_response.json()["detail"],
+            "Not enough Acuite Coins available for this request.",
+        )
+
+    def test_requester_can_cancel_requested_redemption(self):
+        redemption = BrandStoreRedemption.objects.create(
+            item=self.item,
+            requester=self.user,
+            points_locked=self.item.point_cost,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.patch(
+            f"/api/store/redemptions/{redemption.id}/",
+            data=json.dumps({"status": "cancelled"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        redemption.refresh_from_db()
+        self.assertEqual(redemption.status, BrandStoreRedemption.Status.CANCELLED)
+
     def test_admin_can_approve_store_redemption(self):
         redemption = BrandStoreRedemption.objects.create(
             item=self.item,
@@ -175,7 +222,7 @@ class BrandStoreApiTests(TestCase):
         approved_response = self.client.get("/api/store/overview/")
         self.assertEqual(approved_response.json()["balance"]["earned_points"], pending_earned + 500)
 
-    def test_ceo_masala_chai_reward_is_added_only_after_admin_approval(self):
+    def test_ceo_request_reward_is_added_only_after_admin_approval(self):
         Post.objects.create(
             author=self.user,
             title="Ready for a cup of masala chai with me?",
@@ -199,7 +246,7 @@ class BrandStoreApiTests(TestCase):
         post.save(update_fields=["moderation_status", "published_at", "updated_at"])
 
         approved_response = self.client.get("/api/store/overview/")
-        self.assertEqual(approved_response.json()["balance"]["earned_points"], pending_earned + 100)
+        self.assertEqual(approved_response.json()["balance"]["earned_points"], pending_earned + 1000)
 
     def test_requested_store_item_does_not_reduce_balance_until_admin_approval(self):
         self.client.force_login(self.user)
@@ -216,6 +263,7 @@ class BrandStoreApiTests(TestCase):
 
         requested_response = self.client.get("/api/store/overview/")
         requested_balance = requested_response.json()["balance"]
+        self.assertEqual(requested_balance["locked_points"], self.item.point_cost)
         self.assertEqual(requested_balance["spent_points"], before_balance["spent_points"])
         self.assertEqual(requested_balance["available_points"], before_balance["available_points"])
 

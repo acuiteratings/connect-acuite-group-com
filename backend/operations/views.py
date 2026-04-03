@@ -6,7 +6,6 @@ from django.db.models import Count, Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from accounts.models import User
 from directory.models import DirectoryProfile
@@ -189,7 +188,6 @@ def moderation_queue(request):
     )
 
 
-@csrf_exempt
 def moderate_post(request, post_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -223,7 +221,6 @@ def moderate_post(request, post_id):
     return JsonResponse({"post": serialize_post(post), "counts": _moderation_counts()})
 
 
-@csrf_exempt
 def moderate_comment(request, comment_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -301,7 +298,6 @@ def celebration_candidates_today(request):
     return JsonResponse(get_today_celebration_candidates())
 
 
-@csrf_exempt
 def celebration_preview(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -324,7 +320,6 @@ def celebration_preview(request):
     return JsonResponse({"preview": preview})
 
 
-@csrf_exempt
 def celebration_publish(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -349,10 +344,11 @@ def celebration_publish(request):
     return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
-@csrf_exempt
 def analytics_ingest(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if not getattr(request.user, "is_authenticated", False):
+        return JsonResponse({"detail": "Authentication required."}, status=403)
 
     try:
         payload = _parse_json_body(request)

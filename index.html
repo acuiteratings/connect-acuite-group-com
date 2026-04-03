@@ -12,18 +12,16 @@
   <header class="topnav">
     <div class="topnav-left">
       <div class="connect-brand-lockup">
-        <img src="{% static 'img/acuite-logo.png' %}" alt="Acuité" class="connect-brand-logo">
+        <img
+          src="{% static 'img/acuite-logo-light.png' %}"
+          data-light-src="{% static 'img/acuite-logo-light.png' %}"
+          data-dark-src="{% static 'img/acuite-logo-dark.png' %}"
+          alt="Acuité"
+          class="connect-brand-logo"
+        >
         <span class="connect-brand-divider" aria-hidden="true"></span>
         <span class="connect-brand-text">Connect</span>
       </div>
-    </div>
-
-    <div class="topnav-search">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path stroke-linecap="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-      </svg>
-      <input id="global-search" type="text" placeholder="Search people, spaces, tools and resources..." autocomplete="off">
-      <div class="search-results" id="search-results" hidden></div>
     </div>
 
     <div class="topnav-right">
@@ -36,12 +34,6 @@
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
         </svg>
-      </button>
-      <button type="button" class="icon-btn" title="Notifications">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-        </svg>
-        <span class="notif-dot"></span>
       </button>
       <div class="profile-menu-shell">
         <button
@@ -134,7 +126,34 @@
 
     <main class="main">
       <section class="panel" id="panel-home">
+        <div class="announcement-filter-row" id="home-announcement-filters">
+          <button type="button" class="announcement-filter-pill active" data-action="set-home-announcement-filter" data-filter="leadership">Leadership</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="people_culture">People &amp; Culture</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="regulations">Regulations</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="new_initiatives">New Initiatives</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="opinion_poll">Opinion Poll</button>
+        </div>
         <section class="hero-banner announcement-banner" id="home-announcement"></section>
+        <form class="section-card story-form home-announcement-admin-form" id="home-announcement-admin-form" hidden>
+          <p class="widget-kicker">Post Announcement</p>
+          <h3 id="home-announcement-admin-title">Publish under Leadership</h3>
+          <label class="field">
+            <span>Headline</span>
+            <input type="text" name="title" maxlength="140" placeholder="Add the announcement headline" required>
+          </label>
+          <label class="field">
+            <span>One short line</span>
+            <input type="text" name="meta_line" maxlength="160" placeholder="Add one short supporting line">
+          </label>
+          <label class="field">
+            <span>Body</span>
+            <textarea name="body" rows="6" maxlength="3000" placeholder="Write the announcement clearly." required></textarea>
+          </label>
+          <div class="form-actions">
+            <p>This form is visible only to admins and publishes directly into the selected announcement tag.</p>
+            <button type="submit" class="btn-warm">Publish Announcement</button>
+          </div>
+        </form>
       </section>
 
       <section class="panel" id="panel-ceo-desk">
@@ -149,51 +168,48 @@
           <section class="section-card ceo-desk-editorial">
             <div class="section-card-head">
               <div>
-                <p class="widget-kicker">Monthly Editorial</p>
-                <h2>April 2026 note from the MD &amp; CEO</h2>
-                <div class="mini-item-meta">A steady view on performance, priorities, and the path ahead.</div>
+                <p class="widget-kicker" id="ceo-desk-message-date">April 2, 2026</p>
+                <h2 id="ceo-desk-message-title">Hola FY2027</h2>
+                <div class="mini-item-meta" id="ceo-desk-message-meta">A steady view on performance, priorities, and the path ahead.</div>
               </div>
             </div>
 
-            <div class="ceo-desk-copy">
-              <p>Dear colleagues,</p>
-              <p>As we close another financial year, it is important for all of us to pause and look at both performance and purpose. The year behind us demanded discipline, teamwork, and calm judgement. Across functions and offices, many of you carried that responsibility with seriousness. I want to acknowledge that effort.</p>
-              <p>The year ahead now asks us for equal clarity. We must continue strengthening analytical quality, improving operating rhythm, and building a stronger internal culture of ownership. Growth matters, but credible growth matters more. We will therefore stay focused on quality, client trust, and internal capability-building together.</p>
-              <p>Connect is meant to support that culture. It should not only inform employees, but also make it easier for ideas, questions, and thoughtful suggestions to reach leadership in a structured way. I encourage you to use that access well. Ask what should be improved. Share what should be protected. Suggest what should be built next.</p>
-              <p>Thank you for the work you do, and for the seriousness with which you do it.</p>
-              <p>Warm regards,<br>MD &amp; CEO</p>
+            <div class="ceo-desk-copy" id="ceo-desk-copy">
             </div>
             <div class="ceo-desk-actions">
               <button type="button" class="ceo-desk-like-btn" id="ceo-desk-like-btn" data-action="toggle-like" data-id="ceo-desk-editorial-april-2026">Like</button>
             </div>
+
+            <div class="widget-card ceo-desk-archive-card">
+              <p class="widget-kicker">Archive</p>
+              <h3>Previous messages</h3>
+              <div class="ceo-desk-archive-list" id="ceo-desk-archive-list">
+              </div>
+            </div>
+
           </section>
 
           <aside class="stack-side">
             <div class="widget-card ceo-desk-links-card">
-              <p class="widget-kicker">Reach Leadership</p>
-              <h3>Available links</h3>
+              <p class="widget-kicker">Connect with MD &amp; CEO</p>
               <div class="ceo-desk-links">
-                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="masala_chai" data-request-label="Ready for a cup of masala chai with me?">
+                <button type="button" class="ceo-desk-link" data-action="prefill-ceo-request" data-request-key="masala_chai" data-request-label="Ready for a cup of masala chai with me?" data-request-message="Hello, I would like to request a cup of masala chai with you. I would value the opportunity to speak with you briefly.">
                   <span>Ready for a cup of masala chai with me?</span>
-                  <strong>Earn 100 Acuite Coins</strong>
                 </button>
-                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="meet_client" data-request-label="Let us go and meet a client!">
+                <button type="button" class="ceo-desk-link" data-action="prefill-ceo-request" data-request-key="meet_client" data-request-label="Let us go and meet a client!" data-request-message="Hello, I would like to invite you to join me for a client meeting. I believe your presence would add value to the discussion.">
                   <span>Let us go and meet a client!</span>
-                  <strong>Earn 5000 Acuite Coins</strong>
                 </button>
-                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="share_idea" data-request-label="Do you want to share an idea?">
+                <button type="button" class="ceo-desk-link" data-action="prefill-ceo-request" data-request-key="share_idea" data-request-label="Do you want to share an idea?" data-request-message="Hello, I would like to share an idea with you.">
                   <span>Do you want to share an idea?</span>
-                  <strong>Earn 1000 Acuite Coins</strong>
                 </button>
-                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="coaching" data-request-label="Can I help you with coaching?">
+                <button type="button" class="ceo-desk-link" data-action="prefill-ceo-request" data-request-key="coaching" data-request-label="Can I help you with coaching?" data-request-message="Hello, I would appreciate coaching guidance from you on my development.">
                   <span>Can I help you with coaching?</span>
-                  <strong>Earn 2000 Acuite Coins</strong>
                 </button>
               </div>
             </div>
             <div class="widget-card ceo-desk-comment-card">
-              <p class="widget-kicker">Comment to Leadership</p>
-              <form id="ceo-desk-comment-form" class="ceo-desk-comment-form">
+              <p class="widget-kicker">Connect with MD &amp; CEO</p>
+              <form id="ceo-desk-comment-form" class="ceo-desk-comment-form" data-request-key="comment" data-request-label="MD & CEO desk comment">
                 <textarea
                   id="ceo-desk-comment-input"
                   name="body"
@@ -208,6 +224,26 @@
                 </div>
               </form>
             </div>
+            <form class="widget-card story-form ceo-desk-post-form" id="ceo-desk-post-form" hidden>
+              <p class="widget-kicker">Post a Message</p>
+              <h3>Write a new MD &amp; CEO message</h3>
+              <label class="field">
+                <span>Date</span>
+                <input type="text" name="message_date" maxlength="80" placeholder="Example: May 1, 2026" required>
+              </label>
+              <label class="field">
+                <span>Subject line</span>
+                <input type="text" name="title" maxlength="140" placeholder="Add the message heading" required>
+              </label>
+              <label class="field">
+                <span>Body</span>
+                <textarea name="body" rows="8" maxlength="4000" placeholder="Write the full message clearly." required></textarea>
+              </label>
+              <div class="form-actions">
+                <p>Saving here publishes the new message immediately and moves the current one into the archive.</p>
+                <button type="submit" class="btn-warm">Save Message</button>
+              </div>
+            </form>
           </aside>
         </div>
       </section>
@@ -323,11 +359,11 @@
               <div class="tool-card-head">
                 <div class="tool-icon" style="background:linear-gradient(135deg,#2452d1,#0f9a7a)">QZ</div>
                 <div>
-                  <h3>Quiz Arena</h3>
+                  <h3>Business &amp; Finance Quiz</h3>
                   <span class="tool-status live">Live</span>
                 </div>
               </div>
-              <p>A live multiplayer quiz for up to 4 employees with 10 timed multiple-choice questions and score-based ranking.</p>
+              <p>A live multiplayer business and finance quiz for up to 4 employees with 10 timed multiple-choice questions and score-based ranking.</p>
               <div class="tool-meta">
                 <span class="mini-item-meta">Invite up to 3 colleagues and pick the difficulty before starting.</span>
                 <span class="btn-link">Open game</span>
@@ -340,8 +376,8 @@
       <section class="panel" id="panel-quiz">
         <div class="section-head">
           <div>
-            <h2>Quiz Arena</h2>
-            <p>A multiplayer quiz for up to 4 people. Ten timed questions. Highest score wins.</p>
+            <h2>Business &amp; Finance Quiz</h2>
+            <p>A multiplayer business and finance quiz for up to 4 people. Ten timed questions. Highest score wins.</p>
           </div>
           <div class="battleship-head-status" id="quiz-head-status" aria-live="polite"></div>
         </div>
@@ -358,7 +394,7 @@
                 <p class="widget-kicker">Multiplayer quiz</p>
                 <h2 id="quiz-stage-title">Lobby</h2>
                 <div class="mini-item-meta" id="quiz-stage-meta">
-                  Invite up to 3 colleagues, choose the difficulty, and answer each question within 15 seconds.
+                  Invite up to 3 colleagues, choose the difficulty, and answer each business or finance question within 15 seconds.
                 </div>
               </div>
             </div>

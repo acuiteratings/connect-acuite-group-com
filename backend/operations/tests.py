@@ -4,6 +4,7 @@ from datetime import date
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -81,6 +82,8 @@ class OperationsApiTests(TestCase):
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="post_publish").count(), 1)
 
     def test_analytics_ingest_records_event_and_request_id(self):
+        self.client.force_login(self.employee)
+
         response = self.client.post(
             "/api/ops/analytics/ingest/",
             data=json.dumps(
@@ -97,6 +100,34 @@ class OperationsApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue(response["X-Request-ID"])
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="directory_opened").count(), 1)
+
+
+class SecurityHeadersMiddlewareTests(TestCase):
+    def test_html_shells_include_security_headers_and_no_store_cache_policy(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Security-Policy"], settings.CONTENT_SECURITY_POLICY)
+        self.assertEqual(response["Permissions-Policy"], settings.PERMISSIONS_POLICY)
+        self.assertEqual(
+            response["Cache-Control"],
+            "no-store, no-cache, must-revalidate, max-age=0",
+        )
+        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(response["Expires"], "0")
+
+    def test_api_responses_include_security_headers_and_no_store_cache_policy(self):
+        response = self.client.get("/api/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Security-Policy"], settings.CONTENT_SECURITY_POLICY)
+        self.assertEqual(response["Permissions-Policy"], settings.PERMISSIONS_POLICY)
+        self.assertEqual(
+            response["Cache-Control"],
+            "no-store, no-cache, must-revalidate, max-age=0",
+        )
+        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(response["Expires"], "0")
 
 
 @override_settings(ROOT_URLCONF="operations.test_urls")

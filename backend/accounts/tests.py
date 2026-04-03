@@ -22,6 +22,9 @@ from .models import EmployeeSSOIdentitySnapshot, ExitProcess, LoginChallenge, Tr
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
     AUTH_DEBUG_OTP_PREVIEW=False,
+    EMPLOYEE_SSO_BASE_URL="",
+    EMPLOYEE_SSO_CLIENT_ID="",
+    EMPLOYEE_SSO_CLIENT_SECRET="",
 )
 class AuthApiTests(TestCase):
     def setUp(self):
@@ -49,7 +52,8 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertFalse(payload["authenticated"])
-        self.assertEqual(payload["auth_policy"]["mode"], "employee_sso")
+        self.assertEqual(payload["auth_policy"]["mode"], "manual_accounts_with_email_otp_and_password")
+        self.assertEqual(payload["auth_policy"]["otp_code_length"], 6)
 
     def test_request_otp_creates_challenge_and_sends_email(self):
         response = self.client.post(
@@ -492,6 +496,50 @@ class AuthApiTests(TestCase):
         match = re.search(r"(\d{6})", body)
         self.assertIsNotNone(match)
         return match.group(1)
+
+
+@override_settings(
+    EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+    EMPLOYEE_SSO_CLIENT_ID="connect-client",
+    EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+)
+class EmployeeSsoModeAuthTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="employee.one@acuite.in",
+            password="Welcome@123",
+            first_name="Employee",
+            last_name="One",
+            must_change_password=False,
+            password_changed_at=timezone.now(),
+        )
+
+    def test_me_endpoint_reports_employee_sso_policy(self):
+        response = self.client.get("/api/accounts/me/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertFalse(payload["authenticated"])
+        self.assertEqual(payload["auth_policy"]["mode"], "employee_sso")
+        self.assertNotIn("otp_code_length", payload["auth_policy"])
+
+    def test_manual_auth_endpoints_are_disabled_when_employee_sso_is_enabled(self):
+        endpoints = [
+            "/api/accounts/auth/request-otp/",
+            "/api/accounts/auth/forgot-password/",
+            "/api/accounts/auth/verify-otp/",
+            "/api/accounts/auth/login/",
+            "/api/accounts/auth/change-password/",
+        ]
+
+        for endpoint in endpoints:
+            response = self.client.post(
+                endpoint,
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 410)
+            self.assertEqual(response.json()["code"], "manual_auth_disabled")
 
     @override_settings(
         EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",

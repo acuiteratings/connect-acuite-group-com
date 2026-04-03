@@ -173,6 +173,14 @@ select {
   color: #8f1d1d;
 }
 
+[data-theme="dark"] .connect-brand-divider {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme="dark"] .connect-brand-text {
+  color: #ffffff !important;
+}
+
 .topnav-search {
   position: relative;
   width: min(420px, 42vw);
@@ -547,6 +555,54 @@ select {
     0 24px 60px rgba(8, 15, 23, 0.16);
 }
 
+.announcement-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.home-announcement-admin-form {
+  margin-top: 18px;
+}
+
+.announcement-filter-pill {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 800;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.announcement-filter-pill.active {
+  border-color: rgba(247, 148, 29, 0.4);
+  background: rgba(247, 148, 29, 0.12);
+  color: var(--orange);
+}
+
+.announcement-empty-state {
+  display: grid;
+  gap: 12px;
+  min-height: 240px;
+  align-content: center;
+  padding: 28px;
+}
+
+.announcement-empty-state h2 {
+  font-size: 32px;
+  line-height: 1.1;
+  color: #fff7ef;
+}
+
+.announcement-empty-state p:last-child {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
+}
+
 .announcement-main,
 .announcement-side {
   position: relative;
@@ -899,6 +955,36 @@ select {
 
 .ceo-desk-actions {
   margin-top: 18px;
+}
+
+.ceo-desk-archive-card,
+.ceo-desk-post-form {
+  margin-top: 24px;
+}
+
+.ceo-desk-archive-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ceo-desk-archive-link {
+  display: flex;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ceo-desk-archive-link:hover {
+  border-color: rgba(247, 148, 29, 0.32);
+  background: var(--bg-hover);
 }
 
 .ceo-desk-like-btn {

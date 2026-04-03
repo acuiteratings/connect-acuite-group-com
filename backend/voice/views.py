@@ -3,7 +3,6 @@ import json
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
@@ -20,7 +19,6 @@ def _parse_json_body(request):
         raise ValueError("Request body must be valid JSON.") from exc
 
 
-@csrf_exempt
 def active_poll(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
@@ -29,7 +27,6 @@ def active_poll(request):
     return JsonResponse({"poll": serialize_poll(poll, voter=request.user) if poll else None})
 
 
-@csrf_exempt
 def vote_on_poll(request, poll_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -74,4 +71,3 @@ def vote_on_poll(request, poll_id):
     poll.updated_at = timezone.now()
     poll.save(update_fields=["updated_at"])
     return JsonResponse({"poll": serialize_poll(poll, voter=request.user)})
-

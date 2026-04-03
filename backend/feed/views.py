@@ -4,7 +4,6 @@ from django.db.models import Count, Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
@@ -53,7 +52,6 @@ def _can_react(user):
     return user.is_authenticated and getattr(user, "can_react_in_connect", False)
 
 
-@csrf_exempt
 def posts_collection(request):
     if request.method == "GET":
         queryset = Post.objects.select_related("author").annotate(
@@ -215,7 +213,6 @@ def posts_collection(request):
     return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
-@csrf_exempt
 def post_comments(request, post_id):
     post = get_object_or_404(Post.objects.select_related("author"), pk=post_id)
     if (
@@ -272,7 +269,6 @@ def post_comments(request, post_id):
     return JsonResponse({"comment": serialize_comment(comment)}, status=201)
 
 
-@csrf_exempt
 def toggle_post_reaction(request, post_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -333,7 +329,6 @@ def toggle_post_reaction(request, post_id):
     )
 
 
-@csrf_exempt
 def post_detail(request, post_id):
     if request.method == "PATCH":
         if not request.user.is_authenticated:

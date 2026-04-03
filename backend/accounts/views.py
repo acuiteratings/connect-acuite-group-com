@@ -51,15 +51,21 @@ def _parse_json_body(request):
 
 
 def _auth_policy_payload():
-    return {
+    payload = {
         "mode": "employee_sso" if employee_sso_enabled() else "manual_accounts_with_email_otp_and_password",
-        "password_max_age_days": settings.AUTH_PASSWORD_MAX_AGE_DAYS,
-        "otp_ttl_minutes": settings.AUTH_OTP_TTL_MINUTES,
-        "otp_code_length": settings.AUTH_OTP_CODE_LENGTH,
         "account_provisioning": "manual_admin_control",
         "employee_sso_enabled": employee_sso_enabled(),
         "employee_sso_start_path": "/api/accounts/auth/employee-sso/start/",
     }
+    if not employee_sso_enabled():
+        payload.update(
+            {
+                "password_max_age_days": settings.AUTH_PASSWORD_MAX_AGE_DAYS,
+                "otp_ttl_minutes": settings.AUTH_OTP_TTL_MINUTES,
+                "otp_code_length": settings.AUTH_OTP_CODE_LENGTH,
+            }
+        )
+    return payload
 
 
 def _error_response(exc):
@@ -70,6 +76,17 @@ def _error_response(exc):
 
 def _admin_forbidden(detail="Admin access required."):
     return JsonResponse({"detail": detail}, status=403)
+
+
+def _manual_auth_disabled_response():
+    return JsonResponse(
+        {
+            "detail": "Employee SSO is required for Acuité Connect sign-in.",
+            "code": "manual_auth_disabled",
+            "employee_sso_start_path": "/api/accounts/auth/employee-sso/start/",
+        },
+        status=410,
+    )
 
 
 def _is_access_admin(user):
@@ -371,7 +388,6 @@ def access_user_collection(request):
     )
 
 
-@csrf_exempt
 def access_user_detail(request, user_id):
     if request.method not in {"GET", "POST", "PATCH"}:
         return HttpResponseNotAllowed(["GET", "POST", "PATCH"])
@@ -503,7 +519,6 @@ def access_user_detail(request, user_id):
     )
 
 
-@csrf_exempt
 def exit_process_collection(request):
     if not _is_access_admin(request.user):
         return _admin_forbidden()
@@ -687,6 +702,8 @@ def exit_process_collection(request):
 def request_login_otp(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if employee_sso_enabled():
+        return _manual_auth_disabled_response()
 
     try:
         payload = _parse_json_body(request)
@@ -723,6 +740,8 @@ def request_login_otp(request):
 def forgot_password(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if employee_sso_enabled():
+        return _manual_auth_disabled_response()
 
     try:
         payload = _parse_json_body(request)
@@ -755,6 +774,8 @@ def forgot_password(request):
 def verify_login_code(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if employee_sso_enabled():
+        return _manual_auth_disabled_response()
 
     try:
         payload = _parse_json_body(request)
@@ -789,6 +810,8 @@ def verify_login_code(request):
 def login_with_password(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if employee_sso_enabled():
+        return _manual_auth_disabled_response()
 
     try:
         payload = _parse_json_body(request)
@@ -850,6 +873,8 @@ def login_with_password(request):
 def change_password_and_login(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if employee_sso_enabled():
+        return _manual_auth_disabled_response()
 
     try:
         payload = _parse_json_body(request)

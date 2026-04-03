@@ -14,6 +14,7 @@ ACTIVE_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.FULFILLED,
 }
 LOCKED_REDEMPTION_STATUSES = {
+    BrandStoreRedemption.Status.REQUESTED,
 }
 SPENT_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.APPROVED,
@@ -26,10 +27,7 @@ COIN_RULES = {
     "book_returned": {"label": "Read and return a library book", "coins": 100},
     "idea_shared": {"label": "Share an idea", "coins": 500},
     "question_asked": {"label": "Ask a question", "coins": 1000},
-    "ceo_masala_chai": {"label": "Masala chai with MD & CEO", "coins": 100},
-    "ceo_meet_client": {"label": "Meet a client", "coins": 5000},
-    "ceo_share_idea": {"label": "Share an idea with MD & CEO", "coins": 1000},
-    "ceo_coaching": {"label": "Coaching request", "coins": 2000},
+    "ceo_request": {"label": "Connect with MD & CEO", "coins": 1000},
 }
 
 
@@ -60,6 +58,15 @@ def spent_points_for_user(user):
         return 0
     return sum(
         user.brand_store_redemptions.filter(status__in=SPENT_REDEMPTION_STATUSES)
+        .values_list("points_locked", flat=True)
+    )
+
+
+def pending_requested_points_for_user(user):
+    if not getattr(user, "is_authenticated", False):
+        return 0
+    return sum(
+        user.brand_store_redemptions.filter(status=BrandStoreRedemption.Status.REQUESTED)
         .values_list("points_locked", flat=True)
     )
 
@@ -215,47 +222,38 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
                 kind="earned",
             )
 
-    ceo_request_rules = {
-        "masala_chai": "ceo_masala_chai",
-        "meet_client": "ceo_meet_client",
-        "share_idea": "ceo_share_idea",
-        "coaching": "ceo_coaching",
-    }
-    for request_key, rule_key in ceo_request_rules.items():
-        for row in (
-            Post.objects.filter(
-                author_id__in=user_ids,
-                module=Post.Module.GENERAL,
-                topic="employee_submission",
-                moderation_status=Post.ModerationStatus.PUBLISHED,
-                metadata__ceo_desk_request=True,
-                metadata__ceo_desk_request_key=request_key,
+    for row in (
+        Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__ceo_desk_request=True,
+        )
+        .values("author_id")
+        .order_by()
+        .annotate(count=Count("id"))
+    ):
+        user_id = row["author_id"]
+        amount = row["count"] * COIN_RULES["ceo_request"]["coins"]
+        earned[user_id] += amount
+    if include_register:
+        for post in Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__ceo_desk_request=True,
+        ).select_related("author"):
+            _append_entry(
+                entries_by_user,
+                post.author_id,
+                occurred_at=post.published_at or post.created_at,
+                amount=COIN_RULES["ceo_request"]["coins"],
+                label=COIN_RULES["ceo_request"]["label"],
+                summary=f"Approved '{post.title}'",
+                kind="earned",
             )
-            .values("author_id")
-            .order_by()
-            .annotate(count=Count("id"))
-        ):
-            user_id = row["author_id"]
-            amount = row["count"] * COIN_RULES[rule_key]["coins"]
-            earned[user_id] += amount
-        if include_register:
-            for post in Post.objects.filter(
-                author_id__in=user_ids,
-                module=Post.Module.GENERAL,
-                topic="employee_submission",
-                moderation_status=Post.ModerationStatus.PUBLISHED,
-                metadata__ceo_desk_request=True,
-                metadata__ceo_desk_request_key=request_key,
-            ).select_related("author"):
-                _append_entry(
-                    entries_by_user,
-                    post.author_id,
-                    occurred_at=post.published_at or post.created_at,
-                    amount=COIN_RULES[rule_key]["coins"],
-                    label=COIN_RULES[rule_key]["label"],
-                    summary=f"Approved '{post.title}'",
-                    kind="earned",
-                )
 
     for row in (
         Post.objects.filter(
@@ -357,7 +355,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
             "earned_points": earned[user_id],
             "locked_points": locked[user_id],
             "spent_points": spent[user_id],
-            "available_points": max(earned[user_id] - locked[user_id] - spent[user_id], 0),
+            "available_points": max(earned[user_id] - spent[user_id], 0),
         }
         if include_register:
             entries = sorted(

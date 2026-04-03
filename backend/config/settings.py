@@ -125,7 +125,7 @@ if SENTRY_ENABLED:
         dsn=SENTRY_DSN,
         environment=SENTRY_ENVIRONMENT,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
-        send_default_pii=True,
+        send_default_pii=os.getenv("SENTRY_SEND_DEFAULT_PII", "false").lower() == "true",
         integrations=[DjangoIntegration()],
     )
 
@@ -154,6 +154,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "operations.middleware.RequestContextMiddleware",
+    "operations.middleware.SecurityHeadersMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -328,5 +329,37 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv(
 ).lower() == "true"
 SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "false").lower() == "true"
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
+SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv(
+    "SECURE_CROSS_ORIGIN_OPENER_POLICY",
+    "same-origin",
+).strip() or "same-origin"
+CONTENT_SECURITY_POLICY = os.getenv(
+    "CONTENT_SECURITY_POLICY",
+    (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'self'; "
+        "object-src 'none'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "frame-src 'none'; "
+        "manifest-src 'self'"
+    ),
+).strip()
+PERMISSIONS_POLICY = os.getenv(
+    "PERMISSIONS_POLICY",
+    (
+        "camera=(), "
+        "display-capture=(), "
+        "geolocation=(), "
+        "microphone=(), "
+        "payment=(), "
+        "usb=()"
+    ),
+).strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

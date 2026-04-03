@@ -52,7 +52,7 @@
         render();
       }
     } catch (error) {
-      showAlert(error.message || "Could not load Quiz Arena.");
+      showAlert(error.message || "Could not load the Business & Finance Quiz.");
     }
   }
 
@@ -128,7 +128,7 @@
     hideAlert();
 
     if (!state.match) {
-      elements.stageTitle.textContent = "Quiz lobby";
+      elements.stageTitle.textContent = "Business quiz lobby";
       elements.stageMeta.textContent = "Invite up to 3 colleagues, choose the difficulty, and start when at least 2 people are ready.";
       elements.stage.innerHTML = renderCreateStage();
       return;
@@ -185,7 +185,7 @@
         <div class="bulletin-meta-lines">${selectedCards || '<span class="mini-item-meta">No colleagues selected yet.</span>'}</div>
         <div class="community-feed">${candidateCards || '<div class="empty-state">Search results will appear here.</div>'}</div>
         <div class="form-actions">
-          <p>A 10-question match will be created. Each question has 15 seconds and there is no negative marking.</p>
+          <p>A 10-question business and finance match will be created. Each question has 15 seconds and there is no negative marking.</p>
           <button type="button" class="btn-warm" data-action="quiz-create-match" ${state.selectedInvitees.length ? "" : "disabled"}>Send invites</button>
         </div>
       </div>

@@ -4,7 +4,6 @@ from django.db import IntegrityError
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from operations.services import record_analytics_event, record_audit_event
 
@@ -12,11 +11,10 @@ from .models import BrandStoreItem, BrandStoreRedemption
 from .serializers import serialize_redemption
 from .services import (
     ACTIVE_REDEMPTION_STATUSES,
-    LOCKED_REDEMPTION_STATUSES,
     build_store_admin_overview,
     build_store_overview,
     earned_points_for_user,
-    locked_points_for_user,
+    pending_requested_points_for_user,
     spent_points_for_user,
 )
 
@@ -44,7 +42,6 @@ def store_admin_overview(request):
     return JsonResponse(build_store_admin_overview())
 
 
-@csrf_exempt
 def redemption_collection(request):
     if request.method == "GET":
         if not request.user.is_authenticated or not request.user.can_administer_connect:
@@ -70,9 +67,9 @@ def redemption_collection(request):
         return JsonResponse({"detail": "This item is currently out of stock."}, status=400)
 
     earned = earned_points_for_user(request.user)
-    locked = locked_points_for_user(request.user)
+    pending_requested = pending_requested_points_for_user(request.user)
     spent = spent_points_for_user(request.user)
-    available = max(earned - locked - spent, 0)
+    available = max(earned - pending_requested - spent, 0)
     if available < item.point_cost:
         return JsonResponse({"detail": "Not enough Acuite Coins available for this request."}, status=400)
 
@@ -103,7 +100,6 @@ def redemption_collection(request):
     return JsonResponse({"redemption": serialize_redemption(redemption)}, status=201)
 
 
-@csrf_exempt
 def redemption_detail(request, redemption_id):
     if request.method not in {"GET", "PATCH"}:
         return HttpResponseNotAllowed(["GET", "PATCH"])
@@ -166,7 +162,7 @@ def redemption_detail(request, redemption_id):
         return JsonResponse({"detail": "You cannot update this redemption."}, status=403)
     if status != BrandStoreRedemption.Status.CANCELLED:
         return JsonResponse({"detail": "Only cancellation is allowed here."}, status=400)
-    if redemption.status not in LOCKED_REDEMPTION_STATUSES:
+    if redemption.status != BrandStoreRedemption.Status.REQUESTED:
         return JsonResponse({"detail": "This request can no longer be cancelled."}, status=400)
 
     redemption.status = BrandStoreRedemption.Status.CANCELLED

@@ -218,6 +218,45 @@ const BULLETIN_TEMPLATE_LIBRARY = [
       "We are planning an upcoming offsite focused on collaboration, reflection and future priorities. Please indicate your availability once dates and logistics are shared.",
   },
 ];
+const DEFAULT_CEO_DESK_MESSAGE = {
+  date: "April 2, 2026",
+  title: "Hola FY2027",
+  meta: "A steady view on performance, priorities, and the path ahead.",
+  body: [
+    "Dear colleagues,",
+    "As we close another financial year, it is important for all of us to pause and look at both performance and purpose. The year behind us demanded discipline, teamwork, and calm judgement. Across functions and offices, many of you carried that responsibility with seriousness. I want to acknowledge that effort.",
+    "The year ahead now asks us for equal clarity. We must continue strengthening analytical quality, improving operating rhythm, and building a stronger internal culture of ownership. Growth matters, but credible growth matters more. We will therefore stay focused on quality, client trust, and internal capability-building together.",
+    "Connect is meant to support that culture. It should not only inform employees, but also make it easier for ideas, questions, and thoughtful suggestions to reach leadership in a structured way. I encourage you to use that access well. Ask what should be improved. Share what should be protected. Suggest what should be built next.",
+    "Thank you for the work you do, and for the seriousness with which you do it.",
+    "Cheers!\nSankar",
+  ],
+};
+const DEFAULT_CEO_DESK_ARCHIVE = [
+  { date: "March 1, 2026", title: "March 2026 message" },
+  { date: "February 1, 2026", title: "February 2026 message" },
+  { date: "January 1, 2026", title: "January 2026 message" },
+  { date: "December 1, 2025", title: "December 2025 message" },
+  { date: "November 1, 2025", title: "November 2025 message" },
+  { date: "October 1, 2025", title: "October 2025 message" },
+  { date: "September 1, 2025", title: "September 2025 message" },
+  { date: "August 1, 2025", title: "August 2025 message" },
+  { date: "July 1, 2025", title: "July 2025 message" },
+  { date: "June 1, 2025", title: "June 2025 message" },
+  { date: "May 1, 2025", title: "May 2025 message" },
+  { date: "April 1, 2025", title: "April 2025 message" },
+  { date: "March 1, 2025", title: "March 2025 message" },
+  { date: "February 1, 2025", title: "February 2025 message" },
+  { date: "January 1, 2025", title: "January 2025 message" },
+  { date: "December 1, 2024", title: "December 2024 message" },
+  { date: "November 1, 2024", title: "November 2024 message" },
+  { date: "October 1, 2024", title: "October 2024 message" },
+  { date: "September 1, 2024", title: "September 2024 message" },
+  { date: "August 1, 2024", title: "August 2024 message" },
+  { date: "July 1, 2024", title: "July 2024 message" },
+  { date: "June 1, 2024", title: "June 2024 message" },
+  { date: "May 1, 2024", title: "May 2024 message" },
+  { date: "April 1, 2024", title: "April 2024 message" },
+];
 const COMPANY_HOLIDAY_CALENDAR = [
   { date: "2026-01-26", label: "Republic Day" },
   { date: "2026-04-03", label: "Good Friday" },
@@ -354,42 +393,34 @@ const HOME_FOUNDATION_LAYERS = [
   },
 ];
 
-const FEATURED_HOME_ANNOUNCEMENT = {
-  id: "announcement-townhall-launch",
-  eyebrow: "Priority Announcement",
-  type: "Town Hall",
-  format: "Hybrid",
-  title: "Town hall and leadership briefing.",
-  summary: "How did we do last year? What is our plan going forward? If you want to know about these, do attend the session. Before the session you may post a question to our MD & CEO, give a suggestion or share an idea.",
-  dateLabel: "Thursday, 23rd April 2026",
-  timeLabel: "4:00 PM - 5:30 PM IST",
-  venueLabel: "Venue: TBD",
-  hostLabel: "Hosted by the MD & CEO with the leadership team",
-  audienceLabel: "Open to all employees",
-  countdownLabel: "21 days to go",
-  agenda: [
-    "Acuite Connect launch and rollout note",
-    "Business priorities and FY27 direction",
-    "Open floor Q&A with leadership",
-  ],
-  outcomes: [
-    "Reserve your seat or mark yourself as interested",
-    "Block the time directly on your calendar",
-    "Signal momentum through likes before the event",
-  ],
-  baseMetrics: {
-    booked: 84,
-    interested: 127,
-    likes: 96,
+const HOME_ANNOUNCEMENT_FILTERS = [
+  ["leadership", "Leadership"],
+  ["people_culture", "People & Culture"],
+  ["regulations", "Regulations"],
+  ["new_initiatives", "New Initiatives"],
+  ["opinion_poll", "Opinion Poll"],
+];
+
+const HOME_ANNOUNCEMENTS = [
+  {
+    id: "announcement-townhall-launch",
+    tag: "leadership",
+    eyebrow: "Priority Announcement",
+    type: "Town Hall",
+    format: "Hybrid",
+    title: "Town hall and leadership briefing.",
+    summary: "How did we do last year? What is our plan going forward? If you want to know about these, do attend the session. Before the session you may post a question to our MD & CEO, give a suggestion or share an idea.",
+    dateLabel: "Thursday, 23rd April 2026",
+    timeLabel: "4:00 PM - 5:30 PM IST",
+    venueLabel: "Venue: TBD",
+    hostLabel: "Hosted by the MD & CEO with the leadership team",
+    audienceLabel: "Open to all employees",
+    countdownLabel: "21 days to go",
+    baseMetrics: {
+      likes: 96,
+    },
   },
-  calendar: {
-    title: "Acuite Connect Launch Town Hall",
-    description: "Acuite Connect launch walkthrough, business update, and leadership Q&A for all employees.",
-    location: "Venue: TBD",
-    start: "2026-04-23T16:00:00+05:30",
-    end: "2026-04-23T17:30:00+05:30",
-  },
-};
+];
 const CEO_DESK_EDITORIAL = {
   id: "ceo-desk-editorial-april-2026",
   baseLikes: 24,
@@ -1244,6 +1275,7 @@ const kudosTags = [
 const defaultState = {
   theme: "",
   activeTab: "home",
+  homeAnnouncementFilter: "leadership",
   communityFilter: "all",
   voiceFilter: "all",
   recognitionFilter: "all",
@@ -1745,13 +1777,15 @@ function bindEvents() {
   });
   document.addEventListener("submit", handleSubmit);
 
-  elements.searchInput.addEventListener("input", handleSearchInput);
-  elements.searchInput.addEventListener("keydown", handleSearchKeydown);
-  elements.searchInput.addEventListener("focus", () => {
-    if (elements.searchInput.value.trim()) {
-      updateSearchResults(elements.searchInput.value.trim());
-    }
-  });
+  if (elements.searchInput) {
+    elements.searchInput.addEventListener("input", handleSearchInput);
+    elements.searchInput.addEventListener("keydown", handleSearchKeydown);
+    elements.searchInput.addEventListener("focus", () => {
+      if (elements.searchInput.value.trim()) {
+        updateSearchResults(elements.searchInput.value.trim());
+      }
+    });
+  }
 
   if (elements.communityBoardSelect) {
     elements.communityBoardSelect.addEventListener("change", () => {
@@ -1842,6 +1876,14 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "set-home-announcement-filter") {
+      state.homeAnnouncementFilter = action.dataset.filter || "leadership";
+      saveState();
+      renderHomeAnnouncement();
+      renderHomeAnnouncementFilters();
+      return;
+    }
+
     if (actionName === "open-launcher") {
       switchTab("tools");
       showToast("Jumped to the Tool Hub.");
@@ -1874,8 +1916,8 @@ async function handleDocumentClick(event) {
       return;
     }
 
-    if (actionName === "submit-ceo-request") {
-      await submitCeoDeskRequest(action.dataset.requestKey, action.dataset.requestLabel);
+    if (actionName === "prefill-ceo-request") {
+      prefillCeoDeskComment(action.dataset.requestMessage);
       return;
     }
 
@@ -2083,7 +2125,7 @@ async function handleDocumentClick(event) {
     closeProfileMenu();
   }
 
-  if (!event.target.closest(".topnav-search")) {
+  if (!event.target.closest(".topnav-search") || !elements.searchResults) {
     hideSearchResults();
   }
 }
@@ -2119,9 +2161,21 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target.id === "ceo-desk-post-form") {
+    event.preventDefault();
+    void submitCeoDeskPost(event.target);
+    return;
+  }
+
   if (event.target.id === "home-announcement-feedback-form") {
     event.preventDefault();
     void submitHomeAnnouncementFeedback(event.target);
+    return;
+  }
+
+  if (event.target.id === "home-announcement-admin-form") {
+    event.preventDefault();
+    void submitHomeAnnouncementAdminPost(event.target);
     return;
   }
 
@@ -2185,6 +2239,7 @@ function renderAll() {
   renderProfileBuilder();
   renderCommentsModal();
   syncComposerAccess();
+  renderCeoDeskMessage();
   renderHomeAnnouncement();
   renderTodayPanel();
   renderTasksPanel();
@@ -2224,6 +2279,49 @@ function renderAll() {
   syncFilterButtons();
 }
 
+function renderCeoDeskMessage() {
+  const dateEl = document.getElementById("ceo-desk-message-date");
+  const titleEl = document.getElementById("ceo-desk-message-title");
+  const metaEl = document.getElementById("ceo-desk-message-meta");
+  const copyEl = document.getElementById("ceo-desk-copy");
+  const archiveEl = document.getElementById("ceo-desk-archive-list");
+  const form = document.getElementById("ceo-desk-post-form");
+  const message = getCurrentCeoDeskMessage();
+
+  if (dateEl) {
+    dateEl.textContent = message.date;
+  }
+  if (titleEl) {
+    titleEl.textContent = message.title;
+  }
+  if (metaEl) {
+    metaEl.textContent = message.meta;
+  }
+  if (copyEl) {
+    const bodyParts = Array.isArray(message.body) ? message.body : DEFAULT_CEO_DESK_MESSAGE.body;
+    copyEl.innerHTML = bodyParts
+      .map((paragraph) => `<p>${escapeHtml(String(paragraph || "")).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+  if (archiveEl) {
+    const archiveItems = getCeoDeskArchiveItems();
+    archiveEl.innerHTML = archiveItems.length
+      ? archiveItems.map((item) => `
+          <button type="button" class="ceo-desk-archive-link">
+            <span class="mini-item-meta">${escapeHtml(item.date)}</span>
+            <span>${escapeHtml(item.title)}</span>
+          </button>
+        `).join("")
+      : '<div class="mini-item-meta">No previous messages yet.</div>';
+  }
+  if (form && currentUserCanPostCeoMessage() && !form.dataset.seeded) {
+    form.elements.message_date.value = message.date || "";
+    form.elements.title.value = "";
+    form.elements.body.value = "";
+    form.dataset.seeded = "true";
+  }
+}
+
 function currentUserAccessRights() {
   return {
     can_employee: true,
@@ -2246,6 +2344,11 @@ function currentUserCanAdministerConnect() {
   return Boolean(currentUserAccessRights().can_administer);
 }
 
+function currentUserCanPostCeoMessage() {
+  const email = String(appData.currentUser?.email || "").trim().toLowerCase();
+  return currentUserCanAdministerConnect() || email === "ceo@acuite.in";
+}
+
 function renderPanels() {
   const canAdminister = currentUserCanAdministerConnect();
   if (!ENABLED_TABS.has(state.activeTab)) {
@@ -2257,7 +2360,7 @@ function renderPanels() {
     state.activeTab = "home";
     saveState();
   }
-  document.documentElement.setAttribute("data-theme", state.theme);
+  applyTheme();
   const adminPanel = document.getElementById("panel-admin");
   if (elements.adminSidebarTab) {
     elements.adminSidebarTab.hidden = !canAdminister;
@@ -2267,6 +2370,10 @@ function renderPanels() {
   }
   if (adminPanel) {
     adminPanel.hidden = !canAdminister;
+  }
+  const ceoPostForm = document.getElementById("ceo-desk-post-form");
+  if (ceoPostForm) {
+    ceoPostForm.hidden = !currentUserCanPostCeoMessage();
   }
   document.querySelectorAll(".panel").forEach((panel) => {
     panel.classList.toggle("active", panel.id === `panel-${state.activeTab}`);
@@ -2570,9 +2677,49 @@ function renderHomeAnnouncement() {
     return;
   }
 
-  const announcement = FEATURED_HOME_ANNOUNCEMENT;
-  const liked = state.likedPostIds.includes(announcement.id);
-  const totalLikes = Number(announcement.baseMetrics?.likes || 0) + (liked ? 1 : 0);
+  const publishedPost = getHomeAnnouncementPostForTag(state.homeAnnouncementFilter);
+  const announcement = publishedPost
+    ? {
+      id: publishedPost.id,
+      sourceId: publishedPost.sourceId,
+      eyebrow: getSelectedHomeAnnouncementFilterLabel(),
+      type: getSelectedHomeAnnouncementFilterLabel(),
+      format: "Connect",
+      title: publishedPost.title,
+      summary: publishedPost.body[0] || "",
+      dateLabel: publishedPost.metaLines[0] || "Published on Connect",
+      timeLabel: publishedPost.postedAtLabel || "Now live",
+      venueLabel: "Connect announcement",
+      hostLabel: publishedPost.authorName || "Acuité Ratings & Research",
+      audienceLabel: "Visible to all employees",
+      countdownLabel: publishedPost.postedAtLabel || "",
+      baseMetrics: {
+        likes: Number(publishedPost.reactionCount || 0),
+      },
+      currentUserHasReacted: Boolean(publishedPost.currentUserHasReacted),
+      isLive: true,
+    }
+    : (HOME_ANNOUNCEMENTS.find((item) => item.tag === state.homeAnnouncementFilter) || null);
+  renderHomeAnnouncementFilters();
+  renderHomeAnnouncementAdminForm();
+  if (!announcement) {
+    container.innerHTML = `
+      <div class="announcement-empty-state">
+        <p class="widget-kicker">Announcements</p>
+        <h2>No announcement published under this tag yet.</h2>
+        <p>Select another capsule button or publish a real announcement under this tag.</p>
+      </div>
+    `;
+    return;
+  }
+  const liked = announcement.isLive
+    ? Boolean(announcement.currentUserHasReacted)
+    : state.likedPostIds.includes(announcement.id);
+  const totalLikes = announcement.isLive
+    ? Number(announcement.baseMetrics?.likes || 0)
+    : Number(announcement.baseMetrics?.likes || 0) + (liked ? 1 : 0);
+  const likeAction = announcement.isLive ? "toggle-live-reaction" : "toggle-like";
+  const likeTarget = announcement.isLive ? announcement.sourceId : announcement.id;
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -2621,7 +2768,7 @@ function renderHomeAnnouncement() {
         </div>
       </form>
       <div class="announcement-like-row">
-        <button type="button" class="announcement-like-btn ${liked ? "liked" : ""}" data-action="toggle-like" data-id="${escapeHtml(announcement.id)}">
+        <button type="button" class="announcement-like-btn ${liked ? "liked" : ""}" data-action="${likeAction}" data-id="${escapeHtml(String(likeTarget))}">
           ${liked ? "Liked" : "Like"}
         </button>
         <span class="announcement-like-count">${escapeHtml(String(totalLikes))} like${totalLikes === 1 ? "" : "s"}</span>
@@ -2630,9 +2777,35 @@ function renderHomeAnnouncement() {
   `;
 }
 
+function renderHomeAnnouncementFilters() {
+  const row = document.getElementById("home-announcement-filters");
+  if (!row) {
+    return;
+  }
+  row.querySelectorAll("[data-action='set-home-announcement-filter']").forEach((button) => {
+    button.classList.toggle("active", button.dataset.filter === state.homeAnnouncementFilter);
+  });
+}
+
+function renderHomeAnnouncementAdminForm() {
+  const form = document.getElementById("home-announcement-admin-form");
+  const title = document.getElementById("home-announcement-admin-title");
+  if (!form || !title) {
+    return;
+  }
+  form.hidden = !currentUserCanAdministerConnect();
+  title.textContent = `Publish under ${getSelectedHomeAnnouncementFilterLabel()}`;
+}
+
 async function submitHomeAnnouncementFeedback(form) {
   if (!currentUserCanCreatePosts()) {
     showToast("Your posting access is currently disabled.");
+    return;
+  }
+
+  const announcement = getCurrentHomeAnnouncement();
+  if (!announcement) {
+    showToast("There is no live announcement under this tag right now.");
     return;
   }
 
@@ -2656,7 +2829,7 @@ async function submitHomeAnnouncementFeedback(form) {
           bulletin_category: "employee_posts",
           submission_key: "town_hall_response",
           submission_label: "Town hall response",
-          bulletin_meta_lines: [FEATURED_HOME_ANNOUNCEMENT.dateLabel],
+          bulletin_meta_lines: [announcement.dateLabel],
           town_hall_response: true,
         },
       },
@@ -2668,15 +2841,18 @@ async function submitHomeAnnouncementFeedback(form) {
   }
 }
 
-async function submitCeoDeskRequest(requestKey, requestLabel) {
-  if (!currentUserCanCreatePosts()) {
-    showToast("Your posting access is currently disabled.");
+async function submitHomeAnnouncementAdminPost(form) {
+  if (!currentUserCanAdministerConnect()) {
+    showToast("Admin access is required to publish announcements here.");
     return;
   }
 
-  const safeLabel = String(requestLabel || "").trim();
-  if (!requestKey || !safeLabel) {
-    showToast("This request is not available right now.");
+  const formData = new FormData(form);
+  const title = String(formData.get("title") || "").trim();
+  const metaLine = String(formData.get("meta_line") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+  if (!title || !body) {
+    showToast("Add both a headline and body before publishing.");
     return;
   }
 
@@ -2684,26 +2860,43 @@ async function submitCeoDeskRequest(requestKey, requestLabel) {
     await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
       method: "POST",
       body: {
-        title: safeLabel,
-        body: `Employee selected: ${safeLabel}`,
+        title,
+        body,
+        kind: "announcement",
         module: "general",
-        kind: "update",
-        topic: "employee_submission",
+        topic: "announcements",
+        post_as_company: true,
+        allow_comments: true,
         metadata: {
-          bulletin_category: "employee_posts",
-          submission_key: `ceo_request_${requestKey}`,
-          submission_label: "MD & CEO request",
-          bulletin_meta_lines: ["MD & CEO's Desk"],
-          ceo_desk_request: true,
-          ceo_desk_request_key: requestKey,
-          ceo_desk_request_label: safeLabel,
+          bulletin_category: "announcements",
+          bulletin_meta_lines: metaLine ? [metaLine] : [],
+          home_announcement_tag: state.homeAnnouncementFilter,
         },
       },
     });
-    showToast("Your request has been sent to admin.");
+    form.reset();
+    await loadBulletinPosts();
+    renderHomeAnnouncement();
+    showToast(`${getSelectedHomeAnnouncementFilterLabel()} announcement published.`);
   } catch (error) {
-    showToast(error.message || "Could not send your request.");
+    showToast(error.message || "Could not publish the announcement.");
   }
+}
+
+function prefillCeoDeskComment(message) {
+  const input = document.getElementById("ceo-desk-comment-input");
+  const form = document.getElementById("ceo-desk-comment-form");
+  const selectedButton = document.activeElement?.closest?.(".ceo-desk-link[data-request-key]");
+  if (!input) {
+    return;
+  }
+  if (form && selectedButton) {
+    form.dataset.requestKey = selectedButton.dataset.requestKey || "comment";
+    form.dataset.requestLabel = selectedButton.dataset.requestLabel || "MD & CEO desk comment";
+  }
+  input.value = String(message || "").trim();
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
 }
 
 async function submitCeoDeskComment(form) {
@@ -2719,30 +2912,86 @@ async function submitCeoDeskComment(form) {
     return;
   }
 
+  const input = document.getElementById("ceo-desk-comment-input");
+  const requestKey = form.dataset.requestKey || "comment";
+  const requestLabel = form.dataset.requestLabel || "MD & CEO desk comment";
+  const submissionKey = requestKey === "comment" ? "ceo_desk_comment" : `ceo_request_${requestKey}`;
+
   try {
     await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
       method: "POST",
       body: {
-        title: "MD & CEO desk comment",
+        title: requestLabel,
         body,
         module: "general",
         kind: "update",
         topic: "employee_submission",
         metadata: {
           bulletin_category: "employee_posts",
-          submission_key: "ceo_desk_comment",
-          submission_label: "MD & CEO comment",
+          submission_key: submissionKey,
+          submission_label: "MD & CEO request",
           bulletin_meta_lines: ["MD & CEO's Desk"],
           ceo_desk_request: true,
-          ceo_desk_request_key: "comment",
-          ceo_desk_request_label: "MD & CEO desk comment",
+          ceo_desk_request_key: requestKey,
+          ceo_desk_request_label: requestLabel,
         },
       },
     });
     form.reset();
+    form.dataset.requestKey = "comment";
+    form.dataset.requestLabel = "MD & CEO desk comment";
+    if (input) {
+      input.value = "";
+    }
     showToast("Your comment has been sent to admin.");
   } catch (error) {
     showToast(error.message || "Could not send your comment.");
+  }
+}
+
+async function submitCeoDeskPost(form) {
+  if (!currentUserCanPostCeoMessage()) {
+    showToast("This message form is available only to the MD & CEO and admins.");
+    return;
+  }
+
+  const formData = new FormData(form);
+  const messageDate = String(formData.get("message_date") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+
+  if (!messageDate || !title || !body) {
+    showToast("Complete the date, subject line, and body first.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title,
+        body,
+        kind: "announcement",
+        module: "general",
+        topic: "announcements",
+        post_as_company: true,
+        allow_comments: false,
+        metadata: {
+          bulletin_category: "announcements",
+          bulletin_channel: "ceo_desk",
+          bulletin_template: "ceo_editorial",
+          bulletin_meta_lines: [messageDate],
+        },
+      },
+    });
+    await loadBulletinPosts();
+    renderCeoDeskMessage();
+    renderCeoDeskLikeButton();
+    form.reset();
+    form.dataset.seeded = "true";
+    showToast("The MD & CEO message is now live and the previous one has moved to the archive.");
+  } catch (error) {
+    showToast(error.message || "Could not publish the MD & CEO message.");
   }
 }
 
@@ -3683,10 +3932,13 @@ function renderCeoDeskLikeButton() {
   if (!button) {
     return;
   }
-  const liked = state.likedPostIds.includes(CEO_DESK_EDITORIAL.id);
-  const totalLikes = CEO_DESK_EDITORIAL.baseLikes + (liked ? 1 : 0);
+  const message = getCurrentCeoDeskMessage();
+  const liked = Boolean(message.currentUserHasReacted);
+  const totalLikes = Number(message.reactionCount || 0);
   button.textContent = `${liked ? "Liked" : "Like"} (${totalLikes})`;
   button.classList.toggle("liked", liked);
+  button.dataset.action = message.sourceId ? "toggle-live-reaction" : "toggle-like";
+  button.dataset.id = String(message.sourceId || CEO_DESK_EDITORIAL.id);
 }
 
 function renderAdminPanel() {
@@ -4943,11 +5195,15 @@ function updateSearchResults(query) {
 }
 
 function hideSearchResults() {
-  elements.searchResults.hidden = true;
+  if (elements.searchResults) {
+    elements.searchResults.hidden = true;
+  }
 }
 
 function useSearchResult(result) {
-  elements.searchInput.value = result.title;
+  if (elements.searchInput) {
+    elements.searchInput.value = result.title;
+  }
   hideSearchResults();
   jumpToItem(result.tab, result.targetId);
 }
@@ -5143,6 +5399,14 @@ function switchTab(tabId) {
   saveState();
   hideSearchResults();
   renderPanels();
+  window.requestAnimationFrame(() => {
+    try {
+      renderAll();
+    } catch (error) {
+      console.error("Could not fully render the selected tab.", error);
+      renderPanels();
+    }
+  });
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -5244,11 +5508,18 @@ function syncFilterButtons() {
 function toggleTheme() {
   state.theme = state.theme === "dark" ? "" : "dark";
   saveState();
+  applyTheme();
   renderPanels();
 }
 
 function applyTheme() {
   document.documentElement.setAttribute("data-theme", state.theme);
+  document.querySelectorAll(".connect-brand-logo[data-light-src][data-dark-src]").forEach((logo) => {
+    const targetSrc = state.theme === "dark" ? logo.dataset.darkSrc : logo.dataset.lightSrc;
+    if (logo.getAttribute("src") !== targetSrc) {
+      logo.setAttribute("src", targetSrc);
+    }
+  });
 }
 
 function getPostLikeCount(post) {
@@ -5419,6 +5690,8 @@ function mapBulletinPost(post) {
     ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
     imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
+    homeAnnouncementTag: String(metadata.home_announcement_tag || "").trim(),
+    bulletinChannel: String(metadata.bulletin_channel || "").trim(),
     bulletinCard: metadata.bulletin_card && typeof metadata.bulletin_card === "object" ? metadata.bulletin_card : null,
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
@@ -5433,6 +5706,62 @@ function mapBulletinPost(post) {
     canDelete: Boolean(post.viewer_can_delete),
     isAuthor: Boolean(post.viewer_is_author),
   };
+}
+
+function getSelectedHomeAnnouncementFilterLabel() {
+  return HOME_ANNOUNCEMENT_FILTERS.find(([value]) => value === state.homeAnnouncementFilter)?.[1] || "Leadership";
+}
+
+function getHomeAnnouncementPostForTag(tag) {
+  return appData.bulletinPosts
+    .filter((post) => post.homeAnnouncementTag === tag)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0] || null;
+}
+
+function getCurrentHomeAnnouncement() {
+  return getHomeAnnouncementPostForTag(state.homeAnnouncementFilter)
+    || HOME_ANNOUNCEMENTS.find((item) => item.tag === state.homeAnnouncementFilter)
+    || null;
+}
+
+function getCeoDeskPosts() {
+  return appData.bulletinPosts
+    .filter((post) => post.bulletinChannel === "ceo_desk")
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+}
+
+function getCurrentCeoDeskMessage() {
+  const livePost = getCeoDeskPosts()[0];
+  if (!livePost) {
+    const liked = state.likedPostIds.includes(CEO_DESK_EDITORIAL.id);
+    return {
+      ...DEFAULT_CEO_DESK_MESSAGE,
+      body: DEFAULT_CEO_DESK_MESSAGE.body.slice(),
+      sourceId: "",
+      reactionCount: CEO_DESK_EDITORIAL.baseLikes + (liked ? 1 : 0),
+      currentUserHasReacted: liked,
+    };
+  }
+  return {
+    date: livePost.metaLines[0] || formatDisplayDate(livePost.createdAt) || DEFAULT_CEO_DESK_MESSAGE.date,
+    title: livePost.title || DEFAULT_CEO_DESK_MESSAGE.title,
+    meta: DEFAULT_CEO_DESK_MESSAGE.meta,
+    body: Array.isArray(livePost.body) && livePost.body.length ? livePost.body : DEFAULT_CEO_DESK_MESSAGE.body,
+    sourceId: livePost.sourceId,
+    reactionCount: Number(livePost.reactionCount || 0),
+    currentUserHasReacted: Boolean(livePost.currentUserHasReacted),
+  };
+}
+
+function getCeoDeskArchiveItems() {
+  const livePosts = getCeoDeskPosts();
+  if (!livePosts.length) {
+    return DEFAULT_CEO_DESK_ARCHIVE.map((item) => ({ ...item }));
+  }
+  return livePosts.slice(1, 25).map((post) => ({
+    date: post.metaLines[0] || formatDisplayDate(post.createdAt),
+    title: post.title,
+  }));
 }
 
 function mapMyPostSubmission(post) {
@@ -5896,6 +6225,12 @@ function hydrateState() {
   return {
     ...defaultState,
     ...saved,
+    homeAnnouncementFilter: (
+      typeof saved.homeAnnouncementFilter === "string"
+      && HOME_ANNOUNCEMENT_FILTERS.some(([value]) => value === saved.homeAnnouncementFilter)
+    )
+      ? saved.homeAnnouncementFilter
+      : defaultState.homeAnnouncementFilter,
     communityFilter: (
       typeof saved.communityFilter === "string"
       && ["all", ...Object.keys(COMMUNITY_BOARD_CONFIG)].includes(saved.communityFilter)
