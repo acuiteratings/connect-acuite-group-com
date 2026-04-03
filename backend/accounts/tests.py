@@ -7,6 +7,7 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 from django.core import mail
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
@@ -28,6 +29,7 @@ from .models import EmployeeSSOIdentitySnapshot, ExitProcess, LoginChallenge, Tr
 )
 class AuthApiTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             email="employee.one@acuite.in",
             password="Welcome@123",
@@ -72,7 +74,7 @@ class AuthApiTests(TestCase):
         self.assertRegex(mail.outbox[0].subject, r"Acuite Connect OTP: \d{6}")
         self.assertIn("font-size: 500%", mail.outbox[0].alternatives[0][0])
 
-    def test_forgot_password_emails_first_time_password_and_forces_change(self):
+    def test_forgot_password_emails_temporary_password_and_forces_change(self):
         response = self.client.post(
             "/api/accounts/auth/forgot-password/",
             data={"email": self.user.email},
@@ -81,12 +83,13 @@ class AuthApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("314159", mail.outbox[0].body)
+        temporary_password = self._temporary_password_from_mail()
+        self.assertGreaterEqual(len(temporary_password), 12)
 
         self.user.refresh_from_db()
         self.assertTrue(self.user.must_change_password)
         self.assertIsNone(self.user.password_changed_at)
-        self.assertTrue(self.user.check_password("314159"))
+        self.assertTrue(self.user.check_password(temporary_password))
 
     def test_forgot_password_returns_generic_success_for_unknown_email(self):
         response = self.client.post(
@@ -98,7 +101,7 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json()["detail"],
-            "If the email is provisioned, the temporary password has been emailed. Request a fresh OTP, then log in and change your password.",
+            "If the email is provisioned, a temporary sign-in password has been emailed. Request a fresh OTP, then log in and change your password.",
         )
         self.assertEqual(len(mail.outbox), 0)
 
@@ -301,11 +304,12 @@ class AuthApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+        payload = response.json()
         created = User.objects.get(email="new.employee@acuite.in")
         self.assertEqual(created.display_name, "New Employee")
         self.assertEqual(created.access_level, User.AccessLevel.EMPLOYEE)
         self.assertTrue(created.must_change_password)
-        self.assertTrue(created.check_password("314159"))
+        self.assertTrue(created.check_password(payload["temporary_password"]))
         self.assertTrue(DirectoryProfile.objects.filter(user=created).exists())
 
     def test_admin_can_edit_employee_account_fields(self):
@@ -491,9 +495,66 @@ class AuthApiTests(TestCase):
         grant = TrustedAppLoginGrant.objects.get(public_id=grant_code)
         self.assertIsNotNone(grant.consumed_at)
 
+    @override_settings(
+        TRUSTED_SSO_CLIENTS={
+            "karma": {
+                "client_secret": "shared-secret",
+                "redirect_uris": ["https://karma.example.com/accounts/connect/callback/"],
+            }
+        },
+        TRUSTED_SSO_TOKEN_RATE_LIMIT=1,
+        TRUSTED_SSO_TOKEN_RATE_WINDOW_SECONDS=60,
+    )
+    def test_sso_token_is_rate_limited(self):
+        self.client.force_login(self.user)
+
+        authorize_response = self.client.get(
+            "/api/accounts/auth/sso/authorize/",
+            {
+                "client_id": "karma",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "state": "state-123",
+            },
+        )
+        redirect_params = parse_qs(urlparse(authorize_response["Location"]).query)
+        grant_code = redirect_params["code"][0]
+
+        first_response = self.client.post(
+            "/api/accounts/auth/sso/token/",
+            data={
+                "client_id": "karma",
+                "client_secret": "shared-secret",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "code": grant_code,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(first_response.status_code, 200)
+
+        second_response = self.client.post(
+            "/api/accounts/auth/sso/token/",
+            data={
+                "client_id": "karma",
+                "client_secret": "shared-secret",
+                "redirect_uri": "https://karma.example.com/accounts/connect/callback/",
+                "code": grant_code,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(second_response.status_code, 429)
+        self.assertEqual(second_response.json()["code"], "rate_limited")
+        self.assertEqual(second_response["Retry-After"], "60")
+
     def _otp_from_mail(self):
         body = mail.outbox[-1].body
         match = re.search(r"(\d{6})", body)
+        self.assertIsNotNone(match)
+        return match.group(1)
+
+    def _temporary_password_from_mail(self):
+        body = mail.outbox[-1].body
+        match = re.search(r"Temporary password:\s*(\S+)", body)
         self.assertIsNotNone(match)
         return match.group(1)
 
@@ -505,11 +566,22 @@ class AuthApiTests(TestCase):
 )
 class EmployeeSsoModeAuthTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             email="employee.one@acuite.in",
             password="Welcome@123",
             first_name="Employee",
             last_name="One",
+            must_change_password=False,
+            password_changed_at=timezone.now(),
+        )
+        self.admin_user = User.objects.create_user(
+            email="admin.one@acuite.in",
+            password="Welcome@123",
+            first_name="Admin",
+            last_name="One",
+            access_level=User.AccessLevel.ADMIN,
+            is_staff=True,
             must_change_password=False,
             password_changed_at=timezone.now(),
         )
@@ -573,6 +645,49 @@ class EmployeeSsoModeAuthTests(TestCase):
             session["employee_sso_login_state"]["next_path"],
             "/directory.html?company=Acuite",
         )
+
+    @override_settings(
+        EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
+        EMPLOYEE_SSO_CLIENT_ID="connect-client",
+        EMPLOYEE_SSO_CLIENT_SECRET="connect-secret",
+        EMPLOYEE_SSO_CALLBACK_URL="http://127.0.0.1:8240/api/accounts/auth/employee-sso/callback/",
+        EMPLOYEE_SSO_START_RATE_LIMIT=1,
+        EMPLOYEE_SSO_START_RATE_WINDOW_SECONDS=60,
+    )
+    def test_employee_sso_start_is_rate_limited(self):
+        first_response = self.client.get("/api/accounts/auth/employee-sso/start/")
+        self.assertEqual(first_response.status_code, 302)
+
+        second_response = self.client.get("/api/accounts/auth/employee-sso/start/")
+
+        self.assertEqual(second_response.status_code, 429)
+        self.assertEqual(second_response.json()["code"], "rate_limited")
+        self.assertEqual(second_response["Retry-After"], "60")
+
+    def test_admin_created_user_uses_unusable_local_password_when_employee_sso_is_enabled(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/accounts/access/users/",
+            data=json.dumps(
+                {
+                    "email": "sso.only.user@acuite.in",
+                    "display_name": "SSO Only User",
+                    "department": "Technology",
+                    "location": "Mumbai",
+                    "access_level": User.AccessLevel.EMPLOYEE,
+                    "can_post_in_connect": True,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertNotIn("temporary_password", payload)
+        created = User.objects.get(email="sso.only.user@acuite.in")
+        self.assertFalse(created.must_change_password)
+        self.assertFalse(created.has_usable_password())
 
     @override_settings(
         EMPLOYEE_SSO_BASE_URL="https://sso.acuite-group.com",
@@ -744,7 +859,7 @@ class RemoveEmployeeAccountCommandTests(TestCase):
     def test_remove_employee_account_deletes_related_employee_data(self):
         user = User.objects.create_user(
             email="notapplicable@notvalid.in",
-            password="314159",
+            password="TempPass@123",
             display_name="Placeholder User",
         )
         DirectoryProfile.objects.create(user=user, company_name="Acuite", office_location="Mumbai")
@@ -786,7 +901,7 @@ class RemoveEmployeeAccountCommandTests(TestCase):
     def test_remove_employee_account_refuses_staff_user(self):
         staff_user = User.objects.create_user(
             email="admin@acuite.in",
-            password="314159",
+            password="TempPass@123",
             is_staff=True,
         )
 
@@ -800,7 +915,7 @@ class SetConnectAccessCommandTests(TestCase):
     def test_set_connect_access_promotes_user_and_enables_posting(self):
         user = User.objects.create_user(
             email="promote.me@acuite.in",
-            password="314159",
+            password="TempPass@123",
             can_post_in_connect=False,
         )
 

@@ -452,6 +452,11 @@ def generate_otp_code():
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 
+def generate_temporary_password(length=14):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*?"
+    return "".join(secrets.choice(alphabet) for _ in range(max(12, int(length))))
+
+
 def hash_otp_code(code):
     normalized_code = str(code or "").strip()
     digest = salted_hmac("acuite_connect.login_otp", normalized_code).hexdigest()
@@ -623,7 +628,7 @@ def _build_login_otp_message(user, code):
     return email
 
 
-def _build_first_time_password_message(user, temporary_password):
+def _build_temporary_password_message(user, temporary_password):
     subject = "Your Acuite Connect temporary password"
     message = (
         f"Hello {user.full_name},\n\n"
@@ -710,7 +715,7 @@ def start_login_challenge(email):
     return challenge, preview_code
 
 
-def reset_password_to_first_time_password(email):
+def reset_password_to_temporary_password(email):
     normalized_email = normalize_email(email)
     if not normalized_email:
         raise AuthFlowError("Enter your employee email ID first.", status=400, code="email_required")
@@ -734,13 +739,7 @@ def reset_password_to_first_time_password(email):
             code="reset_delivery_unavailable",
         )
 
-    temporary_password = str(getattr(settings, "AUTH_FIRST_TIME_PASSWORD", "314159")).strip()
-    if not temporary_password:
-        raise AuthFlowError(
-            "Temporary password reset is not configured yet. Ask an administrator to finish setup.",
-            status=503,
-            code="reset_password_unavailable",
-        )
+    temporary_password = generate_temporary_password()
 
     now = timezone.now()
     try:
@@ -753,7 +752,7 @@ def reset_password_to_first_time_password(email):
             user.must_change_password = True
             user.password_changed_at = None
             user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
-            _send_email(_build_first_time_password_message, user, temporary_password)
+            _send_email(_build_temporary_password_message, user, temporary_password)
     except Exception as exc:
         raise AuthFlowError(
             "We couldn't send the reset email right now. Please try again in a moment.",

@@ -5,6 +5,7 @@ from urllib.parse import urlencode, urlparse
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import models
@@ -30,10 +31,11 @@ from .services import (
     employee_sso_enabled,
     employee_sso_logout_redirect,
     exchange_trusted_sso_grant,
+    generate_temporary_password,
     get_trusted_sso_client,
     issue_trusted_sso_grant,
     normalize_email,
-    reset_password_to_first_time_password,
+    reset_password_to_temporary_password,
     start_login_challenge,
     validate_trusted_redirect_uri,
     validate_password_step,
@@ -71,7 +73,11 @@ def _auth_policy_payload():
 def _error_response(exc):
     payload = {"detail": exc.message, "code": exc.code}
     payload.update(exc.extra)
-    return JsonResponse(payload, status=exc.status)
+    response = JsonResponse(payload, status=exc.status)
+    retry_after = exc.extra.get("retry_after_seconds")
+    if retry_after and exc.status == 429:
+        response["Retry-After"] = str(retry_after)
+    return response
 
 
 def _admin_forbidden(detail="Admin access required."):
@@ -113,6 +119,49 @@ def _safe_next_path(raw_value, fallback="/"):
     if not candidate.startswith("/"):
         return fallback
     return candidate
+
+
+def _client_ip_address(request):
+    forwarded_for = str(request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or "unknown"
+    return str(request.META.get("REMOTE_ADDR") or "").strip() or "unknown"
+
+
+def _consume_rate_limit(name, identifier, *, limit, window_seconds):
+    key = f"rate_limit:{name}:{identifier}"
+    if cache.add(key, 1, timeout=window_seconds):
+        return
+    try:
+        current_count = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=window_seconds)
+        current_count = 1
+    if current_count > limit:
+        raise AuthFlowError(
+            "Too many requests right now. Please wait a moment and try again.",
+            status=429,
+            code="rate_limited",
+            extra={"retry_after_seconds": window_seconds},
+        )
+
+
+def _rate_limit_employee_sso_start(request):
+    _consume_rate_limit(
+        "employee_sso_start",
+        _client_ip_address(request),
+        limit=int(getattr(settings, "EMPLOYEE_SSO_START_RATE_LIMIT", 120)),
+        window_seconds=int(getattr(settings, "EMPLOYEE_SSO_START_RATE_WINDOW_SECONDS", 60)),
+    )
+
+
+def _rate_limit_trusted_sso_token(request, client_id):
+    _consume_rate_limit(
+        "trusted_sso_token",
+        f"{_client_ip_address(request)}:{str(client_id or 'unknown').strip().lower()}",
+        limit=int(getattr(settings, "TRUSTED_SSO_TOKEN_RATE_LIMIT", 60)),
+        window_seconds=int(getattr(settings, "TRUSTED_SSO_TOKEN_RATE_WINDOW_SECONDS", 60)),
+    )
 
 
 def _split_display_name(display_name, fallback_email=""):
@@ -307,13 +356,14 @@ def access_user_collection(request):
             payload.get("display_name") or payload.get("name"),
             email,
         )
-        temporary_password = str(
-            payload.get("temporary_password") or settings.AUTH_FIRST_TIME_PASSWORD
-        ).strip() or settings.AUTH_FIRST_TIME_PASSWORD
+        using_employee_sso = employee_sso_enabled()
+        temporary_password = ""
+        if not using_employee_sso:
+            temporary_password = str(payload.get("temporary_password") or "").strip() or generate_temporary_password()
 
         user = User.objects.create_user(
             email=email,
-            password=temporary_password,
+            password=temporary_password or None,
             first_name=first_name,
             last_name=last_name,
             display_name=display_name,
@@ -326,8 +376,8 @@ def access_user_collection(request):
             employment_status=employment_status,
             can_post_in_connect=_coerce_bool(payload.get("can_post_in_connect", True)),
             is_active=_coerce_bool(payload.get("is_active", True)),
-            must_change_password=True,
-            password_changed_at=None,
+            must_change_password=not using_employee_sso,
+            password_changed_at=None if not using_employee_sso else timezone.now(),
         )
         _sync_directory_profile(user, payload)
 
@@ -350,13 +400,13 @@ def access_user_collection(request):
             metadata={"target_user_id": user.id, "access_level": user.access_level},
             request=request,
         )
-        return JsonResponse(
-            {
-                "detail": "Employee account created successfully.",
-                "user": serialize_user(user),
-            },
-            status=201,
-        )
+        response_payload = {
+            "detail": "Employee account created successfully.",
+            "user": serialize_user(user),
+        }
+        if temporary_password:
+            response_payload["temporary_password"] = temporary_password
+        return JsonResponse(response_payload, status=201)
 
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET", "POST"])
@@ -745,7 +795,7 @@ def forgot_password(request):
 
     try:
         payload = _parse_json_body(request)
-        user = reset_password_to_first_time_password(payload.get("email"))
+        user = reset_password_to_temporary_password(payload.get("email"))
     except AuthFlowError as exc:
         return _error_response(exc)
 
@@ -766,7 +816,7 @@ def forgot_password(request):
 
     return JsonResponse(
         {
-            "detail": "If the email is provisioned, the temporary password has been emailed. Request a fresh OTP, then log in and change your password.",
+            "detail": "If the email is provisioned, a temporary sign-in password has been emailed. Request a fresh OTP, then log in and change your password.",
         }
     )
 
@@ -944,6 +994,7 @@ def employee_sso_start(request):
         return HttpResponseNotAllowed(["GET"])
 
     try:
+        _rate_limit_employee_sso_start(request)
         redirect_url = begin_employee_sso_login(
             request,
             next_path=_safe_next_path(request.GET.get("next"), "/"),
@@ -1036,6 +1087,7 @@ def sso_token(request):
 
     try:
         payload = _parse_json_body(request)
+        _rate_limit_trusted_sso_token(request, payload.get("client_id"))
         identity_payload = exchange_trusted_sso_grant(
             payload.get("client_id"),
             payload.get("client_secret"),
