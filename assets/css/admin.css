@@ -47,7 +47,7 @@ button {
 }
 
 .admin-console-header,
-.admin-console-main,
+.admin-console-shell,
 .admin-console-footer {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
@@ -107,10 +107,61 @@ button {
   text-transform: uppercase;
 }
 
+.admin-console-shell {
+  display: block;
+}
+
 .admin-console-main {
   display: grid;
   gap: 18px;
+  min-width: 0;
   padding-bottom: 36px;
+}
+
+.admin-console-shortcuts {
+  padding: 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-console-shortcuts-head {
+  margin-bottom: 14px;
+}
+
+.admin-console-shortcuts-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.admin-console-topnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-console-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border-strong);
+  background: var(--admin-surface-2);
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.admin-console-pill:hover,
+.admin-console-pill:focus-visible {
+  outline: none;
+  border-color: var(--admin-accent);
+  background: rgba(232, 114, 42, 0.12);
 }
 
 .admin-console-card {
@@ -639,6 +690,7 @@ button {
 
 @media (max-width: 1080px) {
   .admin-console-header,
+  .admin-console-shell,
   .admin-form-actions,
   .admin-mini-head,
   .admin-process-card-head,
@@ -652,6 +704,10 @@ button {
     width: 100%;
   }
 
+  .admin-console-topnav {
+    gap: 8px;
+  }
+
   .admin-exit-layout,
   .admin-form-grid.three,
   .celebration-admin-layout {
@@ -661,7 +717,7 @@ button {
 
 @media (max-width: 720px) {
   .admin-console-header,
-  .admin-console-main,
+  .admin-console-shell,
   .admin-console-footer {
     width: min(100% - 24px, 1180px);
   }

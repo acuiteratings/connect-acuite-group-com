@@ -14,7 +14,6 @@ ACTIVE_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.FULFILLED,
 }
 LOCKED_REDEMPTION_STATUSES = {
-    BrandStoreRedemption.Status.REQUESTED,
 }
 SPENT_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.APPROVED,
@@ -27,6 +26,10 @@ COIN_RULES = {
     "book_returned": {"label": "Read and return a library book", "coins": 100},
     "idea_shared": {"label": "Share an idea", "coins": 500},
     "question_asked": {"label": "Ask a question", "coins": 1000},
+    "ceo_masala_chai": {"label": "Masala chai with MD & CEO", "coins": 100},
+    "ceo_meet_client": {"label": "Meet a client", "coins": 5000},
+    "ceo_share_idea": {"label": "Share an idea with MD & CEO", "coins": 1000},
+    "ceo_coaching": {"label": "Coaching request", "coins": 2000},
 }
 
 
@@ -176,6 +179,114 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
                 amount=COIN_RULES["idea_shared"]["coins"],
                 label=COIN_RULES["idea_shared"]["label"],
                 summary=f"Shared '{post.title}'",
+                kind="earned",
+            )
+
+    for row in (
+        Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__submission_key="share_idea",
+        )
+        .values("author_id")
+        .order_by()
+        .annotate(count=Count("id"))
+    ):
+        user_id = row["author_id"]
+        amount = row["count"] * COIN_RULES["idea_shared"]["coins"]
+        earned[user_id] += amount
+    if include_register:
+        for post in Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__submission_key="share_idea",
+        ).select_related("author"):
+            _append_entry(
+                entries_by_user,
+                post.author_id,
+                occurred_at=post.published_at or post.created_at,
+                amount=COIN_RULES["idea_shared"]["coins"],
+                label=COIN_RULES["idea_shared"]["label"],
+                summary=f"Approved '{post.title}'",
+                kind="earned",
+            )
+
+    ceo_request_rules = {
+        "masala_chai": "ceo_masala_chai",
+        "meet_client": "ceo_meet_client",
+        "share_idea": "ceo_share_idea",
+        "coaching": "ceo_coaching",
+    }
+    for request_key, rule_key in ceo_request_rules.items():
+        for row in (
+            Post.objects.filter(
+                author_id__in=user_ids,
+                module=Post.Module.GENERAL,
+                topic="employee_submission",
+                moderation_status=Post.ModerationStatus.PUBLISHED,
+                metadata__ceo_desk_request=True,
+                metadata__ceo_desk_request_key=request_key,
+            )
+            .values("author_id")
+            .order_by()
+            .annotate(count=Count("id"))
+        ):
+            user_id = row["author_id"]
+            amount = row["count"] * COIN_RULES[rule_key]["coins"]
+            earned[user_id] += amount
+        if include_register:
+            for post in Post.objects.filter(
+                author_id__in=user_ids,
+                module=Post.Module.GENERAL,
+                topic="employee_submission",
+                moderation_status=Post.ModerationStatus.PUBLISHED,
+                metadata__ceo_desk_request=True,
+                metadata__ceo_desk_request_key=request_key,
+            ).select_related("author"):
+                _append_entry(
+                    entries_by_user,
+                    post.author_id,
+                    occurred_at=post.published_at or post.created_at,
+                    amount=COIN_RULES[rule_key]["coins"],
+                    label=COIN_RULES[rule_key]["label"],
+                    summary=f"Approved '{post.title}'",
+                    kind="earned",
+                )
+
+    for row in (
+        Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__town_hall_response=True,
+        )
+        .values("author_id")
+        .order_by()
+        .annotate(count=Count("id"))
+    ):
+        user_id = row["author_id"]
+        amount = row["count"] * COIN_RULES["question_asked"]["coins"]
+        earned[user_id] += amount
+    if include_register:
+        for post in Post.objects.filter(
+            author_id__in=user_ids,
+            module=Post.Module.GENERAL,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata__town_hall_response=True,
+        ).select_related("author"):
+            _append_entry(
+                entries_by_user,
+                post.author_id,
+                occurred_at=post.published_at or post.created_at,
+                amount=COIN_RULES["question_asked"]["coins"],
+                label=COIN_RULES["question_asked"]["label"],
+                summary=f"Approved '{post.title}'",
                 kind="earned",
             )
 

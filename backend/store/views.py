@@ -135,6 +135,12 @@ def redemption_detail(request, redemption_id):
             BrandStoreRedemption.Status.FULFILLED,
         }:
             return JsonResponse({"detail": "Unsupported redemption status."}, status=400)
+        if status == BrandStoreRedemption.Status.APPROVED:
+            earned = earned_points_for_user(redemption.requester)
+            spent = spent_points_for_user(redemption.requester)
+            available = max(earned - spent, 0)
+            if available < redemption.points_locked:
+                return JsonResponse({"detail": "This employee no longer has enough Acuite Coins for approval."}, status=400)
         redemption.status = status
         redemption.admin_note = admin_note
         redemption.reviewed_at = timezone.now()

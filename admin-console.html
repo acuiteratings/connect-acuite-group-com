@@ -25,12 +25,165 @@
     </div>
   </header>
 
-  <main class="admin-console-main">
-    <section class="admin-console-card">
+  <div class="admin-console-shell">
+    <main class="admin-console-main">
+      <section class="admin-console-shortcuts">
+        <div class="admin-console-shortcuts-head">
+          <p class="admin-console-kicker">Quick links</p>
+          <h2>Jump to a control form</h2>
+        </div>
+        <nav class="admin-console-topnav" aria-label="Admin section shortcuts">
+          <a class="admin-console-pill" href="#admin-section-announcements">Announcements</a>
+          <a class="admin-console-pill" href="#admin-section-ceo-desk">MD &amp; CEO's Desk</a>
+          <a class="admin-console-pill" href="#admin-section-bulletin">Bulletin Board</a>
+          <a class="admin-console-pill" href="#admin-section-library">Library</a>
+          <a class="admin-console-pill" href="#admin-section-store">Brand Store</a>
+          <a class="admin-console-pill" href="#admin-section-approvals">Approvals</a>
+        </nav>
+      </section>
+
+    <section class="admin-console-card" id="admin-section-announcements">
       <div class="admin-console-card-head">
         <div>
           <span class="admin-console-index">01</span>
-          <h2>Birthdays</h2>
+          <h2>Announcements control</h2>
+          <p>Publish a primary company announcement from one place.</p>
+        </div>
+      </div>
+      <form id="admin-featured-announcement-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Announcement title</span>
+            <input type="text" name="headline" maxlength="160" placeholder="Quarterly town hall / Company update" required>
+          </label>
+          <label class="admin-field">
+            <span>Date line</span>
+            <input type="text" name="date_line" maxlength="80" placeholder="Thursday, 23 April 2026">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Write the announcement clearly." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This publishes a company announcement to the Bulletin Board.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish announcement</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card" id="admin-section-ceo-desk">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">02</span>
+          <h2>MD &amp; CEO's Desk control</h2>
+          <p>Publish the monthly editorial from leadership.</p>
+        </div>
+      </div>
+      <form id="admin-ceo-desk-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Editorial title</span>
+            <input type="text" name="headline" maxlength="160" placeholder="April 2026 note from the MD & CEO" required>
+          </label>
+          <label class="admin-field">
+            <span>Month label</span>
+            <input type="text" name="month_label" maxlength="80" placeholder="April 2026">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Editorial body</span>
+          <textarea name="note" rows="7" placeholder="Write the monthly note here." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This publishes to the MD &amp; CEO's Desk channel inside Connect.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish CEO editorial</button>
+        </div>
+      </form>
+      <div class="admin-form admin-library-layout admin-ceo-request-wrap">
+        <div class="admin-library-column">
+          <div class="admin-mini-head">
+            <h3>Incoming employee requests</h3>
+            <span id="admin-ceo-request-meta">Loading requests...</span>
+          </div>
+          <div class="admin-library-requisition-list" id="admin-ceo-request-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-console-card" id="admin-section-bulletin">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">03</span>
+          <h2>Bulletin Board control</h2>
+          <p>Publish a general bulletin post with the right category and optional action link.</p>
+        </div>
+      </div>
+      <form id="admin-bulletin-post-form" class="admin-form">
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Headline</span>
+            <input type="text" name="headline" maxlength="160" placeholder="Important internal notice" required>
+          </label>
+          <label class="admin-field">
+            <span>Category</span>
+            <select name="category">
+              <option value="announcements">Announcements</option>
+              <option value="hr">HR</option>
+              <option value="events">Events</option>
+              <option value="security">Security</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Meta line</span>
+            <input type="text" name="meta_line" maxlength="120" placeholder="Venue / team / deadline">
+          </label>
+        </div>
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="Optional link or email">
+          </label>
+          <label class="admin-field">
+            <span>Action label</span>
+            <input type="text" name="cta_label" maxlength="60" placeholder="Optional button label">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Write the bulletin note." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This publishes straight to the live Bulletin Board.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish bulletin post</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card" id="admin-section-approvals">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">04</span>
+          <h2>My Posts approvals</h2>
+          <p>Review employee submissions from My Posts and approve only the ones that should go live on the Bulletin Board.</p>
+        </div>
+      </div>
+      <div class="admin-form admin-library-layout">
+        <div class="admin-library-column">
+          <div class="admin-mini-head">
+            <h3>Pending review</h3>
+            <span id="admin-employee-post-meta">Loading employee submissions...</span>
+          </div>
+          <div class="admin-library-requisition-list" id="admin-employee-post-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">05</span>
+          <h2>Birthday cards</h2>
           <p>Review today’s birthdays, generate a card, and post it after checking the preview.</p>
         </div>
       </div>
@@ -57,7 +210,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">02</span>
+          <span class="admin-console-index">06</span>
           <h2>Work Anniversary</h2>
           <p>Review today’s anniversaries, generate a card, and post it after checking the preview.</p>
         </div>
@@ -82,29 +235,10 @@
       </div>
     </section>
 
-    <section class="admin-console-card">
+    <section class="admin-console-card" id="admin-section-library">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">03</span>
-          <h2>Approve employee posts</h2>
-          <p>Review employee submissions from My Posts and approve only the ones that should go live on the Bulletin Board.</p>
-        </div>
-      </div>
-      <div class="admin-form admin-library-layout">
-        <div class="admin-library-column">
-          <div class="admin-mini-head">
-            <h3>Pending review</h3>
-            <span id="admin-employee-post-meta">Loading employee submissions...</span>
-          </div>
-          <div class="admin-library-requisition-list" id="admin-employee-post-list"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="admin-console-card">
-      <div class="admin-console-card-head">
-        <div>
-          <span class="admin-console-index">04</span>
+          <span class="admin-console-index">07</span>
           <h2>Add a new book to library</h2>
           <p>Add a new title so it appears in the live Library catalog inside Connect.</p>
         </div>
@@ -162,7 +296,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">05</span>
+          <span class="admin-console-index">08</span>
           <h2>Approve book requisitions</h2>
           <p>Approve a request only after physically handing over the book to the employee.</p>
         </div>
@@ -185,10 +319,10 @@
       </div>
     </section>
 
-    <section class="admin-console-card">
+    <section class="admin-console-card" id="admin-section-store">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">06</span>
+          <span class="admin-console-index">09</span>
           <h2>Approve Brand Store requests</h2>
           <p>Approve only after the Acuite item has been physically handed over to the employee.</p>
         </div>
@@ -211,10 +345,70 @@
       </div>
     </section>
 
+    <section class="admin-console-card" id="admin-section-directory">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">10</span>
+          <h2>Directory control</h2>
+          <p>Publish a directory-related notice from the admin console.</p>
+        </div>
+      </div>
+      <form id="admin-directory-note-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Headline</span>
+            <input type="text" name="headline" maxlength="160" placeholder="Directory update / profile reminder" required>
+          </label>
+          <label class="admin-field">
+            <span>Meta line</span>
+            <input type="text" name="meta_line" maxlength="120" placeholder="Team / action / deadline">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Write the directory-related note." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This publishes a directory-related bulletin note.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish directory note</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card" id="admin-section-playtime">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">11</span>
+          <h2>Playtime control</h2>
+          <p>Publish a Playtime update or invite employees to a quiz or other game activity.</p>
+        </div>
+      </div>
+      <form id="admin-playtime-note-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Headline</span>
+            <input type="text" name="headline" maxlength="160" placeholder="Friday quiz challenge / Playtime update" required>
+          </label>
+          <label class="admin-field">
+            <span>Action target</span>
+            <input type="text" name="cta_target" maxlength="240" placeholder="Optional link or email">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea name="note" rows="4" placeholder="Write the Playtime note." required></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p>This publishes a Playtime-related post to the Bulletin Board.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish Playtime note</button>
+        </div>
+      </form>
+    </section>
+
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">07</span>
+          <span class="admin-console-index">12</span>
           <h2>Internal job post</h2>
           <p>Publish an internal opportunity to the bulletin board so employees can apply.</p>
         </div>
@@ -258,7 +452,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">09</span>
+          <span class="admin-console-index">13</span>
           <h2>Vacancies post</h2>
           <p>Publish a vacancy note to the bulletin board so employees can refer CVs.</p>
         </div>
@@ -302,7 +496,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">08</span>
+          <span class="admin-console-index">14</span>
           <h2>Announce Award</h2>
           <p>Publish an award announcement so employees can celebrate, like and comment.</p>
         </div>
@@ -336,7 +530,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">10</span>
+          <span class="admin-console-index">15</span>
           <h2>Announce Contest</h2>
           <p>Publish a contest with an action button so employees can register or show interest.</p>
         </div>
@@ -380,7 +574,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">11</span>
+          <span class="admin-console-index">16</span>
           <h2>Announce Sports Event</h2>
           <p>Publish a sports event with an action button so employees can book a slot or block the time.</p>
         </div>
@@ -424,7 +618,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">12</span>
+          <span class="admin-console-index">17</span>
           <h2>Announce Quiz</h2>
           <p>Publish a quiz announcement with a join action so employees can register quickly.</p>
         </div>
@@ -468,7 +662,7 @@
     <section class="admin-console-card">
       <div class="admin-console-card-head">
         <div>
-          <span class="admin-console-index">13</span>
+          <span class="admin-console-index">18</span>
           <h2>Announce Debate</h2>
           <p>Publish a debate session so employees can register, like and discuss around the post.</p>
         </div>
@@ -508,7 +702,8 @@
         </div>
       </form>
     </section>
-  </main>
+    </main>
+  </div>
 
   <footer class="admin-console-footer">
     <span>{{ build_credit }} | BUILD {{ build_number }}</span>

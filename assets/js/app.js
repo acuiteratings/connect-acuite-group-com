@@ -218,6 +218,21 @@ const BULLETIN_TEMPLATE_LIBRARY = [
       "We are planning an upcoming offsite focused on collaboration, reflection and future priorities. Please indicate your availability once dates and logistics are shared.",
   },
 ];
+const COMPANY_HOLIDAY_CALENDAR = [
+  { date: "2026-01-26", label: "Republic Day" },
+  { date: "2026-04-03", label: "Good Friday" },
+  { date: "2026-04-14", label: "Dr B. R. Ambedkar Jayanti" },
+  { date: "2026-05-01", label: "Maharashtra Day / Labour Day" },
+  { date: "2026-08-15", label: "Independence Day" },
+  { date: "2026-10-02", label: "Gandhi Jayanti" },
+  { date: "2026-12-25", label: "Christmas" },
+];
+const COMPANY_EVENT_CALENDAR = [
+  {
+    date: "2026-04-23",
+    label: "Town hall and leadership briefing",
+  },
+];
 
 const HOME_PILLARS = [
   {
@@ -374,6 +389,10 @@ const FEATURED_HOME_ANNOUNCEMENT = {
     start: "2026-04-23T16:00:00+05:30",
     end: "2026-04-23T17:30:00+05:30",
   },
+};
+const CEO_DESK_EDITORIAL = {
+  id: "ceo-desk-editorial-april-2026",
+  baseLikes: 24,
 };
 const CONNECT_BOOT_USER_KEY = "acuite-connect-boot-user";
 
@@ -1855,6 +1874,11 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "submit-ceo-request") {
+      await submitCeoDeskRequest(action.dataset.requestKey, action.dataset.requestLabel);
+      return;
+    }
+
     if (actionName === "close-profile-builder") {
       closeProfileBuilder();
       return;
@@ -2089,6 +2113,18 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target.id === "ceo-desk-comment-form") {
+    event.preventDefault();
+    void submitCeoDeskComment(event.target);
+    return;
+  }
+
+  if (event.target.id === "home-announcement-feedback-form") {
+    event.preventDefault();
+    void submitHomeAnnouncementFeedback(event.target);
+    return;
+  }
+
   if (event.target === elements.adminCreateUserForm) {
     event.preventDefault();
     void submitAdminCreateUser();
@@ -2182,6 +2218,9 @@ function renderAll() {
   renderUpcoming();
   renderPoll();
   renderSavedResources();
+  renderSidebarHolidays();
+  renderSidebarEvents();
+  renderCeoDeskLikeButton();
   syncFilterButtons();
 }
 
@@ -2532,6 +2571,8 @@ function renderHomeAnnouncement() {
   }
 
   const announcement = FEATURED_HOME_ANNOUNCEMENT;
+  const liked = state.likedPostIds.includes(announcement.id);
+  const totalLikes = Number(announcement.baseMetrics?.likes || 0) + (liked ? 1 : 0);
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -2565,11 +2606,144 @@ function renderHomeAnnouncement() {
       </div>
     </div>
     <div class="announcement-side announcement-side-actions">
-      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Post a Question</button>
-      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Share an Idea</button>
-      <button type="button" class="announcement-side-button" data-switch-tab="ideas-voice">Give a Suggestion</button>
+      <form class="announcement-feedback-form" id="home-announcement-feedback-form">
+        <label class="announcement-feedback-label" for="home-announcement-feedback-input">Post Your Idea, Suggestion, Question</label>
+        <textarea
+          id="home-announcement-feedback-input"
+          name="body"
+          class="announcement-feedback-input"
+          rows="5"
+          placeholder="Write one clear point for leadership here."
+        ></textarea>
+        <div class="announcement-feedback-actions">
+          <button type="submit" class="announcement-feedback-submit">Submit to Admin</button>
+          <span class="announcement-feedback-reward">Earn 1000 Acuite Coins</span>
+        </div>
+      </form>
+      <div class="announcement-like-row">
+        <button type="button" class="announcement-like-btn ${liked ? "liked" : ""}" data-action="toggle-like" data-id="${escapeHtml(announcement.id)}">
+          ${liked ? "Liked" : "Like"}
+        </button>
+        <span class="announcement-like-count">${escapeHtml(String(totalLikes))} like${totalLikes === 1 ? "" : "s"}</span>
+      </div>
     </div>
   `;
+}
+
+async function submitHomeAnnouncementFeedback(form) {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
+
+  const formData = new FormData(form);
+  const body = String(formData.get("body") || "").trim();
+  if (!body) {
+    showToast("Write your idea, suggestion, or question first.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title: "Town hall response",
+        body,
+        module: "general",
+        kind: "update",
+        topic: "employee_submission",
+        metadata: {
+          bulletin_category: "employee_posts",
+          submission_key: "town_hall_response",
+          submission_label: "Town hall response",
+          bulletin_meta_lines: [FEATURED_HOME_ANNOUNCEMENT.dateLabel],
+          town_hall_response: true,
+        },
+      },
+    });
+    form.reset();
+    showToast("Your note has been sent for admin review.");
+  } catch (error) {
+    showToast(error.message || "Could not send your note to admin.");
+  }
+}
+
+async function submitCeoDeskRequest(requestKey, requestLabel) {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
+
+  const safeLabel = String(requestLabel || "").trim();
+  if (!requestKey || !safeLabel) {
+    showToast("This request is not available right now.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title: safeLabel,
+        body: `Employee selected: ${safeLabel}`,
+        module: "general",
+        kind: "update",
+        topic: "employee_submission",
+        metadata: {
+          bulletin_category: "employee_posts",
+          submission_key: `ceo_request_${requestKey}`,
+          submission_label: "MD & CEO request",
+          bulletin_meta_lines: ["MD & CEO's Desk"],
+          ceo_desk_request: true,
+          ceo_desk_request_key: requestKey,
+          ceo_desk_request_label: safeLabel,
+        },
+      },
+    });
+    showToast("Your request has been sent to admin.");
+  } catch (error) {
+    showToast(error.message || "Could not send your request.");
+  }
+}
+
+async function submitCeoDeskComment(form) {
+  if (!currentUserCanCreatePosts()) {
+    showToast("Your posting access is currently disabled.");
+    return;
+  }
+
+  const formData = new FormData(form);
+  const body = String(formData.get("body") || "").trim();
+  if (!body) {
+    showToast("Write your comment first.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title: "MD & CEO desk comment",
+        body,
+        module: "general",
+        kind: "update",
+        topic: "employee_submission",
+        metadata: {
+          bulletin_category: "employee_posts",
+          submission_key: "ceo_desk_comment",
+          submission_label: "MD & CEO comment",
+          bulletin_meta_lines: ["MD & CEO's Desk"],
+          ceo_desk_request: true,
+          ceo_desk_request_key: "comment",
+          ceo_desk_request_label: "MD & CEO desk comment",
+        },
+      },
+    });
+    form.reset();
+    showToast("Your comment has been sent to admin.");
+  } catch (error) {
+    showToast(error.message || "Could not send your comment.");
+  }
 }
 
 function renderTodayPanel() {
@@ -3452,6 +3626,7 @@ function renderMyPostsPanel() {
   }
 
   syncMyPostsComposer();
+  renderMyPostsCoinBank();
 
   if (!elements.myPostsList || !elements.myPostsResultsMeta) {
     return;
@@ -3481,6 +3656,37 @@ function renderMyPostsPanel() {
       <div class="mini-item-meta">${escapeHtml(formatRelativeTime(post.publishedAt || post.createdAt))}</div>
     </article>
   `).join("");
+}
+
+function renderMyPostsCoinBank() {
+  const container = document.getElementById("my-posts-coin-bank");
+  if (!container) {
+    return;
+  }
+
+  const earned = Number(appData.storeBalance.earned_points || 0);
+  const spent = Number(appData.storeBalance.spent_points || 0);
+  const balance = Math.max(earned - spent, 0);
+
+  container.innerHTML = `
+    <p class="widget-kicker">Acuite Coin Bank</p>
+    <h3>${escapeHtml(String(balance))} balance</h3>
+    <ul class="simple-list">
+      <li>Earned: ${escapeHtml(String(earned))} coins</li>
+      <li>Spent: ${escapeHtml(String(spent))} coins</li>
+    </ul>
+  `;
+}
+
+function renderCeoDeskLikeButton() {
+  const button = document.getElementById("ceo-desk-like-btn");
+  if (!button) {
+    return;
+  }
+  const liked = state.likedPostIds.includes(CEO_DESK_EDITORIAL.id);
+  const totalLikes = CEO_DESK_EDITORIAL.baseLikes + (liked ? 1 : 0);
+  button.textContent = `${liked ? "Liked" : "Like"} (${totalLikes})`;
+  button.classList.toggle("liked", liked);
 }
 
 function renderAdminPanel() {
@@ -5891,6 +6097,88 @@ function formatDisplayDate(value) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatMonthDay(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function renderSidebarHolidays() {
+  const container = document.getElementById("sidebar-holidays-list");
+  if (!container) {
+    return;
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const todayStamp = new Date(year, month, now.getDate()).getTime();
+  const upcoming = COMPANY_HOLIDAY_CALENDAR
+    .map((item) => ({
+      ...item,
+      parsedDate: new Date(`${item.date}T00:00:00`),
+    }))
+    .filter((item) => !Number.isNaN(item.parsedDate.getTime()))
+    .filter((item) => item.parsedDate.getFullYear() === year && item.parsedDate.getMonth() === month)
+    .filter((item) => item.parsedDate.getTime() >= todayStamp)
+    .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
+
+  if (!upcoming.length) {
+    container.innerHTML = '<div class="empty-state">No more published holidays this month.</div>';
+    return;
+  }
+
+  container.className = "sidebar-holiday-list";
+  container.innerHTML = upcoming.map((item) => `
+    <article class="sidebar-holiday-item">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(formatMonthDay(item.date))}</span>
+    </article>
+  `).join("");
+}
+
+function renderSidebarEvents() {
+  const container = document.getElementById("sidebar-events-list");
+  if (!container) {
+    return;
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const todayStamp = new Date(year, month, now.getDate()).getTime();
+  const upcoming = COMPANY_EVENT_CALENDAR
+    .map((item) => ({
+      ...item,
+      parsedDate: new Date(`${item.date}T00:00:00`),
+    }))
+    .filter((item) => !Number.isNaN(item.parsedDate.getTime()))
+    .filter((item) => item.parsedDate.getFullYear() === year && item.parsedDate.getMonth() === month)
+    .filter((item) => item.parsedDate.getTime() >= todayStamp)
+    .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
+
+  if (!upcoming.length) {
+    container.innerHTML = '<div class="empty-state">No more published events this month.</div>';
+    return;
+  }
+
+  container.className = "sidebar-holiday-list";
+  container.innerHTML = upcoming.map((item) => `
+    <article class="sidebar-holiday-item">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(formatMonthDay(item.date))}</span>
+    </article>
+  `).join("");
 }
 
 function formatRelativeTime(value) {

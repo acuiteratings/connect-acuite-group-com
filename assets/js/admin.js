@@ -18,6 +18,7 @@
       birthday: null,
       anniversary: null,
     },
+    employeePosts: [],
     selectedExitEmployeeId: 0,
     toastTimer: null,
   };
@@ -44,7 +45,14 @@
     cacheElements();
     bindEvents();
     renderCurrentUser();
-    await Promise.all([loadUsers(), loadExitProcesses(), loadCelebrations(), loadLibraryAdminData(), loadStoreAdminData()]);
+    await Promise.all([
+      loadUsers(),
+      loadExitProcesses(),
+      loadCelebrations(),
+      loadLibraryAdminData(),
+      loadStoreAdminData(),
+      loadEmployeePosts(),
+    ]);
     renderAll();
   }
 
@@ -52,6 +60,9 @@
     elements = {
       userName: document.getElementById("admin-console-user-name"),
       toast: document.getElementById("admin-toast"),
+      featuredAnnouncementForm: document.getElementById("admin-featured-announcement-form"),
+      ceoDeskForm: document.getElementById("admin-ceo-desk-form"),
+      bulletinPostForm: document.getElementById("admin-bulletin-post-form"),
       onboardForm: document.getElementById("admin-onboard-form"),
       exitSearchInput: document.getElementById("admin-exit-search"),
       exitSearchHelp: document.getElementById("admin-exit-search-help"),
@@ -69,6 +80,10 @@
       anniversaryResultsMeta: document.getElementById("admin-anniversary-results-meta"),
       anniversaryPreviewShell: document.getElementById("admin-anniversary-preview-shell"),
       anniversaryPreviewMeta: document.getElementById("admin-anniversary-preview-meta"),
+      employeePostList: document.getElementById("admin-employee-post-list"),
+      employeePostMeta: document.getElementById("admin-employee-post-meta"),
+      ceoRequestList: document.getElementById("admin-ceo-request-list"),
+      ceoRequestMeta: document.getElementById("admin-ceo-request-meta"),
       libraryBookForm: document.getElementById("admin-library-book-form"),
       libraryRequisitionList: document.getElementById("admin-library-requisition-list"),
       libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
@@ -85,6 +100,8 @@
       sportsForm: document.getElementById("admin-sports-form"),
       quizForm: document.getElementById("admin-quiz-form"),
       debateForm: document.getElementById("admin-debate-form"),
+      directoryNoteForm: document.getElementById("admin-directory-note-form"),
+      playtimeNoteForm: document.getElementById("admin-playtime-note-form"),
     };
   }
 
@@ -123,11 +140,20 @@
     state.store.handedOver = Array.isArray(payload.handed_over) ? payload.handed_over : [];
   }
 
+  async function loadEmployeePosts() {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=general&topic=employee_submission");
+    state.employeePosts = Array.isArray(payload.results)
+      ? payload.results.filter((post) => String(post.moderation_status || "").toLowerCase() === "pending_review")
+      : [];
+  }
+
   function renderAll() {
     renderExitSearchResults();
     renderExitProcessList();
     syncExitForm();
     renderCelebrationSections();
+    renderEmployeePosts();
+    renderCeoRequests();
     renderLibraryAdmin();
     renderStoreAdmin();
   }
@@ -212,9 +238,37 @@
       void updateStoreRedemption(Number(action.dataset.id || 0), "declined");
       return;
     }
+
+    if (action.dataset.action === "approve-employee-post") {
+      void reviewEmployeePost(Number(action.dataset.id || 0), "published");
+      return;
+    }
+
+    if (action.dataset.action === "reject-employee-post") {
+      void reviewEmployeePost(Number(action.dataset.id || 0), "rejected");
+      return;
+    }
   }
 
   function handleSubmit(event) {
+    if (event.target === elements.featuredAnnouncementForm) {
+      event.preventDefault();
+      void submitFeaturedAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.ceoDeskForm) {
+      event.preventDefault();
+      void submitCeoDeskEditorial();
+      return;
+    }
+
+    if (event.target === elements.bulletinPostForm) {
+      event.preventDefault();
+      void submitBulletinPost();
+      return;
+    }
+
     if (event.target === elements.onboardForm) {
       event.preventDefault();
       void submitOnboarding();
@@ -266,6 +320,18 @@
     if (event.target === elements.debateForm) {
       event.preventDefault();
       void submitDebateAnnouncement();
+      return;
+    }
+
+    if (event.target === elements.directoryNoteForm) {
+      event.preventDefault();
+      void submitDirectoryNote();
+      return;
+    }
+
+    if (event.target === elements.playtimeNoteForm) {
+      event.preventDefault();
+      void submitPlaytimeNote();
       return;
     }
 
@@ -375,6 +441,87 @@
     renderCelebrationList("anniversary");
     renderCelebrationPreview("birthday");
     renderCelebrationPreview("anniversary");
+  }
+
+  function renderEmployeePosts() {
+    if (!elements.employeePostList || !elements.employeePostMeta) {
+      return;
+    }
+
+    elements.employeePostMeta.textContent = state.employeePosts.length
+      ? `${state.employeePosts.length} pending submission${state.employeePosts.length === 1 ? "" : "s"}`
+      : "No employee submissions are waiting";
+
+    if (!state.employeePosts.length) {
+      elements.employeePostList.innerHTML = '<div class="celebration-empty">No employee posts are waiting for approval right now.</div>';
+      return;
+    }
+
+    elements.employeePostList.innerHTML = state.employeePosts.map((post) => {
+      const metadata = post.metadata || {};
+      if (metadata.ceo_desk_request) {
+        return "";
+      }
+      const metaLines = Array.isArray(metadata.bulletin_meta_lines)
+        ? metadata.bulletin_meta_lines.filter((line) => typeof line === "string" && line.trim())
+        : [];
+      return `
+        <article class="admin-library-requisition-card">
+          <div class="admin-library-requisition-head">
+            <div>
+              <h4>${escapeHtml(post.title || "Untitled post")}</h4>
+              <p>${escapeHtml([
+                metadata.submission_label || "Employee post",
+                post.author?.name,
+                post.author?.email,
+              ].filter(Boolean).join(" | "))}</p>
+            </div>
+            <span class="admin-process-stage">Pending review</span>
+          </div>
+          ${metaLines.length ? `<div class="celebration-row-meta">${metaLines.map((line) => `<span class="admin-flag">${escapeHtml(line)}</span>`).join("")}</div>` : ""}
+          <p class="admin-library-note">${escapeHtml(post.body || "")}</p>
+          <div class="celebration-preview-actions">
+            <button type="button" class="admin-btn admin-btn-primary" data-action="approve-employee-post" data-id="${post.id}">Approve</button>
+            <button type="button" class="admin-btn admin-btn-danger" data-action="reject-employee-post" data-id="${post.id}">Reject</button>
+          </div>
+        </article>
+      `;
+    }).filter(Boolean).join("");
+  }
+
+  function renderCeoRequests() {
+    if (!elements.ceoRequestList || !elements.ceoRequestMeta) {
+      return;
+    }
+
+    const requests = state.employeePosts.filter((post) => Boolean(post.metadata?.ceo_desk_request));
+    elements.ceoRequestMeta.textContent = requests.length
+      ? `${requests.length} request${requests.length === 1 ? "" : "s"} waiting`
+      : "No requests have been clicked yet";
+
+    if (!requests.length) {
+      elements.ceoRequestList.innerHTML = '<div class="celebration-empty">Employee clicks from the MD & CEO\'s Desk will appear here.</div>';
+      return;
+    }
+
+    elements.ceoRequestList.innerHTML = requests.map((post) => `
+      <article class="admin-library-requisition-card">
+        <div class="admin-library-requisition-head">
+          <div>
+            <h4>${escapeHtml(post.metadata?.ceo_desk_request_label || post.title || "MD & CEO request")}</h4>
+            <p>${escapeHtml([post.author?.name, post.author?.email].filter(Boolean).join(" | "))}</p>
+          </div>
+          <span class="admin-process-stage">Pending review</span>
+        </div>
+        <div class="celebration-row-meta">
+          <span class="admin-flag">MD &amp; CEO's Desk</span>
+        </div>
+        <div class="celebration-preview-actions">
+          <button type="button" class="admin-btn admin-btn-primary" data-action="approve-employee-post" data-id="${post.id}">Approve</button>
+          <button type="button" class="admin-btn admin-btn-danger" data-action="reject-employee-post" data-id="${post.id}">Reject</button>
+        </div>
+      </article>
+    `).join("");
   }
 
   function renderLibraryAdmin() {
@@ -672,6 +819,23 @@
       showToast("Book added to the Library catalog.");
     } catch (error) {
       showToast(error.message || "Could not add the book.");
+    }
+  }
+
+  async function reviewEmployeePost(postId, moderationStatus) {
+    if (!postId) {
+      return;
+    }
+    try {
+      await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${postId}/`, {
+        method: "PATCH",
+        body: { moderation_status: moderationStatus },
+      });
+      await loadEmployeePosts();
+      renderEmployeePosts();
+      showToast(moderationStatus === "published" ? "Employee post approved and published." : "Employee post rejected.");
+    } catch (error) {
+      showToast(error.message || "Could not review the employee post.");
     }
   }
 
@@ -990,6 +1154,128 @@
       templateKey: "debate",
       defaultActionLabel: "Join debate",
       successMessage: "Debate announcement published to the bulletin board.",
+    });
+  }
+
+  async function submitFeaturedAnnouncement() {
+    const formData = new FormData(elements.featuredAnnouncementForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const dateLine = String(formData.get("date_line") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !note) {
+      showToast("Add the announcement headline and message.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.featuredAnnouncementForm,
+      title: headline,
+      body: note,
+      category: "announcements",
+      templateKey: "featured_announcement",
+      metadata: {
+        bulletin_meta_lines: dateLine ? [dateLine] : [],
+      },
+      successMessage: "Announcement published to the Bulletin Board.",
+    });
+  }
+
+  async function submitCeoDeskEditorial() {
+    const formData = new FormData(elements.ceoDeskForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const monthLabel = String(formData.get("month_label") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !note) {
+      showToast("Add the editorial title and body.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.ceoDeskForm,
+      title: headline,
+      body: note,
+      category: "announcements",
+      templateKey: "ceo_editorial",
+      metadata: {
+        bulletin_meta_lines: monthLabel ? [monthLabel] : [],
+        bulletin_channel: "ceo_desk",
+      },
+      successMessage: "MD & CEO editorial published.",
+    });
+  }
+
+  async function submitBulletinPost() {
+    const formData = new FormData(elements.bulletinPostForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const category = String(formData.get("category") || "announcements").trim();
+    const metaLine = String(formData.get("meta_line") || "").trim();
+    const ctaTarget = String(formData.get("cta_target") || "").trim();
+    const ctaLabel = String(formData.get("cta_label") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !note) {
+      showToast("Add the bulletin headline and message.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.bulletinPostForm,
+      title: headline,
+      body: note,
+      category,
+      templateKey: "bulletin_post",
+      metadata: {
+        bulletin_meta_lines: metaLine ? [metaLine] : [],
+        bulletin_cta_target: ctaTarget ? normalizeActionTarget(ctaTarget) : "",
+        bulletin_cta_label: ctaLabel,
+      },
+      successMessage: "Bulletin post published.",
+    });
+  }
+
+  async function submitDirectoryNote() {
+    const formData = new FormData(elements.directoryNoteForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const metaLine = String(formData.get("meta_line") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !note) {
+      showToast("Add the directory headline and message.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.directoryNoteForm,
+      title: headline,
+      body: note,
+      category: "hr",
+      templateKey: "directory_note",
+      metadata: {
+        bulletin_meta_lines: metaLine ? [metaLine] : [],
+      },
+      successMessage: "Directory note published.",
+    });
+  }
+
+  async function submitPlaytimeNote() {
+    const formData = new FormData(elements.playtimeNoteForm);
+    const headline = String(formData.get("headline") || "").trim();
+    const ctaTarget = String(formData.get("cta_target") || "").trim();
+    const note = String(formData.get("note") || "").trim();
+    if (!headline || !note) {
+      showToast("Add the Playtime headline and message.");
+      return;
+    }
+
+    await publishBulletinPost({
+      form: elements.playtimeNoteForm,
+      title: headline,
+      body: note,
+      category: "events",
+      templateKey: "playtime_note",
+      metadata: {
+        bulletin_cta_target: ctaTarget ? normalizeActionTarget(ctaTarget) : "",
+        bulletin_cta_label: ctaTarget ? "Open" : "",
+      },
+      successMessage: "Playtime note published.",
     });
   }
 

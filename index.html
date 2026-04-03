@@ -122,6 +122,14 @@
         </svg>
         ADMIN
       </button>
+      <section class="sidebar-widget" id="sidebar-holidays-card">
+        <p class="widget-kicker">Upcoming Holidays</p>
+        <div id="sidebar-holidays-list"></div>
+      </section>
+      <section class="sidebar-widget" id="sidebar-events-card">
+        <p class="widget-kicker">Upcoming Events</p>
+        <div id="sidebar-events-list"></div>
+      </section>
     </aside>
 
     <main class="main">
@@ -155,6 +163,9 @@
               <p>Thank you for the work you do, and for the seriousness with which you do it.</p>
               <p>Warm regards,<br>MD &amp; CEO</p>
             </div>
+            <div class="ceo-desk-actions">
+              <button type="button" class="ceo-desk-like-btn" id="ceo-desk-like-btn" data-action="toggle-like" data-id="ceo-desk-editorial-april-2026">Like</button>
+            </div>
           </section>
 
           <aside class="stack-side">
@@ -162,13 +173,40 @@
               <p class="widget-kicker">Reach Leadership</p>
               <h3>Available links</h3>
               <div class="ceo-desk-links">
-                <button type="button" class="ceo-desk-link">Coffee with CEO</button>
-                <button type="button" class="ceo-desk-link">Ask a Question</button>
-                <button type="button" class="ceo-desk-link">Invite for an internal meeting</button>
-                <button type="button" class="ceo-desk-link">Share an idea</button>
-                <button type="button" class="ceo-desk-link">Share knowledge with him</button>
-                <button type="button" class="ceo-desk-link">Ask for coaching</button>
+                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="masala_chai" data-request-label="Ready for a cup of masala chai with me?">
+                  <span>Ready for a cup of masala chai with me?</span>
+                  <strong>Earn 100 Acuite Coins</strong>
+                </button>
+                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="meet_client" data-request-label="Let us go and meet a client!">
+                  <span>Let us go and meet a client!</span>
+                  <strong>Earn 5000 Acuite Coins</strong>
+                </button>
+                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="share_idea" data-request-label="Do you want to share an idea?">
+                  <span>Do you want to share an idea?</span>
+                  <strong>Earn 1000 Acuite Coins</strong>
+                </button>
+                <button type="button" class="ceo-desk-link" data-action="submit-ceo-request" data-request-key="coaching" data-request-label="Can I help you with coaching?">
+                  <span>Can I help you with coaching?</span>
+                  <strong>Earn 2000 Acuite Coins</strong>
+                </button>
               </div>
+            </div>
+            <div class="widget-card ceo-desk-comment-card">
+              <p class="widget-kicker">Comment to Leadership</p>
+              <form id="ceo-desk-comment-form" class="ceo-desk-comment-form">
+                <textarea
+                  id="ceo-desk-comment-input"
+                  name="body"
+                  rows="7"
+                  maxlength="1200"
+                  placeholder="Write your comment clearly here."
+                  required
+                ></textarea>
+                <div class="ceo-desk-comment-actions">
+                  <button type="submit" class="btn-warm">Submit to Admin</button>
+                  <span class="ceo-desk-comment-reward">Earn 1000 Acuite Coins</span>
+                </div>
+              </form>
             </div>
           </aside>
         </div>
@@ -736,6 +774,7 @@
           </section>
 
           <aside class="stack-side">
+            <div class="widget-card" id="my-posts-coin-bank"></div>
             <div class="widget-card">
               <p class="widget-kicker">My submissions</p>
               <h3>Recent status</h3>
