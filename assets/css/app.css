@@ -476,6 +476,67 @@ select {
   font-weight: 600;
 }
 
+.holiday-layout {
+  align-items: start;
+}
+
+.holiday-calendar-card {
+  margin-top: 20px;
+}
+
+.holiday-list {
+  display: grid;
+  gap: 14px;
+}
+
+.holiday-list-compact {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.holiday-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: grid;
+  gap: 8px;
+}
+
+.holiday-card-highlight {
+  background: linear-gradient(135deg, rgba(247, 148, 29, 0.08), rgba(141, 198, 63, 0.08)), var(--bg);
+}
+
+.holiday-card h3 {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.holiday-card p:last-child {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.holiday-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.holiday-applicability {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
 .main {
   margin-left: var(--sidebar-left-w);
   margin-right: var(--sidebar-right-w);

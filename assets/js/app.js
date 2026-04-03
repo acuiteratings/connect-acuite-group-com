@@ -34,7 +34,7 @@ const STORE_CATEGORY_LABELS = {
 };
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
-const ENABLED_TABS = new Set(["home", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory"]);
+const ENABLED_TABS = new Set(["home", "holidays", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -147,13 +147,20 @@ const DEFAULT_CEO_DESK_ARCHIVE = [
   { date: "April 1, 2024", title: "April 2024 message" },
 ];
 const COMPANY_HOLIDAY_CALENDAR = [
-  { date: "2026-01-26", label: "Republic Day" },
-  { date: "2026-04-03", label: "Good Friday" },
-  { date: "2026-04-14", label: "Dr B. R. Ambedkar Jayanti" },
-  { date: "2026-05-01", label: "Maharashtra Day / Labour Day" },
-  { date: "2026-08-15", label: "Independence Day" },
-  { date: "2026-10-02", label: "Gandhi Jayanti" },
-  { date: "2026-12-25", label: "Christmas" },
+  { date: "2026-04-14", label: "Tamil New Year", applicability: "Chennai" },
+  { date: "2026-05-01", label: "Maharashtra Day", applicability: "All Offices" },
+  { date: "2026-06-02", label: "Telangana Foundation Day", applicability: "Hyderabad" },
+  { date: "2026-08-15", label: "Independence Day", applicability: "All Offices" },
+  { date: "2026-09-04", label: "Janmashtami", applicability: "Delhi" },
+  { date: "2026-09-14", label: "Ganesh Chaturthi", applicability: "Mumbai, Chennai, Hyderabad, Bangalore, Ahmedabad" },
+  { date: "2026-10-02", label: "Gandhi Jayanti", applicability: "All Offices" },
+  { date: "2026-10-19", label: "Durgapuja Nabami", applicability: "Kolkata" },
+  { date: "2026-10-20", label: "Dussehra", applicability: "All Offices" },
+  { date: "2026-11-01", label: "Karnataka Day", applicability: "Bangalore" },
+  { date: "2026-11-08", label: "Diwali (Laxmi Pujan)", applicability: "All Offices" },
+  { date: "2026-11-10", label: "Vikram Samvat New Year", applicability: "Ahmedabad" },
+  { date: "2026-11-24", label: "Guru Nanak Jayanti", applicability: "Delhi" },
+  { date: "2026-12-25", label: "Christmas", applicability: "All Offices" },
 ];
 const COMPANY_EVENT_CALENDAR = [
   {
@@ -548,19 +555,28 @@ function consumeBootSession() {
   }
 }
 
+function safeRender(label, renderFn) {
+  try {
+    renderFn();
+  } catch (error) {
+    console.error(`Could not render ${label}.`, error);
+  }
+}
+
 function renderShell() {
-  renderPanels();
-  renderProfile();
-  renderProfileBuilder();
-  renderCommentsModal();
-  syncComposerAccess();
-  renderHomeAnnouncement();
-  renderBirthdays();
-  renderAnniversaries();
-  renderSidebarHolidays();
-  renderSidebarEvents();
-  renderCeoDeskLikeButton();
-  syncFilterButtons();
+  safeRender("panels", renderPanels);
+  safeRender("profile", renderProfile);
+  safeRender("profile builder", renderProfileBuilder);
+  safeRender("comments modal", renderCommentsModal);
+  safeRender("composer access", syncComposerAccess);
+  safeRender("home announcement", renderHomeAnnouncement);
+  safeRender("holiday panel", renderHolidayPanel);
+  safeRender("birthdays", renderBirthdays);
+  safeRender("anniversaries", renderAnniversaries);
+  safeRender("sidebar holidays", renderSidebarHolidays);
+  safeRender("sidebar events", renderSidebarEvents);
+  safeRender("CEO desk like button", renderCeoDeskLikeButton);
+  safeRender("filter buttons", syncFilterButtons);
 }
 
 async function init() {
@@ -1218,27 +1234,28 @@ function handleSearchKeydown(event) {
 }
 
 function renderAll() {
-  applyTheme();
-  renderPanels();
-  renderProfile();
-  renderProfileBuilder();
-  renderCommentsModal();
-  syncComposerAccess();
-  renderCeoDeskMessage();
-  renderHomeAnnouncement();
-  renderStorePanel();
-  renderLearningPanel();
-  renderBulletinPanel();
-  renderMyPostsPanel();
-  renderAdminPanel();
-  renderDirectoryChips();
-  renderDirectory();
-  renderBirthdays();
-  renderAnniversaries();
-  renderSidebarHolidays();
-  renderSidebarEvents();
-  renderCeoDeskLikeButton();
-  syncFilterButtons();
+  safeRender("theme", applyTheme);
+  safeRender("panels", renderPanels);
+  safeRender("profile", renderProfile);
+  safeRender("profile builder", renderProfileBuilder);
+  safeRender("comments modal", renderCommentsModal);
+  safeRender("composer access", syncComposerAccess);
+  safeRender("CEO desk message", renderCeoDeskMessage);
+  safeRender("home announcement", renderHomeAnnouncement);
+  safeRender("holiday panel", renderHolidayPanel);
+  safeRender("store panel", renderStorePanel);
+  safeRender("library panel", renderLearningPanel);
+  safeRender("bulletin panel", renderBulletinPanel);
+  safeRender("my posts panel", renderMyPostsPanel);
+  safeRender("admin panel", renderAdminPanel);
+  safeRender("directory filters", renderDirectoryChips);
+  safeRender("directory", renderDirectory);
+  safeRender("birthdays", renderBirthdays);
+  safeRender("anniversaries", renderAnniversaries);
+  safeRender("sidebar holidays", renderSidebarHolidays);
+  safeRender("sidebar events", renderSidebarEvents);
+  safeRender("CEO desk like button", renderCeoDeskLikeButton);
+  safeRender("filter buttons", syncFilterButtons);
 }
 
 function renderCeoDeskMessage() {
@@ -1958,8 +1975,6 @@ function renderLearningPanel() {
   renderLearningSummary();
   renderLearningBooks();
   renderLearningIssuedBooks();
-  renderLearningRequisitions();
-  renderLearningGuideCards();
 }
 
 function renderStorePanel() {
@@ -2034,14 +2049,18 @@ function renderStoreSummary() {
 
 function renderStoreCatalog() {
   const container = document.getElementById("store-catalog-grid");
+  const meta = document.getElementById("store-results-meta");
+  if (!container || !meta) {
+    return;
+  }
   if (storeLoadError) {
-    document.getElementById("store-results-meta").textContent = "Store load issue";
+    meta.textContent = "Store load issue";
     container.innerHTML = `<div class="empty-state">${escapeHtml(storeLoadError)}</div>`;
     return;
   }
 
   const items = getFilteredStoreItems();
-  document.getElementById("store-results-meta").textContent = appData.storeItems.length
+  meta.textContent = appData.storeItems.length
     ? `${items.length} of ${appData.storeItems.length} brand-store items shown`
     : "Live Acuité brand-store catalog";
 
@@ -2457,7 +2476,11 @@ function applyBulletinTemplate(templateKey) {
 }
 
 function renderBirthdays() {
-  document.getElementById("birthdays-list").innerHTML = appData.birthdays.length ? appData.birthdays.map((person) => `
+  const container = document.getElementById("birthdays-list");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = appData.birthdays.length ? appData.birthdays.map((person) => `
     <div class="bday-item">
       <div class="bday-avatar" style="background:${gradientValue(person.gradient || gradientKeyFromText(person.name))}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
@@ -2469,7 +2492,11 @@ function renderBirthdays() {
 }
 
 function renderAnniversaries() {
-  document.getElementById("anniversaries-list").innerHTML = appData.anniversaries.length ? appData.anniversaries.map((person) => `
+  const container = document.getElementById("anniversaries-list");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = appData.anniversaries.length ? appData.anniversaries.map((person) => `
     <div class="bday-item">
       <div class="bday-avatar" style="background:${gradientValue(person.gradient || gradientKeyFromText(person.name))}">${escapeHtml(person.initials)}</div>
       <div class="bday-info">
@@ -2478,6 +2505,87 @@ function renderAnniversaries() {
       </div>
     </div>
   `).join("") : `<div class="empty-state">Work anniversary highlights will appear here later.</div>`;
+}
+
+function renderLearningSummary() {
+  const container = document.getElementById("learning-summary-grid");
+  if (!container) {
+    return;
+  }
+
+  const filteredBooks = getFilteredLearningBooks();
+  const availableTitles = appData.learningBooks.filter((book) => Number(book.available_copies || 0) > 0).length;
+  const categoryCount = new Set(appData.learningBooks.map((book) => book.category).filter(Boolean)).size;
+
+  container.innerHTML = [
+    {
+      kicker: "Library",
+      title: `${appData.learningBooks.length} titles`,
+      copy: "Internal catalog titles ready for employee requisitions.",
+    },
+    {
+      kicker: "Shelves",
+      title: `${categoryCount} categories`,
+      copy: "Grouped into shelf-style rows for easier browsing.",
+    },
+    {
+      kicker: "Available",
+      title: `${availableTitles} ready now`,
+      copy: filteredBooks.length
+        ? `${filteredBooks.length} titles match your current search.`
+        : "Search the catalog to find the right title faster.",
+    },
+  ].map((item) => `
+    <article class="mini-panel">
+      <p class="widget-kicker">${escapeHtml(item.kicker)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="muted-copy">${escapeHtml(item.copy)}</p>
+    </article>
+  `).join("");
+}
+
+function renderLearningBooks() {
+  const container = document.getElementById("learning-book-grid");
+  const meta = document.getElementById("learning-results-meta");
+  if (!container || !meta) {
+    return;
+  }
+
+  if (elements.learningBookSearchInput) {
+    elements.learningBookSearchInput.value = state.learningBookQuery;
+  }
+
+  if (learningLoadError) {
+    meta.textContent = "Library load issue";
+    container.innerHTML = `<div class="empty-state">${escapeHtml(learningLoadError)}</div>`;
+    return;
+  }
+
+  const books = getFilteredLearningBooks();
+  meta.textContent = appData.learningBooks.length
+    ? `${books.length} of ${appData.learningBooks.length} titles shown`
+    : "Live Acuité library catalog";
+
+  if (!appData.learningBooks.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        The book catalog is empty right now. Once admins upload titles in the backend, employees will be able to requisition them here.
+      </div>
+    `;
+    return;
+  }
+
+  if (!books.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No titles match that search. Try a broader title or author search.
+      </div>
+    `;
+    return;
+  }
+
+  const groupedBooks = groupLearningBooksByCategory(books);
+  container.innerHTML = groupedBooks.map(([category, items]) => renderLearningShelf(category, items)).join("");
 }
 
 function renderLearningBookCard(book) {
@@ -3339,6 +3447,112 @@ function displayDirectoryFilterLabel(groupId, value) {
   return value;
 }
 
+function renderDirectoryChips() {
+  const container = document.getElementById("directory-filter-groups");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = DIRECTORY_FILTER_GROUPS.map((groupId) => {
+    const options = directoryFilterOptions[groupId] || [];
+    const selectedValues = state.directoryFilters[groupId] || [];
+    const buttons = [{ value: "all", label: "All" }, ...options.map((value) => ({
+      value,
+      label: displayDirectoryFilterLabel(groupId, value),
+    }))];
+
+    return `
+      <div class="directory-filter-group">
+        <div class="directory-filter-title">${escapeHtml(DIRECTORY_FILTER_GROUP_LABELS[groupId])}</div>
+        <div class="directory-filter-buttons">
+          ${buttons.map((option) => `
+            <button
+              type="button"
+              class="${isDirectoryFilterOptionActive(selectedValues, option.value) ? "active" : ""}"
+              data-directory-filter-group="${groupId}"
+              data-directory-filter-value="${escapeHtml(option.value)}"
+            >
+              ${escapeHtml(option.label)}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderDirectory() {
+  const resultsMeta = document.getElementById("directory-results-meta");
+  const grid = document.getElementById("directory-grid");
+  if (!resultsMeta || !grid) {
+    return;
+  }
+
+  if (elements.directorySearchInput) {
+    elements.directorySearchInput.value = state.directoryQuery;
+  }
+
+  const query = state.directoryQuery.trim().toLowerCase();
+  const selectedCompanies = state.directoryFilters.company || [];
+  const selectedLocations = state.directoryFilters.location || [];
+  const selectedDepartments = state.directoryFilters.department || [];
+  const filtered = appData.directory.filter((person) => {
+    if (selectedCompanies.length && !selectedCompanies.includes(person.company)) {
+      return false;
+    }
+    if (selectedLocations.length && !selectedLocations.includes(person.office)) {
+      return false;
+    }
+    if (selectedDepartments.length && !selectedDepartments.includes(person.departmentForConnect)) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+    return person.searchText.includes(query);
+  });
+
+  if (directoryLoadError) {
+    resultsMeta.textContent = "Directory load issue";
+    grid.innerHTML = `<div class="empty-state">${escapeHtml(directoryLoadError)}</div>`;
+    return;
+  }
+
+  resultsMeta.textContent = appData.directory.length
+    ? `${filtered.length} of ${appData.directory.length} employees shown`
+    : "Live employee directory";
+
+  if (!appData.directory.length) {
+    grid.innerHTML = `<div class="empty-state">The people directory will appear here once the live employee import completes.</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.length
+    ? filtered.map((person) => `
+      <article class="person-card" id="${person.id}">
+        <div class="person-head">
+          ${renderDirectoryAvatar(person)}
+          <div class="person-meta">
+            <h3>${escapeHtml(person.name)}</h3>
+            <div class="person-role">${escapeHtml(person.role)}</div>
+            <div class="person-location">${escapeHtml(person.officeLine)}</div>
+          </div>
+        </div>
+        <div class="person-detail-grid">
+          ${directoryCardDetail("Employee Code", person.employeeCode)}
+          ${directoryCardDetail("Company", person.companyLabel || person.company)}
+          ${directoryCardDetail("Office", person.office)}
+          ${directoryCardDetail("Coins", person.coinBalance)}
+        </div>
+        <div class="person-footer">
+          <span class="availability">${escapeHtml(person.contactLine)}</span>
+          <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View details</button>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="empty-state">No people matched that filter. Try a broader company, location, or department selection.</div>`;
+}
+
 function gradientValue(key) {
   return gradients[key] || gradients.warm;
 }
@@ -3384,17 +3598,28 @@ function formatMonthDay(value) {
   });
 }
 
-function renderSidebarHolidays() {
-  const container = document.getElementById("sidebar-holidays-list");
-  if (!container) {
-    return;
+function formatHolidayLongDate(value) {
+  if (!value) {
+    return "";
   }
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
+function getCurrentMonthHolidayItems() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const todayStamp = new Date(year, month, now.getDate()).getTime();
-  const upcoming = COMPANY_HOLIDAY_CALENDAR
+  return COMPANY_HOLIDAY_CALENDAR
     .map((item) => ({
       ...item,
       parsedDate: new Date(`${item.date}T00:00:00`),
@@ -3403,6 +3628,15 @@ function renderSidebarHolidays() {
     .filter((item) => item.parsedDate.getFullYear() === year && item.parsedDate.getMonth() === month)
     .filter((item) => item.parsedDate.getTime() >= todayStamp)
     .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
+}
+
+function renderSidebarHolidays() {
+  const container = document.getElementById("sidebar-holidays-list");
+  if (!container) {
+    return;
+  }
+
+  const upcoming = getCurrentMonthHolidayItems();
 
   if (!upcoming.length) {
     container.innerHTML = '<div class="empty-state">No more published holidays this month.</div>';
@@ -3414,6 +3648,45 @@ function renderSidebarHolidays() {
     <article class="sidebar-holiday-item">
       <strong>${escapeHtml(item.label)}</strong>
       <span>${escapeHtml(formatMonthDay(item.date))}</span>
+      <span>${escapeHtml(item.applicability || "")}</span>
+    </article>
+  `).join("");
+}
+
+function renderHolidayPanel() {
+  const monthList = document.getElementById("holiday-month-list");
+  const monthMeta = document.getElementById("holiday-month-meta");
+  const fullList = document.getElementById("holiday-calendar-list");
+  if (!monthList || !monthMeta || !fullList) {
+    return;
+  }
+
+  const currentMonthItems = getCurrentMonthHolidayItems();
+  if (!currentMonthItems.length) {
+    monthMeta.textContent = "No more published holidays remain in the current month.";
+    monthList.innerHTML = '<div class="empty-state">No more published holidays this month.</div>';
+  } else {
+    monthMeta.textContent = `${currentMonthItems.length} holiday${currentMonthItems.length === 1 ? "" : "s"} remain in the current month.`;
+    monthList.innerHTML = currentMonthItems.map((item) => `
+      <article class="holiday-card holiday-card-highlight">
+        <p class="widget-kicker">${escapeHtml(formatMonthDay(item.date))}</p>
+        <h3>${escapeHtml(item.label)}</h3>
+        <div class="mini-item-meta">${escapeHtml(formatHolidayLongDate(item.date))}</div>
+        <p>${escapeHtml(item.applicability || "All Offices")}</p>
+      </article>
+    `).join("");
+  }
+
+  fullList.innerHTML = COMPANY_HOLIDAY_CALENDAR.map((item) => `
+    <article class="holiday-card">
+      <div class="holiday-card-head">
+        <div>
+          <p class="widget-kicker">${escapeHtml(formatMonthDay(item.date))}</p>
+          <h3>${escapeHtml(item.label)}</h3>
+        </div>
+        <span class="holiday-applicability">${escapeHtml(item.applicability || "All Offices")}</span>
+      </div>
+      <div class="mini-item-meta">${escapeHtml(formatHolidayLongDate(item.date))}</div>
     </article>
   `).join("");
 }

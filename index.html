@@ -35,6 +35,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
         </svg>
       </button>
+      <button type="button" class="icon-btn" data-switch-tab="holidays" title="Holiday calendar">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 2v4m8-4v4M3 10h18M5 6h14a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"></path>
+        </svg>
+      </button>
       <div class="profile-menu-shell">
         <button
           type="button"
@@ -154,6 +159,47 @@
             <button type="submit" class="btn-warm">Publish Announcement</button>
           </div>
         </form>
+      </section>
+
+      <section class="panel" id="panel-holidays">
+        <div class="section-head">
+          <div>
+            <h2>Holiday Calendar</h2>
+            <p>Office holiday dates and applicability across Acuité locations.</p>
+          </div>
+        </div>
+
+        <div class="two-column-layout holiday-layout">
+          <section class="section-card">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">This Month</p>
+                <h2>Upcoming Holidays</h2>
+                <div class="mini-item-meta" id="holiday-month-meta">Upcoming holidays for the current month.</div>
+              </div>
+            </div>
+            <div class="holiday-list holiday-list-compact" id="holiday-month-list"></div>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <p class="widget-kicker">Year View</p>
+              <h3>All Published Holidays</h3>
+              <div class="mini-item-meta">Use this page as the holiday reference for 2026.</div>
+            </div>
+          </aside>
+        </div>
+
+        <section class="section-card holiday-calendar-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Holiday List</p>
+              <h2>All Offices and City-Specific Holidays</h2>
+              <div class="mini-item-meta">Applicability is shown for each holiday.</div>
+            </div>
+          </div>
+          <div class="holiday-list" id="holiday-calendar-list"></div>
+        </section>
       </section>
 
       <section class="panel" id="panel-ceo-desk">
