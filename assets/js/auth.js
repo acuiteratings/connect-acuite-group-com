@@ -120,6 +120,10 @@
     return payload;
   }
 
+  function isAuthSessionError(error) {
+    return Boolean(error && [401, 403].includes(Number(error.status)));
+  }
+
   function clearSession() {
     cachedSession = null;
     sessionRequest = null;
@@ -149,6 +153,13 @@
         scheduleSessionExpiry(payload);
         return payload;
       })
+      .catch((error) => {
+        if (isAuthSessionError(error)) {
+          clearSession();
+          return { authenticated: false, user: null };
+        }
+        throw error;
+      })
       .finally(() => {
         sessionRequest = null;
       });
@@ -163,15 +174,19 @@
   async function requireAuth(options = {}) {
     const loginPath = options.loginPath || "/login.html";
     let session = cachedSession;
-    if (!(session && session.authenticated && session.user)) {
-      session = await fetchCurrentSession();
-    }
-    if (session && session.authenticated && session.user) {
-      return session.user;
-    }
-    session = await fetchCurrentSession({ forceRefresh: true });
-    if (session && session.authenticated && session.user) {
-      return session.user;
+    try {
+      if (!(session && session.authenticated && session.user)) {
+        session = await fetchCurrentSession();
+      }
+      if (session && session.authenticated && session.user) {
+        return session.user;
+      }
+      session = await fetchCurrentSession({ forceRefresh: true });
+      if (session && session.authenticated && session.user) {
+        return session.user;
+      }
+    } catch (error) {
+      clearSession();
     }
     window.location.href = loginPath;
     return null;
@@ -180,17 +195,21 @@
   async function redirectIfAuthenticated(options = {}) {
     const homePath = options.homePath || "/";
     let session = cachedSession;
-    if (!(session && session.authenticated && session.user)) {
-      session = await fetchCurrentSession();
-    }
-    if (session && session.authenticated && session.user) {
-      window.location.href = homePath;
-      return session.user;
-    }
-    session = await fetchCurrentSession({ forceRefresh: true });
-    if (session && session.authenticated && session.user) {
-      window.location.href = homePath;
-      return session.user;
+    try {
+      if (!(session && session.authenticated && session.user)) {
+        session = await fetchCurrentSession();
+      }
+      if (session && session.authenticated && session.user) {
+        window.location.href = homePath;
+        return session.user;
+      }
+      session = await fetchCurrentSession({ forceRefresh: true });
+      if (session && session.authenticated && session.user) {
+        window.location.href = homePath;
+        return session.user;
+      }
+    } catch (error) {
+      clearSession();
     }
     return null;
   }
