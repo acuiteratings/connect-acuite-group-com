@@ -834,7 +834,7 @@ async function loadBulletinPosts() {
   try {
     const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/?module=${FEED_MODULE_BULLETIN}`);
     appData.bulletinPosts = Array.isArray(payload.results)
-      ? payload.results.map(mapBulletinPost)
+      ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
       : [];
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
@@ -2242,7 +2242,7 @@ function renderBulletinPanel() {
     return;
   }
 
-  const posts = appData.bulletinPosts.slice();
+  const posts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
   meta.textContent = appData.bulletinPosts.length
     ? `${appData.bulletinPosts.length} bulletin post${appData.bulletinPosts.length === 1 ? "" : "s"} shown`
     : "Live company announcement board";
@@ -3063,6 +3063,16 @@ function mapBulletinPost(post) {
     canDelete: Boolean(post.viewer_can_delete),
     isAuthor: Boolean(post.viewer_is_author),
   };
+}
+
+function bulletinPostTimestamp(post) {
+  const value = post?.publishedAt || post?.createdAt || "";
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sortBulletinPostsNewestFirst(items) {
+  return items.slice().sort((left, right) => bulletinPostTimestamp(right) - bulletinPostTimestamp(left));
 }
 
 function getSelectedHomeAnnouncementFilterLabel() {
@@ -4172,7 +4182,7 @@ function updateLivePostFromPayload(postPayload) {
 
   if (postPayload.module === FEED_MODULE_BULLETIN) {
     const mapped = mapBulletinPost(postPayload);
-    appData.bulletinPosts = replaceMappedPost(appData.bulletinPosts, mapped);
+    appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
     return;
   }
 
