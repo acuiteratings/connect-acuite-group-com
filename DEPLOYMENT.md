@@ -23,6 +23,8 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 2. In Render, create a new Blueprint from that repository.
 3. Let Render provision:
    - `acuite-connect` web service
+   - `acuite-connect-people-sync-incremental` cron service
+   - `acuite-connect-people-sync-full` cron service
    - `acuite-connect-db` PostgreSQL database
 4. Add `connect.acuite-group.com` as the custom domain in Render.
 5. Point Cloudflare DNS for `connect.acuite-group.com` to the Render hostname.
@@ -34,6 +36,33 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 cd backend && python manage.py migrate
 cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker
 ```
+
+## People directory sync schedule
+
+Connect now pulls employee master data from the People app and keeps a local snapshot for fast directory reads.
+
+Render should run:
+
+- incremental sync every 30 minutes:
+  - `cd backend && python manage.py sync_people_directory`
+- full sync every day at `02:10 AM IST`:
+  - `cd backend && python manage.py sync_people_directory --full`
+
+Render cron expressions use UTC.
+So the full sync cron is scheduled as:
+
+- `40 20 * * *`
+- which equals `02:10 AM IST`
+
+Render must define these environment variables on:
+
+- the web service
+- the incremental cron service
+- the full cron service
+
+- `PEOPLE_DIRECTORY_API_BASE_URL=https://people.acuite-group.com`
+- `PEOPLE_DIRECTORY_API_TOKEN=...`
+- `PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS=15`
 
 ## Local backend preview
 

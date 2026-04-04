@@ -49,6 +49,24 @@ Set these environment variables in `.env` for local work and in Render for produ
 - `EMPLOYEE_SSO_CALLBACK_URL`
 - `EMPLOYEE_SSO_POST_LOGOUT_REDIRECT_URL`
 
+## People directory sync configuration
+
+Connect uses the People app as the source of truth for employee master data and keeps a local synced snapshot for fast directory reads.
+
+Set these environment variables in `.env` for local work and in Render for production:
+
+- `PEOPLE_DIRECTORY_API_BASE_URL`
+- `PEOPLE_DIRECTORY_API_TOKEN`
+- `PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS`
+
+Manual sync commands:
+
+```bash
+cd backend
+../.venv/bin/python manage.py sync_people_directory
+../.venv/bin/python manage.py sync_people_directory --full
+```
+
 Production callback URL:
 
 - `https://connect.acuite-group.com/api/accounts/auth/employee-sso/callback/`
