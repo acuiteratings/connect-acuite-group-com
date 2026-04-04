@@ -34,7 +34,7 @@ const STORE_CATEGORY_LABELS = {
 };
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
-const ENABLED_TABS = new Set(["home", "holidays", "resources", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile"]);
+const ENABLED_TABS = new Set(["home", "holidays", "resources", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -1003,6 +1003,12 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "open-help-page") {
+      closeProfileMenu();
+      switchTab("help");
+      return;
+    }
+
     if (actionName === "open-terms-page") {
       closeProfileMenu();
       window.location.href = "/terms-and-conditions.html";
@@ -1085,6 +1091,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "redeem-store-item") {
       await redeemStoreItem(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "delete-store-item") {
+      await deleteStoreItem(action.dataset.id);
       return;
     }
 
@@ -2168,6 +2179,7 @@ function renderStorePolicyCard() {
 }
 
 function renderStoreItemCard(item) {
+  const canAdminister = currentUserCanAdministerConnect();
   const accent = item.accent_hex || "#e8722a";
   const activeRedemption = appData.storeRedemptions.find((redemption) => {
     return redemption.item.id === item.id
@@ -2199,7 +2211,21 @@ function renderStoreItemCard(item) {
             <h3>${escapeHtml(item.name)}</h3>
             <span class="tool-status ${item.available_units > 0 ? "live" : "planned"}">${escapeHtml(item.category_label)}</span>
           </div>
-          <div class="store-item-cost">${escapeHtml(String(coinCost))} coins</div>
+          <div class="store-item-head-actions">
+            <div class="store-item-cost">${escapeHtml(String(coinCost))} coins</div>
+            ${
+              canAdminister
+                ? `<button
+                    type="button"
+                    class="btn-link post-delete-btn"
+                    data-action="delete-store-item"
+                    data-id="${item.id}"
+                  >
+                    Delete
+                  </button>`
+                : ""
+            }
+          </div>
         </div>
         <p>${escapeHtml(item.description || "Admin-managed branded merchandise available for Acuite Coin redemption inside Connect.")}</p>
         <div class="store-item-meta">
@@ -2215,38 +2241,51 @@ function renderStoreItemCard(item) {
             ? escapeHtml(`You already have a ${activeRedemption.status.replaceAll("_", " ")} request`)
             : escapeHtml(`Use ${coinCost} Acuite Coins to request this item`)}
         </span>
-        <button
-          type="button"
-          class="tool-open ${canRedeem ? "live" : ""}"
-          data-action="redeem-store-item"
-          data-id="${item.id}"
-          ${canRedeem ? "" : "disabled"}
-        >
-          ${escapeHtml(actionLabel)}
-        </button>
+        <div class="store-item-actions">
+          <button
+            type="button"
+            class="tool-open ${canRedeem ? "live" : ""}"
+            data-action="redeem-store-item"
+            data-id="${item.id}"
+            ${canRedeem ? "" : "disabled"}
+          >
+            ${escapeHtml(actionLabel)}
+          </button>
+        </div>
       </div>
     </article>
   `;
 }
 
+async function deleteStoreItem(itemId) {
+  if (!itemId || !currentUserCanAdministerConnect()) {
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest(`/api/store/items/${itemId}/`, {
+      method: "DELETE",
+    });
+    await loadStoreData();
+    renderStorePanel();
+    showToast("Brand Store item removed.");
+  } catch (error) {
+    showToast(error.message || "Could not remove the Brand Store item.");
+  }
+}
+
 function renderBulletinPanel() {
   const container = document.getElementById("bulletin-feed");
-  const meta = document.getElementById("bulletin-results-meta");
-  if (!container || !meta) {
+  if (!container) {
     return;
   }
 
   if (bulletinLoadError) {
-    meta.textContent = "Bulletin services issue";
     container.innerHTML = `<div class="empty-state">${escapeHtml(bulletinLoadError)}</div>`;
     return;
   }
 
   const posts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
-  meta.textContent = appData.bulletinPosts.length
-    ? `${appData.bulletinPosts.length} bulletin post${appData.bulletinPosts.length === 1 ? "" : "s"} shown`
-    : "Live company announcement board";
-
   if (!appData.bulletinPosts.length) {
     container.innerHTML = `
       <div class="empty-state">

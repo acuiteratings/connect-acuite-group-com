@@ -41,6 +41,107 @@ def store_admin_overview(request):
     return JsonResponse(build_store_admin_overview())
 
 
+def store_item_collection(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_authenticated or not request.user.can_administer_connect:
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    try:
+        payload = _parse_json_body(request)
+    except ValueError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+
+    name = str(payload.get("name", "")).strip()
+    category = str(payload.get("category", "")).strip().lower()
+    description = str(payload.get("description", "")).strip()
+    point_cost = int(payload.get("point_cost") or 0)
+    stock_units = int(payload.get("stock_units") or 0)
+    accent_hex = str(payload.get("accent_hex", "")).strip()
+    image_url = str(payload.get("image_url", "")).strip()
+
+    if not name:
+        return JsonResponse({"detail": "Item name is required."}, status=400)
+    if category not in BrandStoreItem.Category.values:
+        return JsonResponse({"detail": "Invalid store category."}, status=400)
+    if point_cost < 1:
+        return JsonResponse({"detail": "Acuite Coins must be at least 1."}, status=400)
+    if stock_units < 1:
+        return JsonResponse({"detail": "Stock units must be at least 1."}, status=400)
+
+    item = BrandStoreItem.objects.create(
+        name=name,
+        category=category,
+        description=description,
+        point_cost=point_cost,
+        stock_units=stock_units,
+        accent_hex=accent_hex,
+        image_url=image_url,
+        is_active=True,
+    )
+    record_audit_event(
+        action="store.item_created",
+        actor=request.user,
+        target=item,
+        summary=f"Added Brand Store item '{item.name}'",
+        metadata={"item_id": item.id, "category": item.category, "point_cost": item.point_cost},
+        request=request,
+    )
+    record_analytics_event(
+        "store",
+        "item_created",
+        actor=request.user,
+        metadata={"item_id": item.id, "category": item.category, "point_cost": item.point_cost},
+        request=request,
+    )
+    return JsonResponse(
+        {
+            "item": {
+                "id": item.id,
+                "name": item.name,
+                "category": item.category,
+                "point_cost": item.point_cost,
+                "stock_units": item.stock_units,
+            }
+        },
+        status=201,
+    )
+
+
+def store_item_detail(request, item_id):
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+    if not request.user.is_authenticated or not request.user.can_administer_connect:
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    item = get_object_or_404(BrandStoreItem, pk=item_id)
+    open_requests = item.redemptions.filter(status__in=ACTIVE_REDEMPTION_STATUSES).exists()
+    if open_requests:
+        return JsonResponse(
+            {"detail": "This item has open requests and cannot be deleted right now."},
+            status=400,
+        )
+
+    item.is_active = False
+    item.save(update_fields=["is_active", "updated_at"])
+    record_audit_event(
+        action="store.item_deleted",
+        actor=request.user,
+        target=item,
+        summary=f"Removed Brand Store item '{item.name}'",
+        metadata={"item_id": item.id},
+        request=request,
+    )
+    record_analytics_event(
+        "store",
+        "item_deleted",
+        actor=request.user,
+        metadata={"item_id": item.id},
+        request=request,
+    )
+    return JsonResponse({"detail": "Brand Store item removed."})
+
+
 def redemption_collection(request):
     if request.method == "GET":
         if not request.user.is_authenticated or not request.user.can_administer_connect:

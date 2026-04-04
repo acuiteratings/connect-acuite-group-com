@@ -272,6 +272,59 @@
       <div class="admin-console-card-head">
         <div>
           <span class="admin-console-index">08</span>
+          <h2>Add new merchandise to Brand Store</h2>
+          <p>Add a new Acuité item so it appears in the live Brand Store catalog.</p>
+        </div>
+      </div>
+      <form id="admin-store-item-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Item name</span>
+            <input type="text" name="name" maxlength="160" placeholder="Acuite Diary / Acuite Hoodie" required>
+          </label>
+          <label class="admin-field">
+            <span>Category</span>
+            <select name="category" required>
+              <option value="apparel">Apparel</option>
+              <option value="drinkware">Drinkware</option>
+              <option value="desk">Desk</option>
+              <option value="memorabilia">Memorabilia</option>
+            </select>
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Description</span>
+          <textarea name="description" rows="3" placeholder="Short description for the Brand Store card"></textarea>
+        </label>
+        <div class="admin-form-grid three">
+          <label class="admin-field">
+            <span>Acuite Coins</span>
+            <input type="number" name="point_cost" min="1" step="1" value="1000" required>
+          </label>
+          <label class="admin-field">
+            <span>Stock units</span>
+            <input type="number" name="stock_units" min="1" step="1" value="1" required>
+          </label>
+          <label class="admin-field">
+            <span>Accent color</span>
+            <input type="text" name="accent_hex" maxlength="16" placeholder="#8c5a33">
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Image URL</span>
+          <input type="url" name="image_url" maxlength="500" placeholder="https://...">
+        </label>
+        <div class="admin-form-actions">
+          <p>The item will appear in the live Brand Store after saving.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Add merchandise</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">09</span>
           <h2>Approve Brand Store requests</h2>
           <p>Approve only after the Acuite item has been physically handed over to the employee.</p>
         </div>

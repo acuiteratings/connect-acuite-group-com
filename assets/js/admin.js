@@ -73,6 +73,7 @@
       libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
       libraryReturnList: document.getElementById("admin-library-return-list"),
       libraryReturnMeta: document.getElementById("admin-library-return-meta"),
+      storeItemForm: document.getElementById("admin-store-item-form"),
       storeRequestList: document.getElementById("admin-store-request-list"),
       storeRequestMeta: document.getElementById("admin-store-request-meta"),
       storeHandedList: document.getElementById("admin-store-handed-list"),
@@ -196,6 +197,12 @@
     if (event.target === elements.libraryBookForm) {
       event.preventDefault();
       void submitLibraryBook();
+      return;
+    }
+
+    if (event.target === elements.storeItemForm) {
+      event.preventDefault();
+      void submitStoreItem();
     }
   }
 
@@ -640,6 +647,35 @@
       showToast(status === "approved" ? "Brand Store item handed over." : "Brand Store request rejected.");
     } catch (error) {
       showToast(error.message || "Could not update the Brand Store request.");
+    }
+  }
+
+  async function submitStoreItem() {
+    const formData = new FormData(elements.storeItemForm);
+    const payload = {
+      name: String(formData.get("name") || "").trim(),
+      category: String(formData.get("category") || "").trim(),
+      description: String(formData.get("description") || "").trim(),
+      point_cost: Number(formData.get("point_cost") || 0) || 0,
+      stock_units: Number(formData.get("stock_units") || 0) || 0,
+      accent_hex: String(formData.get("accent_hex") || "").trim(),
+      image_url: String(formData.get("image_url") || "").trim(),
+    };
+
+    if (!payload.name || !payload.category || payload.point_cost < 1 || payload.stock_units < 1) {
+      showToast("Add the item name, category, coin value, and stock units.");
+      return;
+    }
+
+    try {
+      await window.AcuiteConnectAuth.apiRequest("/api/store/items/", {
+        method: "POST",
+        body: payload,
+      });
+      elements.storeItemForm.reset();
+      showToast("Brand Store merchandise added.");
+    } catch (error) {
+      showToast(error.message || "Could not add the merchandise.");
     }
   }
 

@@ -9,7 +9,7 @@ def seed_brand_store_items(apps, schema_editor):
             "name": "Acuite Coffee Mug",
             "category": "drinkware",
             "description": "Ceramic Acuite mug for desk and meeting-room use.",
-            "point_cost": 30000,
+            "point_cost": 1000,
             "stock_units": 24,
             "accent_hex": "#8c5a33",
         },

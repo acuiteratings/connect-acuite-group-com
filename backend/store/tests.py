@@ -171,6 +171,61 @@ class BrandStoreApiTests(TestCase):
         payload = response.json()
         self.assertEqual(len(payload["requests"]), 1)
 
+    def test_admin_can_add_brand_store_item(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            "/api/store/items/",
+            data=json.dumps(
+                {
+                    "name": "Acuite Diary",
+                    "category": "desk",
+                    "description": "Branded diary for everyday notes.",
+                    "point_cost": 2500,
+                    "stock_units": 12,
+                    "accent_hex": "#3b4252",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(BrandStoreItem.objects.filter(name="Acuite Diary").exists())
+
+    def test_non_admin_cannot_add_brand_store_item(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/store/items/",
+            data=json.dumps(
+                {
+                    "name": "Acuite Diary",
+                    "category": "desk",
+                    "point_cost": 2500,
+                    "stock_units": 12,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_delete_brand_store_item(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.delete(f"/api/store/items/{self.item.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.is_active)
+
+    def test_non_admin_cannot_delete_brand_store_item(self):
+        self.client.force_login(self.user)
+
+        response = self.client.delete(f"/api/store/items/{self.item.id}/")
+
+        self.assertEqual(response.status_code, 403)
+
     def test_town_hall_reward_is_added_only_after_admin_approval(self):
         Post.objects.create(
             author=self.user,

@@ -648,10 +648,19 @@ def build_store_overview(user):
         )
         .values("id", "active_redemptions")
     }
+    store_priority = {
+        "Acuite Coffee Mug": 0,
+        "Acuite T Shirt": 1,
+        "Acuite Cricket Bat": 2,
+        "Acuite Laptop Bag": 3,
+        "Acuite Necktie": 4,
+        "Acuite Pen": 5,
+    }
     items = [
         serialize_store_item(item, active_redemptions=active_counts.get(item.id, 0))
-        for item in BrandStoreItem.objects.filter(is_active=True).order_by("category", "point_cost", "name")
+        for item in BrandStoreItem.objects.filter(is_active=True).order_by("name")
     ]
+    items.sort(key=lambda item: (store_priority.get(item["name"], 999), item["name"]))
     redemptions = (
         BrandStoreRedemption.objects.select_related("item", "requester")
         .filter(requester=user)
