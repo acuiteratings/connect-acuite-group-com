@@ -8,7 +8,8 @@ from accounts.models import User
 from directory.models import DirectoryProfile
 from feed.models import Comment, Post, PostReaction
 
-from .models import BrandStoreItem, BrandStoreRedemption
+from .models import BrandStoreItem, BrandStoreRedemption, CoinLedgerEntry
+from .services import backfill_coin_ledger
 
 
 class BrandStoreApiTests(TestCase):
@@ -279,3 +280,104 @@ class BrandStoreApiTests(TestCase):
         self.client.force_login(self.user)
         approved_balance = self.client.get("/api/store/overview/").json()["balance"]
         self.assertEqual(approved_balance["spent_points"], before_balance["spent_points"] + self.item.point_cost)
+
+    def test_like_reversal_creates_offset_ledger_entries(self):
+        extra_post = Post.objects.create(
+            author=self.user,
+            title="Second post",
+            body="Another update.",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        self.client.force_login(self.admin)
+        reaction = PostReaction.objects.create(post=extra_post, user=self.admin)
+
+        earned_after_like = self.client.get("/api/store/overview/").json()["balance"]["earned_points"]
+        reaction.delete()
+        earned_after_unlike = self.client.get("/api/store/overview/").json()["balance"]["earned_points"]
+
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                user=self.admin,
+                event_key="reaction_given",
+                entry_type=CoinLedgerEntry.EntryType.EARN,
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                user=self.admin,
+                event_key="reaction_given",
+                entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            ).count(),
+            1,
+        )
+        self.assertEqual(earned_after_like - earned_after_unlike, 1)
+
+    def test_redemption_creates_hold_then_release_and_spend_entries(self):
+        redemption = BrandStoreRedemption.objects.create(
+            item=self.item,
+            requester=self.user,
+            points_locked=self.item.point_cost,
+        )
+
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                reference_key=f"redemption:{redemption.id}:store_request:hold"
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                reference_key=f"redemption:{redemption.id}:store_request:release"
+            ).count(),
+            0,
+        )
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                reference_key=f"redemption:{redemption.id}:store_request:spend"
+            ).count(),
+            0,
+        )
+
+        redemption.status = BrandStoreRedemption.Status.APPROVED
+        redemption.reviewed_at = timezone.now()
+        redemption.save(update_fields=["status", "reviewed_at", "updated_at"])
+
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                reference_key=f"redemption:{redemption.id}:store_request:release"
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                reference_key=f"redemption:{redemption.id}:store_request:spend"
+            ).count(),
+            1,
+        )
+
+    def test_backfill_coin_ledger_rebuilds_entries_without_duplication(self):
+        CoinLedgerEntry.objects.all().delete()
+
+        backfill_coin_ledger()
+
+        self.assertTrue(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                event_key="reaction_given",
+                entry_type=CoinLedgerEntry.EntryType.EARN,
+            ).exists()
+        )
+        self.assertTrue(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                event_key="published_comment",
+                entry_type=CoinLedgerEntry.EntryType.EARN,
+            ).exists()
+        )
+        first_count = CoinLedgerEntry.objects.count()
+        backfill_coin_ledger()
+        self.assertEqual(CoinLedgerEntry.objects.count(), first_count)

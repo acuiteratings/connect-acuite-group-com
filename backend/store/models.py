@@ -61,3 +61,36 @@ class BrandStoreRedemption(models.Model):
 
     def __str__(self):
         return f"{self.requester.full_name} -> {self.item.name}"
+
+
+class CoinLedgerEntry(models.Model):
+    class EntryType(models.TextChoices):
+        EARN = "earn", "Earn"
+        EARN_REVERSAL = "earn_reversal", "Earn reversal"
+        HOLD = "hold", "Hold"
+        RELEASE = "release", "Release"
+        SPEND = "spend", "Spend"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="coin_ledger_entries",
+    )
+    entry_type = models.CharField(max_length=24, choices=EntryType.choices)
+    event_key = models.CharField(max_length=64)
+    amount = models.PositiveIntegerField()
+    reference_key = models.CharField(max_length=180, unique=True)
+    summary = models.CharField(max_length=280, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    occurred_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-occurred_at", "-id")
+        indexes = [
+            models.Index(fields=("user", "occurred_at")),
+            models.Index(fields=("user", "entry_type")),
+        ]
+
+    def __str__(self):
+        return f"{self.user.full_name} | {self.entry_type} | {self.amount}"

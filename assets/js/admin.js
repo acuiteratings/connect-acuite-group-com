@@ -55,7 +55,6 @@
     elements = {
       userName: document.getElementById("admin-console-user-name"),
       toast: document.getElementById("admin-toast"),
-      featuredAnnouncementForm: document.getElementById("admin-featured-announcement-form"),
       bulletinPostForm: document.getElementById("admin-bulletin-post-form"),
       birthdayList: document.getElementById("admin-birthday-list"),
       birthdayResultsMeta: document.getElementById("admin-birthday-results-meta"),
@@ -188,12 +187,6 @@
   }
 
   function handleSubmit(event) {
-    if (event.target === elements.featuredAnnouncementForm) {
-      event.preventDefault();
-      void submitFeaturedAnnouncement();
-      return;
-    }
-
     if (event.target === elements.bulletinPostForm) {
       event.preventDefault();
       void submitBulletinPost();
@@ -648,29 +641,6 @@
     } catch (error) {
       showToast(error.message || "Could not update the Brand Store request.");
     }
-  }
-
-  async function submitFeaturedAnnouncement() {
-    const formData = new FormData(elements.featuredAnnouncementForm);
-    const headline = String(formData.get("headline") || "").trim();
-    const dateLine = String(formData.get("date_line") || "").trim();
-    const note = String(formData.get("note") || "").trim();
-    if (!headline || !note) {
-      showToast("Add the announcement headline and message.");
-      return;
-    }
-
-    await publishBulletinPost({
-      form: elements.featuredAnnouncementForm,
-      title: headline,
-      body: note,
-      category: "announcements",
-      templateKey: "featured_announcement",
-      metadata: {
-        bulletin_meta_lines: dateLine ? [dateLine] : [],
-      },
-      successMessage: "Announcement published to the Bulletin Board.",
-    });
   }
 
   async function submitBulletinPost() {

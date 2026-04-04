@@ -1,10 +1,12 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from django.db.models import Count, Q
+from django.utils import timezone
 
 from feed.models import Comment, Post, PostReaction
 from learning.models import BookRequisition
-from .models import BrandStoreItem, BrandStoreRedemption
+
+from .models import BrandStoreItem, BrandStoreRedemption, CoinLedgerEntry
 from .serializers import serialize_redemption, serialize_store_item
 
 
@@ -38,60 +40,324 @@ def build_coin_rules():
     ]
 
 
-def earned_points_for_user(user):
-    if not getattr(user, "is_authenticated", False):
-        return 0
-    return build_coin_balance_map([user.id]).get(user.id, default_coin_balance())["earned_points"]
-
-
-def locked_points_for_user(user):
-    if not getattr(user, "is_authenticated", False):
-        return 0
-    return sum(
-        user.brand_store_redemptions.filter(status__in=LOCKED_REDEMPTION_STATUSES)
-        .values_list("points_locked", flat=True)
-    )
-
-
-def spent_points_for_user(user):
-    if not getattr(user, "is_authenticated", False):
-        return 0
-    return sum(
-        user.brand_store_redemptions.filter(status__in=SPENT_REDEMPTION_STATUSES)
-        .values_list("points_locked", flat=True)
-    )
-
-
-def pending_requested_points_for_user(user):
-    if not getattr(user, "is_authenticated", False):
-        return 0
-    return sum(
-        user.brand_store_redemptions.filter(status=BrandStoreRedemption.Status.REQUESTED)
-        .values_list("points_locked", flat=True)
-    )
-
-
-def default_coin_balance():
-    return {
+def default_coin_balance(*, include_register=False):
+    payload = {
         "earned_points": 0,
         "locked_points": 0,
         "spent_points": 0,
         "available_points": 0,
     }
+    if include_register:
+        payload["register"] = []
+    return payload
 
 
-def _append_entry(entries_by_user, user_id, *, occurred_at, amount, label, summary, kind):
-    if user_id not in entries_by_user:
-        return
-    entries_by_user[user_id].append(
-        {
-            "occurred_at": occurred_at,
+def _single_entry_reference(source_type, source_id, event_key, entry_type):
+    return f"{source_type}:{source_id}:{event_key}:{entry_type}"
+
+
+def _reward_cycle_prefix(source_type, source_id, event_key):
+    return f"{source_type}:{source_id}:{event_key}:"
+
+
+def _reward_cycle_reference(source_type, source_id, event_key, entry_type, cycle):
+    return f"{source_type}:{source_id}:{event_key}:{entry_type}:{cycle}"
+
+
+def _ensure_ledger_entry(
+    *,
+    user,
+    entry_type,
+    event_key,
+    amount,
+    reference_key,
+    occurred_at,
+    summary,
+    metadata=None,
+):
+    if not getattr(user, "is_authenticated", False):
+        return None, False
+    entry, created = CoinLedgerEntry.objects.get_or_create(
+        reference_key=reference_key,
+        defaults={
+            "user": user,
+            "entry_type": entry_type,
+            "event_key": event_key,
             "amount": amount,
-            "label": label,
+            "occurred_at": occurred_at or timezone.now(),
             "summary": summary,
-            "kind": kind,
-        }
+            "metadata": metadata or {},
+        },
     )
+    return entry, created
+
+
+def _reward_cycle_counts(source_type, source_id, event_key):
+    prefix = _reward_cycle_prefix(source_type, source_id, event_key)
+    counts = Counter(
+        CoinLedgerEntry.objects.filter(
+            reference_key__startswith=prefix,
+            entry_type__in=(
+                CoinLedgerEntry.EntryType.EARN,
+                CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            ),
+        ).values_list("entry_type", flat=True)
+    )
+    return (
+        counts[CoinLedgerEntry.EntryType.EARN],
+        counts[CoinLedgerEntry.EntryType.EARN_REVERSAL],
+    )
+
+
+def _ensure_reward_entry(
+    *,
+    qualifies,
+    user,
+    source_type,
+    source_id,
+    event_key,
+    occurred_at,
+    summary,
+    metadata=None,
+):
+    if not getattr(user, "is_authenticated", False) or not source_id:
+        return None, False
+
+    earn_count, reversal_count = _reward_cycle_counts(source_type, source_id, event_key)
+    amount = COIN_RULES[event_key]["coins"]
+
+    if qualifies:
+        if earn_count > reversal_count:
+            return None, False
+        cycle = earn_count + 1
+        return _ensure_ledger_entry(
+            user=user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key=event_key,
+            amount=amount,
+            reference_key=_reward_cycle_reference(
+                source_type,
+                source_id,
+                event_key,
+                CoinLedgerEntry.EntryType.EARN,
+                cycle,
+            ),
+            occurred_at=occurred_at,
+            summary=summary,
+            metadata=metadata,
+        )
+
+    if earn_count <= reversal_count:
+        return None, False
+
+    cycle = reversal_count + 1
+    return _ensure_ledger_entry(
+        user=user,
+        entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL,
+        event_key=event_key,
+        amount=amount,
+        reference_key=_reward_cycle_reference(
+            source_type,
+            source_id,
+            event_key,
+            CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            cycle,
+        ),
+        occurred_at=occurred_at or timezone.now(),
+        summary=f"Reversed: {summary}",
+        metadata=metadata,
+    )
+
+
+def sync_coin_ledger_for_reaction(reaction):
+    if reaction.reaction_type != PostReaction.ReactionType.LIKE:
+        return None, False
+    return _ensure_reward_entry(
+        qualifies=True,
+        user=reaction.user,
+        source_type="reaction",
+        source_id=reaction.id,
+        event_key="reaction_given",
+        occurred_at=reaction.created_at,
+        summary=f"Liked '{reaction.post.title}'",
+        metadata={"post_id": reaction.post_id, "reaction_type": reaction.reaction_type},
+    )
+
+
+def reverse_coin_ledger_for_reaction(reaction):
+    if reaction.reaction_type != PostReaction.ReactionType.LIKE:
+        return None, False
+    return _ensure_reward_entry(
+        qualifies=False,
+        user=reaction.user,
+        source_type="reaction",
+        source_id=reaction.id,
+        event_key="reaction_given",
+        occurred_at=timezone.now(),
+        summary=f"Liked '{reaction.post.title}'",
+        metadata={"post_id": reaction.post_id, "reaction_type": reaction.reaction_type},
+    )
+
+
+def sync_coin_ledger_for_comment(comment):
+    return _ensure_reward_entry(
+        qualifies=comment.moderation_status == Comment.ModerationStatus.PUBLISHED,
+        user=comment.author,
+        source_type="comment",
+        source_id=comment.id,
+        event_key="published_comment",
+        occurred_at=comment.created_at,
+        summary=f"Commented on '{comment.post.title}'",
+        metadata={"post_id": comment.post_id},
+    )
+
+
+def reverse_coin_ledger_for_comment(comment):
+    return _ensure_reward_entry(
+        qualifies=False,
+        user=comment.author,
+        source_type="comment",
+        source_id=comment.id,
+        event_key="published_comment",
+        occurred_at=timezone.now(),
+        summary=f"Commented on '{comment.post.title}'",
+        metadata={"post_id": comment.post_id},
+    )
+
+
+def _post_reward_key(post):
+    if post.module != Post.Module.EMPLOYEE_POSTS:
+        return ""
+    metadata = post.metadata or {}
+    if metadata.get("town_hall_response"):
+        return "question_asked"
+    if metadata.get("ceo_desk_request"):
+        return "ceo_request"
+    if metadata.get("submission_key") == "share_idea":
+        return "idea_shared"
+    return ""
+
+
+def sync_coin_ledger_for_post(post):
+    reward_key = _post_reward_key(post)
+    if not reward_key:
+        return None, False
+    return _ensure_reward_entry(
+        qualifies=post.moderation_status == Post.ModerationStatus.PUBLISHED,
+        user=post.author,
+        source_type="post",
+        source_id=post.id,
+        event_key=reward_key,
+        occurred_at=post.published_at or post.created_at or timezone.now(),
+        summary=f"Approved '{post.title}'",
+        metadata={
+            "post_id": post.id,
+            "submission_key": (post.metadata or {}).get("submission_key", ""),
+        },
+    )
+
+
+def sync_coin_ledger_for_book_requisition(requisition):
+    return _ensure_reward_entry(
+        qualifies=(
+            requisition.status == BookRequisition.Status.RETURNED
+            and requisition.returned_at is not None
+        ),
+        user=requisition.requester,
+        source_type="book_requisition",
+        source_id=requisition.id,
+        event_key="book_returned",
+        occurred_at=requisition.returned_at or requisition.updated_at or timezone.now(),
+        summary=f"Returned '{requisition.book.title}'",
+        metadata={"book_id": requisition.book_id},
+    )
+
+
+def sync_coin_ledger_for_redemption(redemption):
+    if not redemption.requester_id:
+        return None, False
+
+    hold_reference = _single_entry_reference(
+        "redemption",
+        redemption.id,
+        "store_request",
+        CoinLedgerEntry.EntryType.HOLD,
+    )
+    release_reference = _single_entry_reference(
+        "redemption",
+        redemption.id,
+        "store_request",
+        CoinLedgerEntry.EntryType.RELEASE,
+    )
+    spend_reference = _single_entry_reference(
+        "redemption",
+        redemption.id,
+        "store_request",
+        CoinLedgerEntry.EntryType.SPEND,
+    )
+    metadata = {"item_id": redemption.item_id, "redemption_id": redemption.id}
+
+    _ensure_ledger_entry(
+        user=redemption.requester,
+        entry_type=CoinLedgerEntry.EntryType.HOLD,
+        event_key="store_request",
+        amount=redemption.points_locked,
+        reference_key=hold_reference,
+        occurred_at=redemption.created_at or timezone.now(),
+        summary=f"Requested {redemption.item.name}",
+        metadata=metadata,
+    )
+
+    if redemption.status in {
+        BrandStoreRedemption.Status.CANCELLED,
+        BrandStoreRedemption.Status.DECLINED,
+        BrandStoreRedemption.Status.APPROVED,
+        BrandStoreRedemption.Status.FULFILLED,
+    }:
+        _ensure_ledger_entry(
+            user=redemption.requester,
+            entry_type=CoinLedgerEntry.EntryType.RELEASE,
+            event_key="store_request",
+            amount=redemption.points_locked,
+            reference_key=release_reference,
+            occurred_at=redemption.reviewed_at or redemption.updated_at or timezone.now(),
+            summary=f"Released hold for {redemption.item.name}",
+            metadata=metadata,
+        )
+
+    if redemption.status in SPENT_REDEMPTION_STATUSES:
+        _ensure_ledger_entry(
+            user=redemption.requester,
+            entry_type=CoinLedgerEntry.EntryType.SPEND,
+            event_key="store_request",
+            amount=redemption.points_locked,
+            reference_key=spend_reference,
+            occurred_at=redemption.reviewed_at or redemption.updated_at or timezone.now(),
+            summary=f"Collected {redemption.item.name}",
+            metadata=metadata,
+        )
+    return None, False
+
+
+def _signed_register_amount(entry):
+    if entry.entry_type in {
+        CoinLedgerEntry.EntryType.EARN,
+        CoinLedgerEntry.EntryType.RELEASE,
+    }:
+        return entry.amount
+    return -entry.amount
+
+
+def _register_kind(entry):
+    if entry.entry_type == CoinLedgerEntry.EntryType.HOLD:
+        return "locked"
+    if entry.entry_type == CoinLedgerEntry.EntryType.RELEASE:
+        return "released"
+    if entry.entry_type == CoinLedgerEntry.EntryType.SPEND:
+        return "spent"
+    if entry.entry_type == CoinLedgerEntry.EntryType.EARN_REVERSAL:
+        return "reversed"
+    return "earned"
 
 
 def build_coin_balance_map(user_ids, *, include_register=False, register_limit=12):
@@ -99,248 +365,108 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     if not user_ids:
         return {}
 
-    earned = defaultdict(int)
-    locked = defaultdict(int)
-    spent = defaultdict(int)
-    entries_by_user = {user_id: [] for user_id in user_ids} if include_register else {}
+    payload = {
+        user_id: {
+            "earned_total": 0,
+            "earned_reversals": 0,
+            "held_total": 0,
+            "released_total": 0,
+            "spent_points": 0,
+            "register": [] if include_register else None,
+        }
+        for user_id in user_ids
+    }
 
-    for row in (
-        PostReaction.objects.filter(
-            user_id__in=user_ids,
-            reaction_type=PostReaction.ReactionType.LIKE,
-        )
-        .values("user_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["user_id"]
-        amount = row["count"] * COIN_RULES["reaction_given"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for reaction in PostReaction.objects.filter(
-            user_id__in=user_ids,
-            reaction_type=PostReaction.ReactionType.LIKE,
-        ).select_related("post", "user"):
-            _append_entry(
-                entries_by_user,
-                reaction.user_id,
-                occurred_at=reaction.created_at,
-                amount=COIN_RULES["reaction_given"]["coins"],
-                label=COIN_RULES["reaction_given"]["label"],
-                summary=f"Liked '{reaction.post.title}'",
-                kind="earned",
+    entries = CoinLedgerEntry.objects.filter(user_id__in=user_ids).order_by("-occurred_at", "-id")
+
+    for entry in entries:
+        balance = payload[entry.user_id]
+        if entry.entry_type == CoinLedgerEntry.EntryType.EARN:
+            balance["earned_total"] += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.EARN_REVERSAL:
+            balance["earned_reversals"] += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.HOLD:
+            balance["held_total"] += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.RELEASE:
+            balance["released_total"] += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.SPEND:
+            balance["spent_points"] += entry.amount
+
+        if include_register and len(balance["register"]) < register_limit:
+            balance["register"].append(
+                {
+                    "occurred_at": entry.occurred_at.isoformat() if entry.occurred_at else None,
+                    "amount": _signed_register_amount(entry),
+                    "label": COIN_RULES.get(entry.event_key, {}).get("label") or entry.get_entry_type_display(),
+                    "summary": entry.summary,
+                    "kind": _register_kind(entry),
+                }
             )
 
-    for row in (
-        Comment.objects.filter(
-            author_id__in=user_ids,
-            moderation_status=Comment.ModerationStatus.PUBLISHED,
-        )
-        .values("author_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["author_id"]
-        amount = row["count"] * COIN_RULES["published_comment"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for comment in Comment.objects.filter(
-            author_id__in=user_ids,
-            moderation_status=Comment.ModerationStatus.PUBLISHED,
-        ).select_related("post", "author"):
-            _append_entry(
-                entries_by_user,
-                comment.author_id,
-                occurred_at=comment.created_at,
-                amount=COIN_RULES["published_comment"]["coins"],
-                label=COIN_RULES["published_comment"]["label"],
-                summary=f"Commented on '{comment.post.title}'",
-                kind="earned",
-            )
-
-    for row in (
-        Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__submission_key="share_idea",
-        )
-        .values("author_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["author_id"]
-        amount = row["count"] * COIN_RULES["idea_shared"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for post in Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__submission_key="share_idea",
-        ).select_related("author"):
-            _append_entry(
-                entries_by_user,
-                post.author_id,
-                occurred_at=post.published_at or post.created_at,
-                amount=COIN_RULES["idea_shared"]["coins"],
-                label=COIN_RULES["idea_shared"]["label"],
-                summary=f"Approved '{post.title}'",
-                kind="earned",
-            )
-
-    for row in (
-        Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__ceo_desk_request=True,
-        )
-        .values("author_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["author_id"]
-        amount = row["count"] * COIN_RULES["ceo_request"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for post in Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__ceo_desk_request=True,
-        ).select_related("author"):
-            _append_entry(
-                entries_by_user,
-                post.author_id,
-                occurred_at=post.published_at or post.created_at,
-                amount=COIN_RULES["ceo_request"]["coins"],
-                label=COIN_RULES["ceo_request"]["label"],
-                summary=f"Approved '{post.title}'",
-                kind="earned",
-            )
-
-    for row in (
-        Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__town_hall_response=True,
-        )
-        .values("author_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["author_id"]
-        amount = row["count"] * COIN_RULES["question_asked"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for post in Post.objects.filter(
-            author_id__in=user_ids,
-            module=Post.Module.EMPLOYEE_POSTS,
-            topic="employee_submission",
-            moderation_status=Post.ModerationStatus.PUBLISHED,
-            metadata__town_hall_response=True,
-        ).select_related("author"):
-            _append_entry(
-                entries_by_user,
-                post.author_id,
-                occurred_at=post.published_at or post.created_at,
-                amount=COIN_RULES["question_asked"]["coins"],
-                label=COIN_RULES["question_asked"]["label"],
-                summary=f"Approved '{post.title}'",
-                kind="earned",
-            )
-
-    for row in (
-        BookRequisition.objects.filter(
-            requester_id__in=user_ids,
-            status=BookRequisition.Status.RETURNED,
-            returned_at__isnull=False,
-        )
-        .values("requester_id")
-        .order_by()
-        .annotate(count=Count("id"))
-    ):
-        user_id = row["requester_id"]
-        amount = row["count"] * COIN_RULES["book_returned"]["coins"]
-        earned[user_id] += amount
-    if include_register:
-        for requisition in BookRequisition.objects.filter(
-            requester_id__in=user_ids,
-            status=BookRequisition.Status.RETURNED,
-            returned_at__isnull=False,
-        ).select_related("book", "requester"):
-            _append_entry(
-                entries_by_user,
-                requisition.requester_id,
-                occurred_at=requisition.returned_at,
-                amount=COIN_RULES["book_returned"]["coins"],
-                label=COIN_RULES["book_returned"]["label"],
-                summary=f"Returned '{requisition.book.title}'",
-                kind="earned",
-            )
-
-    for redemption in BrandStoreRedemption.objects.filter(
-        requester_id__in=user_ids,
-        status__in=LOCKED_REDEMPTION_STATUSES,
-    ).select_related("item", "requester"):
-        locked[redemption.requester_id] += redemption.points_locked
-        if include_register:
-            _append_entry(
-                entries_by_user,
-                redemption.requester_id,
-                occurred_at=redemption.created_at,
-                amount=-redemption.points_locked,
-                label="Purchase request pending",
-                summary=f"Requested {redemption.item.name}",
-                kind="locked",
-            )
-
-    for redemption in BrandStoreRedemption.objects.filter(
-        requester_id__in=user_ids,
-        status__in=SPENT_REDEMPTION_STATUSES,
-    ).select_related("item", "requester"):
-        spent[redemption.requester_id] += redemption.points_locked
-        if include_register:
-            _append_entry(
-                entries_by_user,
-                redemption.requester_id,
-                occurred_at=redemption.reviewed_at or redemption.updated_at,
-                amount=-redemption.points_locked,
-                label="Acuite Coins encashed",
-                summary=f"Collected {redemption.item.name}",
-                kind="spent",
-            )
-
-    payload = {}
-    for user_id in user_ids:
+    final_payload = {}
+    for user_id, raw_balance in payload.items():
+        earned_points = max(raw_balance["earned_total"] - raw_balance["earned_reversals"], 0)
+        locked_points = max(raw_balance["held_total"] - raw_balance["released_total"], 0)
+        spent_points = raw_balance["spent_points"]
         balance = {
-            "earned_points": earned[user_id],
-            "locked_points": locked[user_id],
-            "spent_points": spent[user_id],
-            "available_points": max(earned[user_id] - spent[user_id], 0),
+            "earned_points": earned_points,
+            "locked_points": locked_points,
+            "spent_points": spent_points,
+            "available_points": max(earned_points - spent_points, 0),
         }
         if include_register:
-            entries = sorted(
-                entries_by_user[user_id],
-                key=lambda item: item["occurred_at"] or 0,
-                reverse=True,
-            )[:register_limit]
-            balance["register"] = [
-                {
-                    **item,
-                    "occurred_at": item["occurred_at"].isoformat() if item["occurred_at"] else None,
-                }
-                for item in entries
-            ]
-        payload[user_id] = balance
-    return payload
+            balance["register"] = raw_balance["register"]
+        final_payload[user_id] = balance
+    return final_payload
+
+
+def coin_balance_for_user(user, *, include_register=False):
+    if not getattr(user, "is_authenticated", False):
+        return default_coin_balance(include_register=include_register)
+    return build_coin_balance_map([user.id], include_register=include_register).get(
+        user.id,
+        default_coin_balance(include_register=include_register),
+    )
+
+
+def earned_points_for_user(user):
+    return coin_balance_for_user(user)["earned_points"]
+
+
+def locked_points_for_user(user):
+    return coin_balance_for_user(user)["locked_points"]
+
+
+def spent_points_for_user(user):
+    return coin_balance_for_user(user)["spent_points"]
+
+
+def pending_requested_points_for_user(user):
+    return locked_points_for_user(user)
+
+
+def requestable_points_for_user(user):
+    balance = coin_balance_for_user(user)
+    return max(balance["earned_points"] - balance["spent_points"] - balance["locked_points"], 0)
+
+
+def backfill_coin_ledger():
+    for reaction in PostReaction.objects.filter(
+        reaction_type=PostReaction.ReactionType.LIKE,
+    ).select_related("post", "user"):
+        sync_coin_ledger_for_reaction(reaction)
+
+    for comment in Comment.objects.select_related("post", "author"):
+        sync_coin_ledger_for_comment(comment)
+
+    for post in Post.objects.select_related("author"):
+        sync_coin_ledger_for_post(post)
+
+    for requisition in BookRequisition.objects.select_related("book", "requester"):
+        sync_coin_ledger_for_book_requisition(requisition)
+
+    for redemption in BrandStoreRedemption.objects.select_related("item", "requester"):
+        sync_coin_ledger_for_redemption(redemption)
 
 
 def build_store_admin_overview():
@@ -380,7 +506,7 @@ def build_store_overview(user):
         if getattr(user, "is_authenticated", False)
         else BrandStoreRedemption.objects.none()
     )
-    balance = build_coin_balance_map([user.id], include_register=True).get(user.id, default_coin_balance()) if getattr(user, "is_authenticated", False) else default_coin_balance()
+    balance = coin_balance_for_user(user, include_register=True)
 
     return {
         "items": items,

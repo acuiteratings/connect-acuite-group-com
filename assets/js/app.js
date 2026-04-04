@@ -34,7 +34,7 @@ const STORE_CATEGORY_LABELS = {
 };
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
-const ENABLED_TABS = new Set(["home", "holidays", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory"]);
+const ENABLED_TABS = new Set(["home", "holidays", "resources", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -172,8 +172,10 @@ const COMPANY_EVENT_CALENDAR = [
 const HOME_ANNOUNCEMENT_FILTERS = [
   ["leadership", "Leadership"],
   ["people_culture", "People & Culture"],
+  ["cybersecurity", "Cybersecurity"],
   ["regulations", "Regulations"],
   ["new_initiatives", "New Initiatives"],
+  ["giving", "Giving"],
   ["opinion_poll", "Opinion Poll"],
 ];
 
@@ -630,7 +632,6 @@ async function init() {
     adminBulletinTemplates: document.getElementById("admin-bulletin-templates"),
     profileBuilderForm: document.getElementById("profile-builder-form"),
     profileMenu: document.getElementById("profile-menu"),
-    profileMenuAdminLink: document.getElementById("profile-menu-admin-link"),
     profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
     commentsModalBackdrop: document.getElementById("comments-modal-backdrop"),
     commentsModalList: document.getElementById("comments-modal-list"),
@@ -1237,6 +1238,7 @@ function renderAll() {
   safeRender("theme", applyTheme);
   safeRender("panels", renderPanels);
   safeRender("profile", renderProfile);
+  safeRender("profile coin bank", renderProfileCoinBank);
   safeRender("profile builder", renderProfileBuilder);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
@@ -1364,6 +1366,9 @@ function renderPanels() {
   document.querySelectorAll(".sidebar-left .tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.switchTab === activeSidebarTab);
   });
+  document.querySelectorAll(".topnav-right [data-switch-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.switchTab === state.activeTab);
+  });
 }
 
 function renderProfile() {
@@ -1395,9 +1400,6 @@ function renderProfile() {
   elements.profilePitches.textContent = String(openRequests);
   if (elements.profileMenu) {
     elements.profileMenu.hidden = !profileMenuOpen;
-  }
-  if (elements.profileMenuAdminLink) {
-    elements.profileMenuAdminLink.hidden = !canAdminister;
   }
 }
 
@@ -2229,9 +2231,9 @@ function renderBulletinPanel() {
     return;
   }
 
-  const posts = getFilteredBulletinPosts();
+  const posts = appData.bulletinPosts.slice();
   meta.textContent = appData.bulletinPosts.length
-    ? `${posts.length} of ${appData.bulletinPosts.length} bulletin posts shown`
+    ? `${appData.bulletinPosts.length} bulletin post${appData.bulletinPosts.length === 1 ? "" : "s"} shown`
     : "Live company announcement board";
 
   if (!appData.bulletinPosts.length) {
@@ -2240,11 +2242,6 @@ function renderBulletinPanel() {
         No company bulletin posts have been published yet. The first town hall, advisory or event note will appear here.
       </div>
     `;
-    return;
-  }
-
-  if (!posts.length) {
-    container.innerHTML = `<div class="empty-state">No bulletin posts match this filter right now.</div>`;
     return;
   }
 
@@ -2260,7 +2257,6 @@ function renderMyPostsPanel() {
   }
 
   syncMyPostsComposer();
-  renderMyPostsCoinBank();
 
   if (!elements.myPostsList || !elements.myPostsResultsMeta) {
     return;
@@ -2292,8 +2288,8 @@ function renderMyPostsPanel() {
   `).join("");
 }
 
-function renderMyPostsCoinBank() {
-  const container = document.getElementById("my-posts-coin-bank");
+function renderProfileCoinBank() {
+  const container = document.getElementById("profile-coin-bank");
   if (!container) {
     return;
   }
@@ -3293,7 +3289,7 @@ async function toggleLiveReaction(postId) {
       renderHomeAnnouncement();
       renderBulletinPanel();
       renderCeoDeskLikeButton();
-      renderMyPostsCoinBank();
+      renderProfileCoinBank();
       renderProfile();
       showToast(payload.reacted ? "Appreciation recorded." : "Appreciation removed.");
       return;
@@ -3836,19 +3832,11 @@ function closeProfileMenu() {
 }
 
 function openProfileBuilder() {
-  if (!elements.profileModalBackdrop) {
-    return;
-  }
-  elements.profileModalBackdrop.hidden = false;
-  document.body.classList.add("modal-open");
+  switchTab("profile");
 }
 
 function closeProfileBuilder() {
-  if (!elements.profileModalBackdrop) {
-    return;
-  }
-  elements.profileModalBackdrop.hidden = true;
-  document.body.classList.remove("modal-open");
+  switchTab("home");
 }
 
 function mapDirectoryProfileToCard(profile) {

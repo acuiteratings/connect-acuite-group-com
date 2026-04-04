@@ -25,14 +25,29 @@
     </div>
 
     <div class="topnav-right">
-      <button type="button" class="icon-btn" data-action="open-launcher" title="Quick launcher">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 3h6"></path>
-        </svg>
-      </button>
       <button type="button" class="icon-btn" data-action="toggle-theme" title="Toggle theme">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" data-switch-tab="resources" title="Resources">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" data-switch-tab="applications" title="Applications">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" data-switch-tab="knowledge" title="Knowledge">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5A4.5 4.5 0 003 9.5V19a4 4 0 014-4h5m0-8.747C13.168 5.477 14.754 5 16.5 5A4.5 4.5 0 0121 9.5V19a4 4 0 00-4-4h-5"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" data-switch-tab="my-posts" title="My posts">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8M8 12h8m-8 5h5M6 3h9l3 3v15a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"></path>
         </svg>
       </button>
       <button type="button" class="icon-btn" data-switch-tab="holidays" title="Holiday calendar">
@@ -53,7 +68,6 @@
           --
         </button>
         <div class="profile-menu" id="profile-menu" hidden>
-          <button type="button" id="profile-menu-admin-link" data-action="open-admin-console" hidden>Admin Console</button>
           <button type="button" data-action="open-profile-builder">My Profile</button>
           <button type="button" data-action="logout">Logout</button>
         </div>
@@ -80,12 +94,6 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h6m-6 4h8M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"></path>
         </svg>
         Bulletin Board
-      </button>
-      <button type="button" class="tab" data-switch-tab="my-posts">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
-        </svg>
-        My Posts
       </button>
       <button type="button" class="tab" data-switch-tab="playtime">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -134,8 +142,10 @@
         <div class="announcement-filter-row" id="home-announcement-filters">
           <button type="button" class="announcement-filter-pill active" data-action="set-home-announcement-filter" data-filter="leadership">Leadership</button>
           <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="people_culture">People &amp; Culture</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="cybersecurity">Cybersecurity</button>
           <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="regulations">Regulations</button>
           <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="new_initiatives">New Initiatives</button>
+          <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="giving">Giving</button>
           <button type="button" class="announcement-filter-pill" data-action="set-home-announcement-filter" data-filter="opinion_poll">Opinion Poll</button>
         </div>
         <section class="hero-banner announcement-banner" id="home-announcement"></section>
@@ -200,6 +210,184 @@
           </div>
           <div class="holiday-list" id="holiday-calendar-list"></div>
         </section>
+      </section>
+
+      <section class="panel" id="panel-resources">
+        <div class="section-head">
+          <div>
+            <h2>Resources</h2>
+            <p>Brand assets and standard templates for internal employee use.</p>
+          </div>
+        </div>
+
+        <div class="two-column-layout knowledge-layout">
+          <section class="knowledge-list">
+            <article class="resource-card">
+              <div class="resource-card-head">
+                <div>
+                  <p class="widget-kicker">Brand Assets</p>
+                  <h3 class="resource-title">Approved Acuité brand files</h3>
+                </div>
+                <span class="resource-badge policy">Internal use</span>
+              </div>
+              <p>Use this section for approved logos, lockups, and simple brand material that employees may need in internal communication.</p>
+              <div class="resource-meta">
+                <span>Logos</span>
+                <span>Lockups</span>
+                <span>Badges</span>
+              </div>
+            </article>
+
+            <article class="resource-card">
+              <div class="resource-card-head">
+                <div>
+                  <p class="widget-kicker">Standard Templates</p>
+                  <h3 class="resource-title">Reusable internal formats</h3>
+                </div>
+                <span class="resource-badge template">Template</span>
+              </div>
+              <p>Use this section for standard presentation templates, memo formats, announcement layouts, and other repeat-use internal formats.</p>
+              <div class="resource-meta">
+                <span>Presentation</span>
+                <span>Memo</span>
+                <span>Announcement</span>
+              </div>
+            </article>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <p class="widget-kicker">How to use</p>
+              <h3>Keep the source consistent</h3>
+              <ul class="simple-list">
+                <li>Use approved brand files only.</li>
+                <li>Use standard templates for recurring communication.</li>
+                <li>Keep updates controlled from admin publishing.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-applications">
+        <div class="section-head">
+          <div>
+            <h2>Applications</h2>
+            <p>Useful internal application links with short explanations.</p>
+          </div>
+        </div>
+
+        <div class="tool-grid">
+          <article class="resource-card">
+            <div class="resource-card-head">
+              <div>
+                <p class="widget-kicker">Identity</p>
+                <h3 class="resource-title">Employee SSO</h3>
+              </div>
+            </div>
+            <p>Central employee sign-in and identity verification service used by Connect.</p>
+            <div class="landing-actions">
+              <a class="btn-link" href="https://sso.acuite-group.com/login" target="_blank" rel="noopener noreferrer">Open</a>
+            </div>
+          </article>
+
+          <article class="resource-card">
+            <div class="resource-card-head">
+              <div>
+                <p class="widget-kicker">HR</p>
+                <h3 class="resource-title">Myself</h3>
+              </div>
+            </div>
+            <p>Self-service HR portal for all employees.</p>
+            <div class="landing-actions">
+              <a class="btn-link" href="https://myself.acuite-group.com" target="_blank" rel="noopener noreferrer">Open</a>
+            </div>
+          </article>
+
+          <article class="resource-card">
+            <div class="resource-card-head">
+              <div>
+                <p class="widget-kicker">People</p>
+                <h3 class="resource-title">People</h3>
+              </div>
+            </div>
+            <p>Employee onboarding platform for HR Admin.</p>
+            <div class="landing-actions">
+              <a class="btn-link" href="https://people.acuite-group.com" target="_blank" rel="noopener noreferrer">Open</a>
+            </div>
+          </article>
+
+          <article class="resource-card">
+            <div class="resource-card-head">
+              <div>
+                <p class="widget-kicker">ATR Reporting</p>
+                <h3 class="resource-title">Karma</h3>
+              </div>
+            </div>
+            <p>Action Taken Reporting portal.</p>
+            <div class="landing-actions">
+              <a class="btn-link" href="https://karma.acuite-group.com" target="_blank" rel="noopener noreferrer">Open</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-knowledge">
+        <div class="section-head">
+          <div>
+            <h2>Knowledge</h2>
+            <p>FAQs, training tools, and reports in one place.</p>
+          </div>
+        </div>
+
+        <div class="two-column-layout knowledge-layout">
+          <section class="knowledge-list">
+            <article class="resource-card">
+              <div class="resource-card-head">
+                <div>
+                  <p class="widget-kicker">FAQs</p>
+                  <h3 class="resource-title">Frequently asked questions</h3>
+                </div>
+                <span class="resource-badge policy">Reference</span>
+              </div>
+              <p>Use this section for common employee questions on access, workflows, timelines, and internal processes.</p>
+            </article>
+
+            <article class="resource-card">
+              <div class="resource-card-head">
+                <div>
+                  <p class="widget-kicker">Training Tools</p>
+                  <h3 class="resource-title">Learning support material</h3>
+                </div>
+                <span class="resource-badge learning">Learning</span>
+              </div>
+              <p>Use this section for training decks, workshop support material, and reusable learning aids.</p>
+            </article>
+
+            <article class="resource-card">
+              <div class="resource-card-head">
+                <div>
+                  <p class="widget-kicker">Reports</p>
+                  <h3 class="resource-title">Reports and internal notes</h3>
+                </div>
+                <span class="resource-badge research">Reports</span>
+              </div>
+              <p>Use this section for published reports, periodic summaries, and internal reference documents.</p>
+            </article>
+          </section>
+
+          <aside class="stack-side">
+            <div class="widget-card">
+              <p class="widget-kicker">Publishing flow</p>
+              <h3>Managed through admin</h3>
+              <ul class="simple-list">
+                <li>Admins can keep FAQs updated.</li>
+                <li>Training aids can be published here over time.</li>
+                <li>Reports can be organised for quick employee access.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </section>
 
       <section class="panel" id="panel-ceo-desk">
@@ -503,43 +691,20 @@
         <div class="section-head">
           <div>
             <h2>Bulletin Board</h2>
-            <p>Company announcements, notices, launches and high-visibility internal updates.</p>
-          </div>
-          <div class="filter-tabs" data-filter-group="bulletin">
-            <button type="button" class="active" data-filter="all">All</button>
-            <button type="button" data-filter="announcements">Announcements</button>
-            <button type="button" data-filter="employee_posts">Employee posts</button>
-            <button type="button" data-filter="hr">HR</button>
-            <button type="button" data-filter="events">Events</button>
-            <button type="button" data-filter="security">Security</button>
           </div>
         </div>
 
-        <div class="two-column-layout bulletin-layout">
-          <section class="section-card">
-            <div class="section-card-head">
-              <div>
-                <p class="widget-kicker">Live bulletin</p>
-                <h2>Company notices and internal announcements</h2>
-                <div class="mini-item-meta" id="bulletin-results-meta">Loading the company bulletin board...</div>
-              </div>
-              <button type="button" class="btn-ghost" data-action="open-admin-console" id="bulletin-admin-open-btn" hidden>Open Admin Console</button>
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Live bulletin</p>
+              <h2>Company notices and internal announcements</h2>
+              <div class="mini-item-meta" id="bulletin-results-meta">Loading the company bulletin board...</div>
             </div>
-            <div id="bulletin-feed"></div>
-          </section>
-
-          <aside class="stack-side">
-            <div class="widget-card">
-              <p class="widget-kicker">What belongs here</p>
-              <h3>Posts that should stay visible</h3>
-              <ul class="simple-list">
-                <li>Town halls, launches, seminars and training sessions</li>
-                <li>Cybersecurity warnings and urgent internal notices</li>
-                <li>Picnics, office parties, offsites and key workplace updates</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
+            <button type="button" class="btn-ghost" data-action="open-admin-console" id="bulletin-admin-open-btn" hidden>Open Admin Console</button>
+          </div>
+          <div id="bulletin-feed"></div>
+        </section>
       </section>
 
       <section class="panel" id="panel-my-posts">
@@ -590,7 +755,6 @@
           </section>
 
           <aside class="stack-side">
-            <div class="widget-card" id="my-posts-coin-bank"></div>
             <div class="widget-card">
               <p class="widget-kicker">My submissions</p>
               <h3>Recent status</h3>
@@ -615,6 +779,55 @@
         <div class="directory-filter-stack" id="directory-filter-groups"></div>
         <div class="directory-results-meta" id="directory-results-meta"></div>
         <div class="directory-grid" id="directory-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-profile">
+        <div class="section-head">
+          <div>
+            <h2>My Profile</h2>
+            <p>Build your internal employee profile so colleagues can know your skills, interests, and expertise better.</p>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Profile Builder</p>
+              <h2>Update your profile</h2>
+              <div class="mini-item-meta">Add up to 2 photos, choose a few skills, and tell colleagues what you enjoy.</div>
+            </div>
+          </div>
+          <div class="widget-card" id="profile-coin-bank"></div>
+          <form id="profile-builder-form" class="profile-builder-form">
+            <div class="profile-photo-grid" id="profile-photo-preview-grid"></div>
+            <div class="profile-photo-inputs">
+              <label class="field profile-photo-field">
+                <span>Photo 1</span>
+                <input type="file" id="profile-photo-input-1" accept="image/*">
+              </label>
+              <label class="field profile-photo-field">
+                <span>Photo 2</span>
+                <input type="file" id="profile-photo-input-2" accept="image/*">
+              </label>
+            </div>
+            <div class="field">
+              <span>Skills</span>
+              <div class="profile-skill-library" id="profile-skill-library"></div>
+            </div>
+            <label class="field">
+              <span>Hobbies</span>
+              <textarea id="profile-hobbies-input" rows="3" placeholder="Reading, cricket, travel..."></textarea>
+            </label>
+            <label class="field">
+              <span>Interests</span>
+              <textarea id="profile-interests-input" rows="3" placeholder="Mentoring, markets, photography..."></textarea>
+            </label>
+            <div class="form-actions profile-builder-actions">
+              <p id="profile-builder-status">Add up to 2 photos, choose a few skills, and tell colleagues what you enjoy.</p>
+              <button type="submit" class="btn-warm">Save profile</button>
+            </div>
+          </form>
+        </section>
       </section>
 
     </main>
@@ -655,49 +868,6 @@
   <footer class="connect-site-footer">
     <span id="build-number-display">Built with care by Sankar Chakraborti | BUILD {{ build_number }}</span>
   </footer>
-
-  <div class="profile-modal-backdrop" id="profile-modal-backdrop" hidden>
-    <div class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
-      <div class="profile-modal-head">
-        <div>
-          <p class="widget-kicker">My Profile</p>
-          <h2 id="profile-modal-title">Build your profile</h2>
-        </div>
-        <button type="button" class="profile-modal-close" data-action="close-profile-builder" aria-label="Close profile builder">
-          ×
-        </button>
-      </div>
-      <form id="profile-builder-form" class="profile-builder-form profile-builder-modal-form">
-        <div class="profile-photo-grid" id="profile-photo-preview-grid"></div>
-        <div class="profile-photo-inputs">
-          <label class="field profile-photo-field">
-            <span>Photo 1</span>
-            <input type="file" id="profile-photo-input-1" accept="image/*">
-          </label>
-          <label class="field profile-photo-field">
-            <span>Photo 2</span>
-            <input type="file" id="profile-photo-input-2" accept="image/*">
-          </label>
-        </div>
-        <div class="field">
-          <span>Skills</span>
-          <div class="profile-skill-library" id="profile-skill-library"></div>
-        </div>
-        <label class="field">
-          <span>Hobbies</span>
-          <textarea id="profile-hobbies-input" rows="3" placeholder="Reading, cricket, travel..."></textarea>
-        </label>
-        <label class="field">
-          <span>Interests</span>
-          <textarea id="profile-interests-input" rows="3" placeholder="Mentoring, markets, photography..."></textarea>
-        </label>
-        <div class="form-actions profile-builder-actions">
-          <p id="profile-builder-status">Add up to 2 photos, choose a few skills, and tell colleagues what you enjoy.</p>
-          <button type="submit" class="btn-warm">Save profile</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <div class="toast" id="toast" aria-live="polite"></div>
 

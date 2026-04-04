@@ -13,9 +13,8 @@ from .services import (
     ACTIVE_REDEMPTION_STATUSES,
     build_store_admin_overview,
     build_store_overview,
-    earned_points_for_user,
-    pending_requested_points_for_user,
-    spent_points_for_user,
+    coin_balance_for_user,
+    requestable_points_for_user,
 )
 
 
@@ -66,11 +65,7 @@ def redemption_collection(request):
     if active_redemptions >= item.stock_units:
         return JsonResponse({"detail": "This item is currently out of stock."}, status=400)
 
-    earned = earned_points_for_user(request.user)
-    pending_requested = pending_requested_points_for_user(request.user)
-    spent = spent_points_for_user(request.user)
-    available = max(earned - pending_requested - spent, 0)
-    if available < item.point_cost:
+    if requestable_points_for_user(request.user) < item.point_cost:
         return JsonResponse({"detail": "Not enough Acuite Coins available for this request."}, status=400)
 
     try:
@@ -131,10 +126,27 @@ def redemption_detail(request, redemption_id):
             BrandStoreRedemption.Status.FULFILLED,
         }:
             return JsonResponse({"detail": "Unsupported redemption status."}, status=400)
+        current_status = redemption.status
+        allowed_admin_transitions = {
+            BrandStoreRedemption.Status.REQUESTED: {
+                BrandStoreRedemption.Status.APPROVED,
+                BrandStoreRedemption.Status.DECLINED,
+            },
+            BrandStoreRedemption.Status.APPROVED: {
+                BrandStoreRedemption.Status.FULFILLED,
+            },
+            BrandStoreRedemption.Status.FULFILLED: set(),
+            BrandStoreRedemption.Status.DECLINED: set(),
+            BrandStoreRedemption.Status.CANCELLED: set(),
+        }
+        if status not in allowed_admin_transitions.get(current_status, set()):
+            return JsonResponse(
+                {"detail": "This redemption cannot move to that status from its current state."},
+                status=400,
+            )
         if status == BrandStoreRedemption.Status.APPROVED:
-            earned = earned_points_for_user(redemption.requester)
-            spent = spent_points_for_user(redemption.requester)
-            available = max(earned - spent, 0)
+            balance = coin_balance_for_user(redemption.requester)
+            available = max(balance["earned_points"] - balance["spent_points"], 0)
             if available < redemption.points_locked:
                 return JsonResponse({"detail": "This employee no longer has enough Acuite Coins for approval."}, status=400)
         redemption.status = status
