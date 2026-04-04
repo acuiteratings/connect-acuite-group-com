@@ -112,6 +112,14 @@ TRUSTED_SSO_TOKEN_RATE_LIMIT = int(os.getenv("TRUSTED_SSO_TOKEN_RATE_LIMIT", "60
 TRUSTED_SSO_TOKEN_RATE_WINDOW_SECONDS = int(
     os.getenv("TRUSTED_SSO_TOKEN_RATE_WINDOW_SECONDS", "60")
 )
+PEOPLE_DIRECTORY_API_BASE_URL = os.getenv(
+    "PEOPLE_DIRECTORY_API_BASE_URL",
+    "",
+).strip().rstrip("/")
+PEOPLE_DIRECTORY_API_TOKEN = os.getenv("PEOPLE_DIRECTORY_API_TOKEN", "").strip()
+PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS = int(
+    os.getenv("PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS", "15")
+)
 
 
 def register_trusted_sso_client(client_id, env_prefix, default_name):
@@ -152,6 +160,7 @@ INSTALLED_APPS = [
     "recognition",
     "store",
     "operations",
+    "people_sync",
     "quiz",
     "voice",
 ]
