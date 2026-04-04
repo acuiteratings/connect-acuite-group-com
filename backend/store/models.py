@@ -70,6 +70,7 @@ class CoinLedgerEntry(models.Model):
         HOLD = "hold", "Hold"
         RELEASE = "release", "Release"
         SPEND = "spend", "Spend"
+        EXPIRE = "expire", "Expire"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -74,3 +74,16 @@ def admin_console_page(request):
             "build_credit": settings.APP_BUILD_CREDIT,
         },
     )
+
+
+@ensure_csrf_cookie
+def terms_page(request):
+    return render(
+        request,
+        "terms.html",
+        {
+            "api_base_path": "/api",
+            "build_number": get_current_build_number(),
+            "build_credit": settings.APP_BUILD_CREDIT,
+        },
+    )

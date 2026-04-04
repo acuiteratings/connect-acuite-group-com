@@ -234,6 +234,7 @@ const appData = {
     earned_points: 0,
     locked_points: 0,
     spent_points: 0,
+    expired_points: 0,
     available_points: 0,
     register: [],
   },
@@ -448,6 +449,7 @@ Object.assign(appData, {
     earned_points: 0,
     locked_points: 0,
     spent_points: 0,
+    expired_points: 0,
     available_points: 0,
     register: [],
   },
@@ -798,6 +800,7 @@ async function loadStoreData() {
     earned_points: 0,
     locked_points: 0,
     spent_points: 0,
+    expired_points: 0,
     available_points: 0,
     register: [],
   };
@@ -997,6 +1000,12 @@ async function handleDocumentClick(event) {
     if (actionName === "open-profile-builder") {
       closeProfileMenu();
       openProfileBuilder();
+      return;
+    }
+
+    if (actionName === "open-terms-page") {
+      closeProfileMenu();
+      window.location.href = "/terms-and-conditions.html";
       return;
     }
 
@@ -2099,7 +2108,9 @@ function renderStoreBalanceCard() {
       <li>Earned: ${escapeHtml(String(appData.storeBalance.earned_points || 0))} coins</li>
       <li>Locked in requests: ${escapeHtml(String(appData.storeBalance.locked_points || 0))} coins</li>
       <li>Encashed: ${escapeHtml(String(appData.storeBalance.spent_points || 0))} coins</li>
+      <li>Expired: ${escapeHtml(String(appData.storeBalance.expired_points || 0))} coins</li>
     </ul>
+    <div class="mini-item-meta">Unused balance expires on 31 March or on the employee’s day of exit.</div>
   `;
 }
 
@@ -2137,7 +2148,7 @@ function renderStorePolicyCard() {
   const register = Array.isArray(appData.storeBalance.register) ? appData.storeBalance.register.slice(0, 5) : [];
   container.innerHTML = `
     <p class="widget-kicker">Coin register</p>
-    <h3>Recent earned and encashed activity</h3>
+    <h3>Recent coin activity</h3>
     ${
       register.length
         ? `<ul class="mini-list">
@@ -2295,16 +2306,21 @@ function renderProfileCoinBank() {
   }
 
   const earned = Number(appData.storeBalance.earned_points || 0);
+  const locked = Number(appData.storeBalance.locked_points || 0);
   const spent = Number(appData.storeBalance.spent_points || 0);
-  const balance = Math.max(earned - spent, 0);
+  const expired = Number(appData.storeBalance.expired_points || 0);
+  const balance = Number(appData.storeBalance.available_points || 0);
 
   container.innerHTML = `
     <p class="widget-kicker">Acuite Coin Bank</p>
     <h3>${escapeHtml(String(balance))} balance</h3>
     <ul class="simple-list">
       <li>Earned: ${escapeHtml(String(earned))} coins</li>
+      <li>Locked: ${escapeHtml(String(locked))} coins</li>
       <li>Spent: ${escapeHtml(String(spent))} coins</li>
+      <li>Expired: ${escapeHtml(String(expired))} coins</li>
     </ul>
+    <div class="mini-item-meta">Unused balance expires on 31 March or on the employee’s day of exit.</div>
   `;
 }
 

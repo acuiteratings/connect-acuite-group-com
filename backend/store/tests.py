@@ -1,10 +1,11 @@
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import ExitProcess, User
 from directory.models import DirectoryProfile
 from feed.models import Comment, Post, PostReaction
 
@@ -266,7 +267,10 @@ class BrandStoreApiTests(TestCase):
         requested_balance = requested_response.json()["balance"]
         self.assertEqual(requested_balance["locked_points"], self.item.point_cost)
         self.assertEqual(requested_balance["spent_points"], before_balance["spent_points"])
-        self.assertEqual(requested_balance["available_points"], before_balance["available_points"])
+        self.assertEqual(
+            requested_balance["available_points"],
+            before_balance["available_points"] - self.item.point_cost,
+        )
 
         redemption = BrandStoreRedemption.objects.get()
         self.client.force_login(self.admin)
@@ -381,3 +385,72 @@ class BrandStoreApiTests(TestCase):
         first_count = CoinLedgerEntry.objects.count()
         backfill_coin_ledger()
         self.assertEqual(CoinLedgerEntry.objects.count(), first_count)
+
+    def test_financial_year_end_expires_unused_available_points(self):
+        CoinLedgerEntry.objects.all().delete()
+        self.client.force_login(self.user)
+        expiry_now = timezone.make_aware(datetime(2026, 4, 4, 9, 0, 0))
+        earn_time = timezone.make_aware(datetime(2026, 3, 15, 10, 0, 0))
+
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="question_asked",
+            amount=1000,
+            reference_key="manual-test-earn-fy",
+            summary="Manual fiscal-year earn",
+            occurred_at=earn_time,
+        )
+
+        with patch("store.services.timezone.now", return_value=expiry_now):
+            balance = self.client.get("/api/store/overview/").json()["balance"]
+
+        self.assertEqual(balance["earned_points"], 1000)
+        self.assertEqual(balance["expired_points"], 1000)
+        self.assertEqual(balance["available_points"], 0)
+        self.assertTrue(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                entry_type=CoinLedgerEntry.EntryType.EXPIRE,
+                reference_key="coin_expiry:fiscal_year_end:2026-04-01",
+            ).exists()
+        )
+
+    def test_exit_day_expires_unused_available_points(self):
+        CoinLedgerEntry.objects.all().delete()
+        self.client.force_login(self.user)
+        earn_time = timezone.make_aware(datetime(2026, 4, 10, 10, 0, 0))
+        exit_now = timezone.make_aware(datetime(2026, 4, 18, 10, 0, 0))
+
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="idea_shared",
+            amount=500,
+            reference_key="manual-test-earn-exit",
+            summary="Manual exit earn",
+            occurred_at=earn_time,
+        )
+        ExitProcess.objects.create(
+            employee=self.user,
+            initiated_by=self.admin,
+            updated_by=self.admin,
+            resignation_date=datetime(2026, 4, 15).date(),
+            last_working_day=datetime(2026, 4, 18).date(),
+            stage=ExitProcess.Stage.ALUMNI_CONVERSION,
+            notes="Exit scheduled.",
+        )
+
+        with patch("store.services.timezone.now", return_value=exit_now):
+            balance = self.client.get("/api/store/overview/").json()["balance"]
+
+        self.assertEqual(balance["earned_points"], 500)
+        self.assertEqual(balance["expired_points"], 500)
+        self.assertEqual(balance["available_points"], 0)
+        self.assertTrue(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                entry_type=CoinLedgerEntry.EntryType.EXPIRE,
+                reference_key="coin_expiry:employee_exit:2026-04-18",
+            ).exists()
+        )

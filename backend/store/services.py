@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+from datetime import date, datetime, time
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -30,6 +31,7 @@ COIN_RULES = {
     "idea_shared": {"label": "Share an idea", "coins": 500},
     "question_asked": {"label": "Ask a question", "coins": 1000},
     "ceo_request": {"label": "Connect with MD & CEO", "coins": 1000},
+    "coin_expiry": {"label": "Coin balance expiry", "coins": 0},
 }
 
 
@@ -37,6 +39,7 @@ def build_coin_rules():
     return [
         {"key": key, "label": item["label"], "coins": item["coins"]}
         for key, item in COIN_RULES.items()
+        if item["coins"] > 0
     ]
 
 
@@ -45,11 +48,150 @@ def default_coin_balance(*, include_register=False):
         "earned_points": 0,
         "locked_points": 0,
         "spent_points": 0,
+        "expired_points": 0,
         "available_points": 0,
     }
     if include_register:
         payload["register"] = []
     return payload
+
+
+def _coin_account_is_active(user):
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if not getattr(user, "is_active", False):
+        return False
+    employment_status = getattr(user, "employment_status", "")
+    active_status = getattr(getattr(user, "EmploymentStatus", None), "ACTIVE", "active")
+    return employment_status == active_status
+
+
+def _local_day_start(value):
+    tz = timezone.get_current_timezone()
+    return timezone.make_aware(datetime.combine(value, time.min), tz)
+
+
+def _current_fiscal_cycle_start(now=None):
+    now = now or timezone.now()
+    today = timezone.localtime(now).date()
+    fiscal_year = today.year if today.month >= 4 else today.year - 1
+    return _local_day_start(date(fiscal_year, 4, 1))
+
+
+def _coin_exit_date(user):
+    try:
+        process = getattr(user, "exit_process", None)
+    except Exception:
+        process = None
+    if process and getattr(process, "last_working_day", None):
+        return process.last_working_day
+    return None
+
+
+def _coin_expiry_reference(kind, cutoff_date):
+    return f"coin_expiry:{kind}:{cutoff_date.isoformat()}"
+
+
+def _iter_coin_expiry_boundaries(user, now=None):
+    now = now or timezone.now()
+    today = timezone.localtime(now).date()
+    first_entry_at = (
+        CoinLedgerEntry.objects.filter(user=user)
+        .order_by("occurred_at")
+        .values_list("occurred_at", flat=True)
+        .first()
+    )
+    if not first_entry_at:
+        return []
+
+    first_entry_date = timezone.localtime(first_entry_at).date()
+    boundaries = []
+    first_fiscal_year = first_entry_date.year if first_entry_date.month < 4 else first_entry_date.year + 1
+    fiscal_date = date(first_fiscal_year, 4, 1)
+    while fiscal_date <= today:
+        boundaries.append(("fiscal_year_end", fiscal_date, _local_day_start(fiscal_date)))
+        fiscal_date = date(fiscal_date.year + 1, 4, 1)
+
+    exit_date = _coin_exit_date(user)
+    if exit_date and exit_date <= today:
+        boundaries.append(("employee_exit", exit_date, _local_day_start(exit_date)))
+
+    boundaries.sort(key=lambda item: item[2])
+    return boundaries
+
+
+def _balance_snapshot_before(user, cutoff_at):
+    earned_total = 0
+    earned_reversals = 0
+    held_total = 0
+    released_total = 0
+    spent_total = 0
+    expired_total = 0
+
+    entries = CoinLedgerEntry.objects.filter(user=user, occurred_at__lt=cutoff_at).order_by("occurred_at", "id")
+    for entry in entries:
+        if entry.entry_type == CoinLedgerEntry.EntryType.EARN:
+            earned_total += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.EARN_REVERSAL:
+            earned_reversals += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.HOLD:
+            held_total += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.RELEASE:
+            released_total += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.SPEND:
+            spent_total += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.EXPIRE:
+            expired_total += entry.amount
+
+    net_earned = max(earned_total - earned_reversals, 0)
+    locked_points = max(held_total - released_total, 0)
+    available_points = max(net_earned - spent_total - expired_total - locked_points, 0)
+    return {
+        "earned_points": net_earned,
+        "locked_points": locked_points,
+        "spent_points": spent_total,
+        "expired_points": expired_total,
+        "available_points": available_points,
+    }
+
+
+def ensure_coin_expiry_entries_for_user(user, now=None):
+    if not getattr(user, "pk", None):
+        return
+
+    for kind, cutoff_date, cutoff_at in _iter_coin_expiry_boundaries(user, now=now):
+        reference_key = _coin_expiry_reference(kind, cutoff_date)
+        if CoinLedgerEntry.objects.filter(reference_key=reference_key).exists():
+            continue
+
+        snapshot = _balance_snapshot_before(user, cutoff_at)
+        if snapshot["available_points"] <= 0:
+            continue
+
+        _ensure_ledger_entry(
+            user=user,
+            entry_type=CoinLedgerEntry.EntryType.EXPIRE,
+            event_key="coin_expiry",
+            amount=snapshot["available_points"],
+            reference_key=reference_key,
+            occurred_at=cutoff_at,
+            summary=(
+                "Unused Acuite Coins expired on employee exit."
+                if kind == "employee_exit"
+                else "Unused Acuite Coins expired at the financial year-end reset."
+            ),
+            metadata={"expiry_kind": kind, "cutoff_date": cutoff_date.isoformat()},
+        )
+
+
+def ensure_coin_expiry_entries_for_users(user_ids, now=None):
+    if not user_ids:
+        return
+    from accounts.models import User
+
+    users = User.objects.filter(id__in=user_ids)
+    for user in users:
+        ensure_coin_expiry_entries_for_user(user, now=now)
 
 
 def _single_entry_reference(source_type, source_id, event_key, entry_type):
@@ -121,6 +263,8 @@ def _ensure_reward_entry(
     metadata=None,
 ):
     if not getattr(user, "is_authenticated", False) or not source_id:
+        return None, False
+    if qualifies and not _coin_account_is_active(user):
         return None, False
 
     earn_count, reversal_count = _reward_cycle_counts(source_type, source_id, event_key)
@@ -355,6 +499,8 @@ def _register_kind(entry):
         return "released"
     if entry.entry_type == CoinLedgerEntry.EntryType.SPEND:
         return "spent"
+    if entry.entry_type == CoinLedgerEntry.EntryType.EXPIRE:
+        return "expired"
     if entry.entry_type == CoinLedgerEntry.EntryType.EARN_REVERSAL:
         return "reversed"
     return "earned"
@@ -365,6 +511,8 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
     if not user_ids:
         return {}
 
+    ensure_coin_expiry_entries_for_users(user_ids)
+
     payload = {
         user_id: {
             "earned_total": 0,
@@ -372,6 +520,7 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
             "held_total": 0,
             "released_total": 0,
             "spent_points": 0,
+            "expired_points": 0,
             "register": [] if include_register else None,
         }
         for user_id in user_ids
@@ -391,6 +540,8 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
             balance["released_total"] += entry.amount
         elif entry.entry_type == CoinLedgerEntry.EntryType.SPEND:
             balance["spent_points"] += entry.amount
+        elif entry.entry_type == CoinLedgerEntry.EntryType.EXPIRE:
+            balance["expired_points"] += entry.amount
 
         if include_register and len(balance["register"]) < register_limit:
             balance["register"].append(
@@ -408,11 +559,13 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
         earned_points = max(raw_balance["earned_total"] - raw_balance["earned_reversals"], 0)
         locked_points = max(raw_balance["held_total"] - raw_balance["released_total"], 0)
         spent_points = raw_balance["spent_points"]
+        expired_points = raw_balance["expired_points"]
         balance = {
             "earned_points": earned_points,
             "locked_points": locked_points,
             "spent_points": spent_points,
-            "available_points": max(earned_points - spent_points, 0),
+            "expired_points": expired_points,
+            "available_points": max(earned_points - spent_points - expired_points - locked_points, 0),
         }
         if include_register:
             balance["register"] = raw_balance["register"]
@@ -447,7 +600,7 @@ def pending_requested_points_for_user(user):
 
 def requestable_points_for_user(user):
     balance = coin_balance_for_user(user)
-    return max(balance["earned_points"] - balance["spent_points"] - balance["locked_points"], 0)
+    return balance["available_points"]
 
 
 def backfill_coin_ledger():

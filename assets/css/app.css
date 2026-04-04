@@ -90,6 +90,15 @@ body.modal-open {
   padding-top: 0;
 }
 
+.connect-footer-link {
+  color: rgba(232, 114, 42, 0.92);
+  font-weight: 700;
+}
+
+.connect-footer-link:hover {
+  color: rgba(166, 56, 29, 0.92);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -313,6 +322,91 @@ select {
 .profile-menu button:hover {
   background: var(--bg3);
   color: var(--text);
+}
+
+.terms-page-body {
+  min-height: 100vh;
+}
+
+.terms-page-shell {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.terms-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 114, 42, 0.24);
+  color: var(--text);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: var(--shadow-soft);
+}
+
+.terms-page-card {
+  display: grid;
+  gap: 22px;
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.terms-page-head {
+  display: grid;
+  gap: 8px;
+}
+
+.terms-page-head h1 {
+  margin: 0;
+  font-size: clamp(34px, 4.4vw, 52px);
+  line-height: 1.04;
+  letter-spacing: -0.05em;
+}
+
+.terms-page-meta {
+  margin: 0;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.terms-highlight {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(232, 114, 42, 0.18);
+  background: linear-gradient(135deg, rgba(247, 148, 29, 0.1), rgba(255, 255, 255, 0.72));
+  color: var(--text);
+}
+
+.terms-content {
+  display: grid;
+  gap: 22px;
+}
+
+.terms-content section {
+  display: grid;
+  gap: 10px;
+}
+
+.terms-content h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.terms-content p {
+  margin: 0;
+  color: var(--text2);
+  line-height: 1.8;
+}
+
+.terms-list {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text2);
+  line-height: 1.8;
 }
 
 .icon-btn {

@@ -25,6 +25,7 @@ urlpatterns = [
     path("admin-console.html", views.admin_console_page, name="admin-console-page"),
     path("access-denied.html", views.access_denied_page, name="access-denied-page"),
     path("login.html", views.login_page, name="login-page"),
+    path("terms-and-conditions.html", views.terms_page, name="terms-page"),
     path(
         "login/",
         RedirectView.as_view(pattern_name="login-page", permanent=False),
