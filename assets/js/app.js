@@ -4066,6 +4066,7 @@ function showToast(message) {
 }
 
 function renderBulletinPostCard(post) {
+  const showSupplementaryText = !post.bulletinCard;
   return `
     <article class="card voice-card bulletin-card bulletin-category-${escapeHtml(post.category)}" id="${post.id}">
       <div class="voice-card-top">
@@ -4090,12 +4091,16 @@ function renderBulletinPostCard(post) {
             </div>`
           : ""
       }
-      <div class="card-body">
-        <div class="card-title">${escapeHtml(post.title)}</div>
-        ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
-      </div>
       ${
-        post.metaLines.length
+        showSupplementaryText
+          ? `<div class="card-body">
+              <div class="card-title">${escapeHtml(post.title)}</div>
+              ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+            </div>`
+          : ""
+      }
+      ${
+        showSupplementaryText && post.metaLines.length
           ? `<div class="bulletin-meta-lines">
               ${post.metaLines.map((line) => `<span class="mini-chip">${escapeHtml(line)}</span>`).join("")}
             </div>`

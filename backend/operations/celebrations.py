@@ -139,6 +139,22 @@ def _template_style_key(template_path: Path) -> str:
     return styles[int(digest[:8], 16) % len(styles)]
 
 
+def _celebration_person_meta(profile: DirectoryProfile) -> str:
+    location = str(
+        profile.office_location
+        or profile.city
+        or getattr(profile.user, "location", "")
+        or ""
+    ).strip()
+    department = str(
+        profile.department_for_connect
+        or getattr(profile.user, "department", "")
+        or profile.company_name
+        or ""
+    ).strip()
+    return " | ".join(item for item in [location, department] if item)
+
+
 def _build_celebration_card(candidate: CelebrationCandidate, *, template_path: Path) -> dict:
     profile = candidate.profile
     user = profile.user
@@ -147,9 +163,7 @@ def _build_celebration_card(candidate: CelebrationCandidate, *, template_path: P
         "template_label": _template_label(template_path),
         "occasion_label": "Happy Birthday" if candidate.template_key == "birthday_wish" else "Happy Work Anniversary",
         "person_name": user.full_name,
-        "person_role": " | ".join(
-            item for item in [user.title, user.department or profile.company_name] if item
-        ),
+        "person_role": _celebration_person_meta(profile),
         "date_label": candidate.occasion_date_label,
         "message": candidate.body,
         "photo_url": _profile_photo_url(profile),
