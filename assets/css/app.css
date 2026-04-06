@@ -758,6 +758,23 @@ select {
   margin-top: 18px;
 }
 
+.home-announcement-form-group {
+  display: grid;
+  gap: 14px;
+}
+
+.home-announcement-form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.home-announcement-form-note {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+
 .announcement-filter-pill {
   min-height: 42px;
   padding: 0 16px;

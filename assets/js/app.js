@@ -199,6 +199,12 @@ const HOME_ANNOUNCEMENTS = [
     },
   },
 ];
+const TOWN_HALL_GENERIC_CONTENT = {
+  title: "Town hall and leadership briefing.",
+  summary: "How did we do last year? What is our plan going forward? If you want to know about these, do attend the session. Before the session you may post a question to our MD & CEO, give a suggestion or share an idea.",
+  hostLabel: "Hosted by the MD & CEO with the leadership team",
+  audienceLabel: "Open to all employees",
+};
 const CEO_DESK_EDITORIAL = {
   id: "ceo-desk-editorial-april-2026",
   baseLikes: 24,
@@ -915,6 +921,13 @@ function bindEvents() {
   if (elements.adminUserSearchInput) {
     elements.adminUserSearchInput.addEventListener("input", () => {
       renderAdminUserList();
+    });
+  }
+
+  const homeAnnouncementTypeSelect = document.getElementById("home-announcement-type-select");
+  if (homeAnnouncementTypeSelect) {
+    homeAnnouncementTypeSelect.addEventListener("change", () => {
+      syncHomeAnnouncementAdminForm();
     });
   }
 
@@ -1677,26 +1690,7 @@ function renderHomeAnnouncement() {
 
   const publishedPost = getHomeAnnouncementPostForTag(state.homeAnnouncementFilter);
   const announcement = publishedPost
-    ? {
-      id: publishedPost.id,
-      sourceId: publishedPost.sourceId,
-      eyebrow: getSelectedHomeAnnouncementFilterLabel(),
-      type: getSelectedHomeAnnouncementFilterLabel(),
-      format: "Connect",
-      title: publishedPost.title,
-      summary: publishedPost.body[0] || "",
-      dateLabel: publishedPost.metaLines[0] || "Published on Connect",
-      timeLabel: publishedPost.postedAtLabel || "Now live",
-      venueLabel: "Connect announcement",
-      hostLabel: publishedPost.authorName || "Acuité Ratings & Research",
-      audienceLabel: "Visible to all employees",
-      countdownLabel: publishedPost.postedAtLabel || "",
-      baseMetrics: {
-        likes: Number(publishedPost.reactionCount || 0),
-      },
-      currentUserHasReacted: Boolean(publishedPost.currentUserHasReacted),
-      isLive: true,
-    }
+    ? mapHomeAnnouncementPost(publishedPost)
     : (HOME_ANNOUNCEMENTS.find((item) => item.tag === state.homeAnnouncementFilter) || null);
   renderHomeAnnouncementFilters();
   renderHomeAnnouncementAdminForm();
@@ -1793,6 +1787,7 @@ function renderHomeAnnouncementAdminForm() {
   }
   form.hidden = !currentUserCanAdministerConnect();
   title.textContent = `Publish under ${getSelectedHomeAnnouncementFilterLabel()}`;
+  syncHomeAnnouncementAdminForm(form);
 }
 
 async function submitHomeAnnouncementFeedback(form) {
@@ -1846,13 +1841,47 @@ async function submitHomeAnnouncementAdminPost(form) {
   }
 
   const formData = new FormData(form);
-  const title = String(formData.get("title") || "").trim();
-  const metaLine = String(formData.get("meta_line") || "").trim();
-  const body = String(formData.get("body") || "").trim();
-  if (!title || !body) {
-    showToast("Add both a headline and body before publishing.");
-    return;
+  const announcementType = String(formData.get("announcement_type") || "other").trim();
+  let title = "";
+  let body = "";
+  let metaLines = [];
+  const metadata = {
+    bulletin_category: "announcements",
+    home_announcement_tag: state.homeAnnouncementFilter,
+    home_announcement_type: announcementType,
+  };
+
+  if (announcementType === "town_hall") {
+    const townHallDate = String(formData.get("town_hall_date") || "").trim();
+    const townHallTime = String(formData.get("town_hall_time") || "").trim();
+    const townHallMode = String(formData.get("town_hall_mode") || "").trim();
+    const townHallVenue = String(formData.get("town_hall_venue") || "").trim();
+    if (!townHallDate || !townHallTime || !townHallMode || !townHallVenue) {
+      showToast("Add the date, time, mode, and venue before publishing a town hall.");
+      return;
+    }
+    title = TOWN_HALL_GENERIC_CONTENT.title;
+    body = TOWN_HALL_GENERIC_CONTENT.summary;
+    metaLines = [formatAnnouncementLongDate(townHallDate)];
+    metadata.home_announcement_town_hall = {
+      date: townHallDate,
+      time: townHallTime,
+      mode: townHallMode,
+      venue: normalizeTownHallVenueLabel(townHallVenue),
+    };
+  } else {
+    title = String(formData.get("title") || "").trim();
+    const metaLine = String(formData.get("meta_line") || "").trim();
+    body = String(formData.get("body") || "").trim();
+    if (!title || !body) {
+      showToast("Add both a headline and body before publishing.");
+      return;
+    }
+    metadata.home_announcement_town_hall = null;
+    metaLines = metaLine ? [metaLine] : [];
   }
+
+  metadata.bulletin_meta_lines = metaLines;
 
   try {
     await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
@@ -1865,17 +1894,16 @@ async function submitHomeAnnouncementAdminPost(form) {
         topic: "announcements",
         post_as_company: true,
         allow_comments: true,
-        metadata: {
-          bulletin_category: "announcements",
-          bulletin_meta_lines: metaLine ? [metaLine] : [],
-          home_announcement_tag: state.homeAnnouncementFilter,
-        },
+        metadata,
       },
     });
     form.reset();
+    syncHomeAnnouncementAdminForm(form);
     await loadBulletinPosts();
     renderHomeAnnouncement();
-    showToast(`${getSelectedHomeAnnouncementFilterLabel()} announcement published.`);
+    showToast(announcementType === "town_hall"
+      ? "Town hall announcement published."
+      : `${getSelectedHomeAnnouncementFilterLabel()} announcement published.`);
   } catch (error) {
     showToast(error.message || "Could not publish the announcement.");
   }
@@ -3087,6 +3115,10 @@ function mapBulletinPost(post) {
     imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
     homeAnnouncementTag: String(metadata.home_announcement_tag || "").trim(),
+    homeAnnouncementType: String(metadata.home_announcement_type || "").trim(),
+    townHallDetails: metadata.home_announcement_town_hall && typeof metadata.home_announcement_town_hall === "object"
+      ? metadata.home_announcement_town_hall
+      : null,
     bulletinChannel: String(metadata.bulletin_channel || "").trim(),
     bulletinCard: metadata.bulletin_card && typeof metadata.bulletin_card === "object" ? metadata.bulletin_card : null,
     authorName,
@@ -3094,6 +3126,7 @@ function mapBulletinPost(post) {
     initials: author.initials || initialsFromName(authorName),
     avatar: gradientKeyFromText(`${authorName}-${category}`),
     postedAtLabel: formatRelativeTime(post.published_at || post.created_at),
+    publishedAt: post.published_at || "",
     createdAt: post.created_at || "",
     allowComments: Boolean(post.allow_comments),
     commentCount: post.comment_count || 0,
@@ -3128,6 +3161,108 @@ function getCurrentHomeAnnouncement() {
   return getHomeAnnouncementPostForTag(state.homeAnnouncementFilter)
     || HOME_ANNOUNCEMENTS.find((item) => item.tag === state.homeAnnouncementFilter)
     || null;
+}
+
+function syncHomeAnnouncementAdminForm(form = document.getElementById("home-announcement-admin-form")) {
+  if (!form) {
+    return;
+  }
+  const typeSelect = form.querySelector("[name='announcement_type']");
+  const otherFields = document.getElementById("home-announcement-other-fields");
+  const townHallFields = document.getElementById("home-announcement-townhall-fields");
+  const isTownHall = (typeSelect?.value || "other") === "town_hall";
+
+  if (otherFields) {
+    otherFields.hidden = isTownHall;
+    toggleFormGroupControls(otherFields, !isTownHall);
+  }
+  if (townHallFields) {
+    townHallFields.hidden = !isTownHall;
+    toggleFormGroupControls(townHallFields, isTownHall);
+  }
+
+  const titleInput = form.querySelector("[name='title']");
+  const bodyInput = form.querySelector("[name='body']");
+  const dateInput = form.querySelector("[name='town_hall_date']");
+  const timeInput = form.querySelector("[name='town_hall_time']");
+  const modeInput = form.querySelector("[name='town_hall_mode']");
+  const venueInput = form.querySelector("[name='town_hall_venue']");
+
+  if (titleInput) {
+    titleInput.required = !isTownHall;
+  }
+  if (bodyInput) {
+    bodyInput.required = !isTownHall;
+  }
+  if (dateInput) {
+    dateInput.required = isTownHall;
+  }
+  if (timeInput) {
+    timeInput.required = isTownHall;
+  }
+  if (modeInput) {
+    modeInput.required = isTownHall;
+  }
+  if (venueInput) {
+    venueInput.required = isTownHall;
+  }
+}
+
+function toggleFormGroupControls(group, enabled) {
+  group.querySelectorAll("input, textarea, select").forEach((control) => {
+    control.disabled = !enabled;
+  });
+}
+
+function mapHomeAnnouncementPost(post) {
+  if (post.homeAnnouncementType === "town_hall" && post.townHallDetails) {
+    return buildTownHallAnnouncementFromPost(post);
+  }
+
+  return {
+    id: post.id,
+    sourceId: post.sourceId,
+    eyebrow: getSelectedHomeAnnouncementFilterLabel(),
+    type: getSelectedHomeAnnouncementFilterLabel(),
+    format: "Connect",
+    title: post.title,
+    summary: post.body[0] || "",
+    dateLabel: post.metaLines[0] || "Published on Connect",
+    timeLabel: post.postedAtLabel || "Now live",
+    venueLabel: "Connect announcement",
+    hostLabel: post.authorName || "Acuité Ratings & Research",
+    audienceLabel: "Visible to all employees",
+    countdownLabel: post.postedAtLabel || "",
+    baseMetrics: {
+      likes: Number(post.reactionCount || 0),
+    },
+    currentUserHasReacted: Boolean(post.currentUserHasReacted),
+    isLive: true,
+  };
+}
+
+function buildTownHallAnnouncementFromPost(post) {
+  const details = post.townHallDetails || {};
+  return {
+    id: post.id,
+    sourceId: post.sourceId,
+    eyebrow: getSelectedHomeAnnouncementFilterLabel(),
+    type: "Town Hall",
+    format: formatTownHallModeLabel(details.mode) || "Town Hall",
+    title: TOWN_HALL_GENERIC_CONTENT.title,
+    summary: TOWN_HALL_GENERIC_CONTENT.summary,
+    dateLabel: formatAnnouncementLongDate(details.date) || post.metaLines[0] || "Date to be announced",
+    timeLabel: String(details.time || "").trim() || "Time to be announced",
+    venueLabel: normalizeTownHallVenueLabel(details.venue),
+    hostLabel: TOWN_HALL_GENERIC_CONTENT.hostLabel,
+    audienceLabel: TOWN_HALL_GENERIC_CONTENT.audienceLabel,
+    countdownLabel: getTownHallCountdownLabel(details.date),
+    baseMetrics: {
+      likes: Number(post.reactionCount || 0),
+    },
+    currentUserHasReacted: Boolean(post.currentUserHasReacted),
+    isLive: true,
+  };
 }
 
 function getCeoDeskPosts() {
@@ -3629,6 +3764,89 @@ function capitalize(value) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 }
 
+function ordinalSuffix(value) {
+  const day = Number(value);
+  if (!Number.isFinite(day)) {
+    return "";
+  }
+  const remainderHundred = day % 100;
+  if (remainderHundred >= 11 && remainderHundred <= 13) {
+    return "th";
+  }
+  switch (day % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
+}
+
+function formatAnnouncementLongDate(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  const weekday = parsed.toLocaleDateString("en-IN", { weekday: "long" });
+  const month = parsed.toLocaleDateString("en-IN", { month: "long" });
+  const day = parsed.getDate();
+  return `${weekday}, ${day}${ordinalSuffix(day)} ${month} ${parsed.getFullYear()}`;
+}
+
+function formatTownHallModeLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "in_person") {
+    return "In Person";
+  }
+  if (normalized === "hybrid") {
+    return "Hybrid";
+  }
+  if (normalized === "online") {
+    return "Online";
+  }
+  return capitalize(normalized.replaceAll("_", " "));
+}
+
+function normalizeTownHallVenueLabel(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "Venue: TBD";
+  }
+  if (/^venue\s*:/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `Venue: ${trimmed}`;
+}
+
+function getTownHallCountdownLabel(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const difference = Math.round((eventDay.getTime() - today.getTime()) / 86400000);
+  if (difference > 1) {
+    return `${difference} days to go`;
+  }
+  if (difference === 1) {
+    return "1 day to go";
+  }
+  if (difference === 0) {
+    return "Today";
+  }
+  return "Completed";
+}
 
 function formatDisplayDate(value) {
   if (!value) {

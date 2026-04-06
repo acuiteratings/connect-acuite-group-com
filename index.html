@@ -155,17 +155,51 @@
           <p class="widget-kicker">Post Announcement</p>
           <h3 id="home-announcement-admin-title">Publish under Leadership</h3>
           <label class="field">
-            <span>Headline</span>
-            <input type="text" name="title" maxlength="140" placeholder="Add the announcement headline" required>
+            <span>Announcement type</span>
+            <select name="announcement_type" id="home-announcement-type-select">
+              <option value="other">Other Announcements</option>
+              <option value="town_hall">Town Hall</option>
+            </select>
           </label>
-          <label class="field">
-            <span>One short line</span>
-            <input type="text" name="meta_line" maxlength="160" placeholder="Add one short supporting line">
-          </label>
-          <label class="field">
-            <span>Body</span>
-            <textarea name="body" rows="6" maxlength="3000" placeholder="Write the announcement clearly." required></textarea>
-          </label>
+          <div class="home-announcement-form-group" id="home-announcement-other-fields">
+            <label class="field">
+              <span>Headline</span>
+              <input type="text" name="title" maxlength="140" placeholder="Add the announcement headline" required>
+            </label>
+            <label class="field">
+              <span>One short line</span>
+              <input type="text" name="meta_line" maxlength="160" placeholder="Add one short supporting line">
+            </label>
+            <label class="field">
+              <span>Body</span>
+              <textarea name="body" rows="6" maxlength="3000" placeholder="Write the announcement clearly." required></textarea>
+            </label>
+          </div>
+          <div class="home-announcement-form-group" id="home-announcement-townhall-fields" hidden>
+            <div class="home-announcement-form-grid">
+              <label class="field">
+                <span>Date</span>
+                <input type="date" name="town_hall_date">
+              </label>
+              <label class="field">
+                <span>Time</span>
+                <input type="text" name="town_hall_time" maxlength="120" placeholder="4:00 PM - 5:30 PM IST">
+              </label>
+              <label class="field">
+                <span>Mode</span>
+                <select name="town_hall_mode">
+                  <option value="hybrid">Hybrid</option>
+                  <option value="online">Online</option>
+                  <option value="in_person">In Person</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Venue</span>
+                <input type="text" name="town_hall_venue" maxlength="180" placeholder="Venue: TBD">
+              </label>
+            </div>
+            <p class="home-announcement-form-note">The rest of the town hall text will be published in the standard Connect format automatically.</p>
+          </div>
           <div class="form-actions">
             <p>This form is visible only to admins and publishes directly into the selected announcement tag.</p>
             <button type="submit" class="btn-warm">Publish Announcement</button>
