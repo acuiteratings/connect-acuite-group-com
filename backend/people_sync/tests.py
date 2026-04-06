@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import date, datetime, timezone as dt_timezone
 
 from django.test import TestCase
 from django.utils import timezone
@@ -118,6 +118,58 @@ class PeopleSyncServiceTests(TestCase):
         profile = user.directory_profile
         self.assertEqual(profile.manager_id, manager.id)
         self.assertEqual(profile.department_for_connect, "Business Development")
+        self.assertEqual(profile.date_of_birth, date(1994, 4, 4))
+        self.assertEqual(profile.joined_on, date(2022, 4, 4))
+
+    def test_sync_keeps_existing_celebration_dates_when_source_values_are_blank(self):
+        user = User.objects.create_user(
+            email="nidhi.shree@acuite.in",
+            employee_code="ARR-00421",
+            first_name="Nidhi",
+            last_name="Shree",
+            display_name="Nidhi Shree",
+            employment_status=User.EmploymentStatus.ACTIVE,
+            must_change_password=False,
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            city="Mumbai",
+            office_location="Mumbai",
+            date_of_birth=date(1994, 4, 4),
+            joined_on=date(2022, 4, 4),
+        )
+
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00421",
+                        "email": "nidhi.shree@acuite.in",
+                        "full_name": "Nidhi Shree",
+                        "title": "Associate",
+                        "department": "Corporate Sector Ratings",
+                        "function_name": "Business Development",
+                        "company_name": "Acuite",
+                        "office_location": "Mumbai",
+                        "city": "Mumbai",
+                        "mobile_number": "+91-9000000000",
+                        "date_of_birth": "",
+                        "joined_on": "",
+                        "manager_employee_id": "",
+                        "employment_status": "active",
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run_people_sync(fetch_page=fake_fetch_page)
+
+        profile = DirectoryProfile.objects.get(user=user)
+        self.assertEqual(profile.date_of_birth, date(1994, 4, 4))
+        self.assertEqual(profile.joined_on, date(2022, 4, 4))
 
     def test_partial_success_logs_failures_and_keeps_same_checkpoint(self):
         checkpoint = timezone.make_aware(datetime(2026, 4, 4, 10, 0, 0), dt_timezone.utc)

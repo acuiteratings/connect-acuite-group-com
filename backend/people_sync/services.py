@@ -179,14 +179,16 @@ def _apply_directory_fields(profile, user, item):
         source_status,
         item.get("is_directory_visible"),
     )
+    source_date_of_birth = _parse_optional_date(item.get("date_of_birth"))
+    source_joined_on = _parse_optional_date(item.get("joined_on"))
     desired_values = {
         "company_name": str(item.get("company_name") or "").strip(),
         "function_name": str(item.get("function_name") or "").strip(),
         "office_location": str(item.get("office_location") or "").strip(),
         "city": str(item.get("city") or item.get("office_location") or "").strip(),
         "mobile_number": str(item.get("mobile_number") or "").strip(),
-        "date_of_birth": _parse_optional_date(item.get("date_of_birth")),
-        "joined_on": _parse_optional_date(item.get("joined_on")),
+        "date_of_birth": source_date_of_birth if source_date_of_birth is not None else profile.date_of_birth,
+        "joined_on": source_joined_on if source_joined_on is not None else profile.joined_on,
         "is_visible": source_visible,
         "department_for_connect": map_department_for_connect(user.department),
     }
