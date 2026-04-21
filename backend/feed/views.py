@@ -30,6 +30,19 @@ def _query_flag_enabled(request, key):
     return value in {"1", "true", "yes", "on"}
 
 
+def _query_limit(request, default=50, maximum=200):
+    raw_value = str(request.GET.get("limit", "")).strip()
+    if not raw_value:
+        return default
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        return default
+    if parsed < 1:
+        return default
+    return min(parsed, maximum)
+
+
 def _can_moderate(user):
     return user.is_authenticated and (
         getattr(user, "can_moderate_connect", False)
@@ -143,6 +156,10 @@ def posts_collection(request):
         if topic:
             queryset = queryset.filter(topic=topic)
 
+        moderation_status = str(request.GET.get("moderation_status", "")).strip().lower()
+        if moderation_status:
+            queryset = queryset.filter(moderation_status=moderation_status)
+
         bulletin_channel = request.GET.get("bulletin_channel")
         if bulletin_channel:
             queryset = queryset.filter(metadata__bulletin_channel=bulletin_channel)
@@ -164,7 +181,8 @@ def posts_collection(request):
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
-        posts = [serialize_post(post, viewer=request.user) for post in queryset[:50]]
+        limit = _query_limit(request)
+        posts = [serialize_post(post, viewer=request.user) for post in queryset[:limit]]
         return JsonResponse({"count": len(posts), "results": posts})
 
     if request.method != "POST":

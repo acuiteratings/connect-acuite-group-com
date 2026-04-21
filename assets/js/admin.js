@@ -104,9 +104,11 @@
   }
 
   async function loadEmployeePosts() {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/?module=employee_posts&topic=employee_submission");
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      "/api/feed/posts/?module=employee_posts&topic=employee_submission&moderation_status=pending_review&limit=200",
+    );
     state.employeePosts = Array.isArray(payload.results)
-      ? payload.results.filter((post) => String(post.moderation_status || "").toLowerCase() === "pending_review")
+      ? payload.results
       : [];
   }
 

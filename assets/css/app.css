@@ -2726,6 +2726,10 @@ select {
   background: var(--bg-soft);
 }
 
+.typeahead-list[hidden] {
+  display: none;
+}
+
 .typeahead-option {
   width: 100%;
   padding: 10px 12px;
