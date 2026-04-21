@@ -5275,14 +5275,14 @@ function renderBulletinPostCard(post) {
         showSupplementaryText
           ? `<div class="card-body">
               <div class="card-title">${escapeHtml(post.title)}</div>
+              ${
+                post.metaLines.length
+                  ? `<div class="bulletin-meta-lines">
+                      ${post.metaLines.map((line) => `<span class="mini-chip">${escapeHtml(line)}</span>`).join("")}
+                    </div>`
+                  : ""
+              }
               ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
-            </div>`
-          : ""
-      }
-      ${
-        showSupplementaryText && post.metaLines.length
-          ? `<div class="bulletin-meta-lines">
-              ${post.metaLines.map((line) => `<span class="mini-chip">${escapeHtml(line)}</span>`).join("")}
             </div>`
           : ""
       }
