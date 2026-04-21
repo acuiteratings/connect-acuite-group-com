@@ -1,6 +1,7 @@
 const STORAGE_KEY = "acuite-connect-state-v2-live";
 const DIRECTORY_CACHE_KEY = "acuite-connect-directory-cache-v1";
 const CEO_DESK_CACHE_KEY = "acuite-connect-ceo-desk-cache-v1";
+const LEARNING_CACHE_KEY = "acuite-connect-library-cache-v1";
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -507,6 +508,8 @@ let directoryCachedAt = "";
 let directoryShowingCachedData = false;
 let ceoDeskCachedAt = "";
 let ceoDeskShowingCachedData = false;
+let learningCachedAt = "";
+let learningShowingCachedData = false;
 let storeLoadError = "";
 let learningLoadError = "";
 let bulletinLoadError = "";
@@ -724,6 +727,10 @@ async function init() {
   if (state.activeTab === "ceo-desk" && hydratedCeoDeskCache) {
     renderAll();
   }
+  const hydratedLearningCache = hydrateLearningCache();
+  if (state.activeTab === "library" && hydratedLearningCache) {
+    renderAll();
+  }
 
   try {
     const criticalTasks = [
@@ -806,8 +813,13 @@ async function loadDirectoryData() {
 
 async function loadLearningData() {
   learningLoadError = "";
-  appData.learningBooks = [];
-  appData.learningRequisitions = [];
+  const hasCachedLearning = hydrateLearningCache();
+  if (!hasCachedLearning) {
+    appData.learningBooks = [];
+    appData.learningRequisitions = [];
+    learningCachedAt = "";
+    learningShowingCachedData = false;
+  }
 
   if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
     learningLoadError = "Learning services are unavailable in this build.";
@@ -817,8 +829,13 @@ async function loadLearningData() {
   try {
     const booksPayload = await window.AcuiteConnectAuth.apiRequest("/api/learning/books/");
     appData.learningBooks = Array.isArray(booksPayload.results) ? booksPayload.results : [];
+    learningCachedAt = new Date().toISOString();
+    learningShowingCachedData = false;
+    saveLearningCache();
   } catch (error) {
-    learningLoadError = error.message || "Could not load book-club data.";
+    learningLoadError = hasCachedLearning
+      ? ""
+      : (error.message || "Could not load book-club data.");
   }
 }
 
@@ -3443,7 +3460,7 @@ function renderLearningBooks() {
 
   const books = getFilteredLearningBooks();
   meta.textContent = appData.learningBooks.length
-    ? `${books.length} of ${appData.learningBooks.length} titles shown`
+    ? `${books.length} of ${appData.learningBooks.length} titles shown${learningShowingCachedData ? ` · saved copy${learningCachedAt ? ` · updated ${formatRelativeTime(learningCachedAt)}` : ""}` : ""}`
     : "Live Acuité library catalog";
 
   if (!appData.learningBooks.length) {
@@ -4570,6 +4587,27 @@ function hydrateCeoDeskCache() {
   return true;
 }
 
+function readLearningCache() {
+  try {
+    const raw = window.localStorage.getItem(LEARNING_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function hydrateLearningCache() {
+  const saved = readLearningCache();
+  if (!saved || !Array.isArray(saved.results)) {
+    return false;
+  }
+
+  appData.learningBooks = saved.results;
+  learningCachedAt = typeof saved.cachedAt === "string" ? saved.cachedAt : "";
+  learningShowingCachedData = true;
+  return true;
+}
+
 function saveState() {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -4585,6 +4623,20 @@ function saveCeoDeskCache() {
       JSON.stringify({
         cachedAt: ceoDeskCachedAt || new Date().toISOString(),
         results: appData.ceoDeskPosts,
+      }),
+    );
+  } catch (error) {
+    return;
+  }
+}
+
+function saveLearningCache() {
+  try {
+    window.localStorage.setItem(
+      LEARNING_CACHE_KEY,
+      JSON.stringify({
+        cachedAt: learningCachedAt || new Date().toISOString(),
+        results: appData.learningBooks,
       }),
     );
   } catch (error) {
