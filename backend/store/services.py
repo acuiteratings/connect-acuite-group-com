@@ -1,7 +1,8 @@
 from collections import Counter, defaultdict
 from datetime import date, datetime, time
 
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from feed.models import Comment, Post, PostReaction
@@ -506,12 +507,13 @@ def _register_kind(entry):
     return "earned"
 
 
-def build_coin_balance_map(user_ids, *, include_register=False, register_limit=12):
+def build_coin_balance_map(user_ids, *, include_register=False, register_limit=12, refresh_expiry=True):
     user_ids = [int(user_id) for user_id in user_ids if user_id]
     if not user_ids:
         return {}
 
-    ensure_coin_expiry_entries_for_users(user_ids)
+    if refresh_expiry:
+        ensure_coin_expiry_entries_for_users(user_ids)
 
     payload = {
         user_id: {
@@ -525,6 +527,91 @@ def build_coin_balance_map(user_ids, *, include_register=False, register_limit=1
         }
         for user_id in user_ids
     }
+
+    if not include_register:
+        balance_rows = (
+            CoinLedgerEntry.objects.filter(user_id__in=user_ids)
+            .values("user_id")
+            .annotate(
+                earned_total=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.EARN, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                earned_reversals=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                held_total=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.HOLD, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                released_total=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.RELEASE, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                spent_points=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.SPEND, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                expired_points=Coalesce(
+                    Sum(
+                        Case(
+                            When(entry_type=CoinLedgerEntry.EntryType.EXPIRE, then="amount"),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+            )
+        )
+
+        final_payload = {}
+        for user_id, raw_balance in payload.items():
+            final_payload[user_id] = default_coin_balance()
+        for row in balance_rows:
+            earned_points = max(row["earned_total"] - row["earned_reversals"], 0)
+            locked_points = max(row["held_total"] - row["released_total"], 0)
+            spent_points = row["spent_points"]
+            expired_points = row["expired_points"]
+            final_payload[row["user_id"]] = {
+                "earned_points": earned_points,
+                "locked_points": locked_points,
+                "spent_points": spent_points,
+                "expired_points": expired_points,
+                "available_points": max(earned_points - spent_points - expired_points - locked_points, 0),
+            }
+        return final_payload
 
     entries = CoinLedgerEntry.objects.filter(user_id__in=user_ids).order_by("-occurred_at", "-id")
 

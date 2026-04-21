@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 
 from accounts.models import User
@@ -6,6 +8,28 @@ from .models import DirectoryProfile
 
 
 class DirectoryApiTests(TestCase):
+    def test_directory_skips_coin_expiry_refresh_work(self):
+        user = User.objects.create_user(
+            email="fast.directory@acuite.in",
+            first_name="Fast",
+            last_name="Directory",
+            title="Analyst",
+            department="Technology",
+            location="Mumbai",
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            city="Mumbai",
+            office_location="Mumbai",
+            department_for_connect="Rating Operations",
+        )
+
+        with patch("directory.views.build_coin_balance_map", return_value={user.id: {}}) as mocked_balance_map:
+            response = self.client.get("/api/directory/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(mocked_balance_map.call_args.kwargs["refresh_expiry"], False)
+
     def test_directory_search_returns_matching_profile(self):
         user = User.objects.create_user(
             email="rahul.mehta@acuite.in",

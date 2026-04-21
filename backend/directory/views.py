@@ -96,7 +96,10 @@ def directory_list(request):
             if _profile_branch_location(profile).casefold() == location.casefold()
         ]
     profiles = profiles[:500]
-    coin_balance_map = build_coin_balance_map([profile.user_id for profile in profiles])
+    coin_balance_map = build_coin_balance_map(
+        [profile.user_id for profile in profiles],
+        refresh_expiry=False,
+    )
     results = [
         serialize_directory_profile(profile, coin_balance=coin_balance_map.get(profile.user_id))
         for profile in profiles

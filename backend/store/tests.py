@@ -10,7 +10,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post, PostReaction
 
 from .models import BrandStoreItem, BrandStoreRedemption, CoinLedgerEntry
-from .services import backfill_coin_ledger
+from .services import backfill_coin_ledger, build_coin_balance_map
 
 
 class BrandStoreApiTests(TestCase):
@@ -507,5 +507,33 @@ class BrandStoreApiTests(TestCase):
                 user=self.user,
                 entry_type=CoinLedgerEntry.EntryType.EXPIRE,
                 reference_key="coin_expiry:employee_exit:2026-04-18",
+            ).exists()
+        )
+
+    def test_build_coin_balance_map_can_skip_expiry_refresh(self):
+        CoinLedgerEntry.objects.all().delete()
+        expiry_now = timezone.make_aware(datetime(2026, 4, 4, 9, 0, 0))
+        earn_time = timezone.make_aware(datetime(2026, 3, 15, 10, 0, 0))
+
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="question_asked",
+            amount=1000,
+            reference_key="manual-test-skip-expiry",
+            summary="Manual earn before year end",
+            occurred_at=earn_time,
+        )
+
+        with patch("store.services.timezone.now", return_value=expiry_now):
+            balance = build_coin_balance_map([self.user.id], refresh_expiry=False)[self.user.id]
+
+        self.assertEqual(balance["earned_points"], 1000)
+        self.assertEqual(balance["expired_points"], 0)
+        self.assertEqual(balance["available_points"], 1000)
+        self.assertFalse(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                entry_type=CoinLedgerEntry.EntryType.EXPIRE,
             ).exists()
         )

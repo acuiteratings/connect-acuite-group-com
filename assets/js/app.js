@@ -1439,8 +1439,10 @@ function renderAll() {
   safeRender("bulletin panel", renderBulletinPanel);
   safeRender("my posts panel", renderMyPostsPanel);
   safeRender("admin panel", renderAdminPanel);
-  safeRender("directory filters", renderDirectoryChips);
-  safeRender("directory", renderDirectory);
+  if (state.activeTab === "directory") {
+    safeRender("directory filters", renderDirectoryChips);
+    safeRender("directory", renderDirectory);
+  }
   safeRender("birthdays", renderBirthdays);
   safeRender("anniversaries", renderAnniversaries);
   safeRender("sidebar holidays", renderSidebarHolidays);
@@ -4450,12 +4452,6 @@ function renderDirectory() {
             <div class="person-role">${escapeHtml(person.role)}</div>
             <div class="person-location">${escapeHtml(person.officeLine)}</div>
           </div>
-        </div>
-        <div class="person-detail-grid">
-          ${directoryCardDetail("Employee Code", person.employeeCode)}
-          ${directoryCardDetail("Company", person.companyLabel || person.company)}
-          ${directoryCardDetail("Office", person.office)}
-          ${directoryCardDetail("Coins", person.coinBalance)}
         </div>
         <div class="person-footer">
           <span class="availability">${escapeHtml(person.contactLine)}</span>
