@@ -38,7 +38,7 @@ const STORE_CATEGORY_LABELS = {
 const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
-const ENABLED_TABS = new Set(["home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
+const ENABLED_TABS = new Set(["home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -178,6 +178,21 @@ const COMPANY_EVENT_CALENDAR = [
     label: "Town hall and leadership briefing",
   },
 ];
+
+const COMMUNITY_CLUB_EMOJIS = {
+  reading_club: "📚",
+  movie_club: "🎬",
+  travel_club: "✈️",
+  entertainment_club: "🎭",
+  quiz_club: "🧠",
+  debate_club: "🎙️",
+  technology_club: "💻",
+  photography_club: "📷",
+  cricket_club: "🏏",
+  football_club: "⚽",
+  charity_club: "🤝",
+  health_club: "💚",
+};
 
 const HOME_ANNOUNCEMENT_FILTERS = [
   ["leadership", "Leadership"],
@@ -479,6 +494,7 @@ Object.assign(appData, {
   bulletinPosts: [],
   ceoDeskPosts: [],
   myPosts: [],
+  communityClubs: [],
   directory: [],
   birthdays: [],
   anniversaries: [],
@@ -518,6 +534,9 @@ let bulletinLoadError = "";
 let selectedCeoDeskArchiveKey = "";
 let myPostsLoadError = "";
 let adminUsersLoadError = "";
+let communityLoadError = "";
+let communityLoading = false;
+let communitySavingKey = "";
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
 let profileMenuOpen = false;
@@ -610,6 +629,7 @@ function renderShell() {
   safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
+  safeRender("community panel", renderCommunityPanel);
   safeRender("home announcement", renderHomeAnnouncement);
   safeRender("holiday panel", renderHolidayPanel);
   safeRender("birthdays", renderBirthdays);
@@ -651,6 +671,8 @@ async function init() {
     myPostsHelpCopy: document.getElementById("my-posts-help-copy"),
     myPostsList: document.getElementById("my-posts-list"),
     myPostsResultsMeta: document.getElementById("my-posts-results-meta"),
+    communityGrid: document.getElementById("community-grid"),
+    communityResultsMeta: document.getElementById("community-results-meta"),
     brochureBuilderMeta: document.getElementById("brochure-builder-meta"),
     brochurePickerList: document.getElementById("brochure-picker-list"),
     brochureSelectionMeta: document.getElementById("brochure-selection-meta"),
@@ -993,6 +1015,27 @@ async function loadMyPosts() {
   }
 }
 
+async function loadCommunityData() {
+  if (communityLoading) {
+    return;
+  }
+
+  communityLoading = true;
+  communityLoadError = "";
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/communities/");
+    appData.communityClubs = Array.isArray(payload.results) ? payload.results : [];
+    if (appData.currentProfile) {
+      appData.currentProfile.clubs = Array.isArray(payload.my_clubs) ? payload.my_clubs : [];
+    }
+  } catch (error) {
+    communityLoadError = error.message || "Could not load communities.";
+  } finally {
+    communityLoading = false;
+    renderCommunityPanel();
+  }
+}
+
 async function loadAdminUsers() {
   adminUsersLoadError = "";
   appData.adminUsers = [];
@@ -1189,6 +1232,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "select-my-posts-person") {
       selectMyPostsPerson(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "toggle-community-membership") {
+      await toggleCommunityMembership(action.dataset.clubKey, action.dataset.joined === "true");
       return;
     }
 
@@ -1543,6 +1591,7 @@ function renderAll() {
   safeRender("library panel", renderLearningPanel);
   safeRender("bulletin panel", renderBulletinPanel);
   safeRender("my posts panel", renderMyPostsPanel);
+  safeRender("community panel", renderCommunityPanel);
   safeRender("admin panel", renderAdminPanel);
   if (state.activeTab === "directory") {
     safeRender("directory filters", renderDirectoryChips);
@@ -3185,6 +3234,109 @@ function renderMyPostsPanel() {
   `).join("");
 }
 
+function renderCommunityPanel() {
+  if (!elements.communityGrid || !elements.communityResultsMeta) {
+    return;
+  }
+
+  if (state.activeTab === "community" && !communityLoading && !communityLoadError && !appData.communityClubs.length) {
+    void loadCommunityData();
+  }
+
+  if (communityLoadError) {
+    elements.communityResultsMeta.textContent = "Community issue";
+    elements.communityGrid.innerHTML = `<div class="empty-state">${escapeHtml(communityLoadError)}</div>`;
+    return;
+  }
+
+  if (communityLoading && !appData.communityClubs.length) {
+    elements.communityResultsMeta.textContent = "Loading communities...";
+    elements.communityGrid.innerHTML = '<div class="empty-state">Loading communities...</div>';
+    return;
+  }
+
+  if (!appData.communityClubs.length) {
+    elements.communityResultsMeta.textContent = "No communities available";
+    elements.communityGrid.innerHTML = '<div class="empty-state">No communities have been published yet.</div>';
+    return;
+  }
+
+  const joinedCount = appData.communityClubs.filter((club) => club.joined).length;
+  elements.communityResultsMeta.textContent = `${appData.communityClubs.length} communities | ${joinedCount} joined`;
+  elements.communityGrid.innerHTML = appData.communityClubs.map((club) => `
+    <article class="section-card club-card">
+      <div class="club-banner ${communityGradientClass(club.key)}">
+        <div class="club-emoji">${escapeHtml(COMMUNITY_CLUB_EMOJIS[club.key] || "✨")}</div>
+      </div>
+      <div class="club-card-body">
+        <h3>${escapeHtml(club.label)}</h3>
+        <p>${escapeHtml(club.description || "Join this community voluntarily and participate with colleagues.")}</p>
+        <div class="club-members">
+          <span class="count">${escapeHtml(String(club.member_count || 0))} member${Number(club.member_count || 0) === 1 ? "" : "s"}</span>
+          <button
+            type="button"
+            class="btn-ghost club-join ${club.joined ? "joined" : ""}"
+            data-action="toggle-community-membership"
+            data-club-key="${escapeHtml(club.key)}"
+            data-joined="${club.joined ? "true" : "false"}"
+            ${communitySavingKey === club.key ? "disabled" : ""}
+          >
+            ${communitySavingKey === club.key ? "Saving..." : (club.joined ? "Joined" : "Join")}
+          </button>
+        </div>
+      </div>
+    </article>
+  `).join("");
+}
+
+function communityGradientClass(clubKey) {
+  const groups = {
+    reading_club: "club-banner-sun",
+    movie_club: "club-banner-ember",
+    travel_club: "club-banner-cool",
+    entertainment_club: "club-banner-fire",
+    quiz_club: "club-banner-leaf",
+    debate_club: "club-banner-sun",
+    technology_club: "club-banner-cool",
+    photography_club: "club-banner-ember",
+    cricket_club: "club-banner-leaf",
+    football_club: "club-banner-cool",
+    charity_club: "club-banner-fire",
+    health_club: "club-banner-leaf",
+  };
+  return groups[clubKey] || "club-banner-sun";
+}
+
+async function toggleCommunityMembership(clubKey, isJoined) {
+  if (!clubKey || !window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    showToast("Communities are unavailable right now.");
+    return;
+  }
+
+  communitySavingKey = clubKey;
+  renderCommunityPanel();
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/communities/", {
+      method: "POST",
+      body: {
+        club_key: clubKey,
+        action: isJoined ? "leave" : "join",
+      },
+    });
+    appData.communityClubs = Array.isArray(payload.results) ? payload.results : appData.communityClubs;
+    if (appData.currentProfile) {
+      appData.currentProfile.clubs = Array.isArray(payload.my_clubs) ? payload.my_clubs : [];
+    }
+    renderCommunityPanel();
+    showToast(isJoined ? "You have left the community." : "You have joined the community.");
+  } catch (error) {
+    showToast(error.message || "Could not update your club membership.");
+  } finally {
+    communitySavingKey = "";
+    renderCommunityPanel();
+  }
+}
+
 function renderProfileCoinBank() {
   const container = document.getElementById("profile-coin-bank");
   if (!container) {
@@ -4319,6 +4471,9 @@ function getFilteredStoreItems() {
 function switchTab(tabId) {
   state.activeTab = ENABLED_TABS.has(tabId) ? tabId : "home";
   saveState();
+  if (state.activeTab === "community" && !communityLoading && !appData.communityClubs.length) {
+    void loadCommunityData();
+  }
   hideSearchResults();
   renderPanels();
   window.requestAnimationFrame(() => {

@@ -2993,6 +2993,26 @@ select {
   justify-content: center;
 }
 
+.club-banner-sun {
+  background: var(--grad-sun);
+}
+
+.club-banner-cool {
+  background: var(--grad-cool);
+}
+
+.club-banner-fire {
+  background: var(--grad-fire);
+}
+
+.club-banner-ember {
+  background: linear-gradient(135deg, var(--orange), var(--amber));
+}
+
+.club-banner-leaf {
+  background: linear-gradient(135deg, var(--green), var(--lime));
+}
+
 .club-emoji {
   font-size: 40px;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));

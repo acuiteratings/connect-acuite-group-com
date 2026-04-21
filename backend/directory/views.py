@@ -5,6 +5,7 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 
 from store.services import build_coin_balance_map
 
+from .community_utils import COMMUNITY_CLUB_LIBRARY, normalize_community_clubs
 from .models import DirectoryProfile
 from .serializers import serialize_directory_profile
 from .utils import (
@@ -51,6 +52,49 @@ def _collect_branch_locations(profiles):
             if branch_location
         }
     )
+
+
+def _get_or_create_profile_for_user(user):
+    profile, _ = DirectoryProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            "city": user.location,
+            "office_location": user.location,
+            "department_for_connect": map_department_for_connect(user.department),
+            "is_visible": True,
+        },
+    )
+    return profile
+
+
+def _build_communities_payload(current_user=None):
+    profiles = list(
+        DirectoryProfile.objects.select_related("user").filter(user__is_active=True)
+    )
+    member_counts = {item["key"]: 0 for item in COMMUNITY_CLUB_LIBRARY}
+    for profile in profiles:
+        for club_key in normalize_community_clubs(profile.clubs):
+            member_counts[club_key] += 1
+
+    current_user_clubs = []
+    if current_user and getattr(current_user, "is_authenticated", False):
+        profile = _get_or_create_profile_for_user(current_user)
+        current_user_clubs = normalize_community_clubs(profile.clubs)
+
+    results = [
+        {
+            **club,
+            "member_count": member_counts.get(club["key"], 0),
+            "joined": club["key"] in current_user_clubs,
+        }
+        for club in COMMUNITY_CLUB_LIBRARY
+    ]
+    return {
+        "count": len(results),
+        "joined_count": len(current_user_clubs),
+        "my_clubs": current_user_clubs,
+        "results": results,
+    }
 
 
 def directory_list(request):
@@ -118,19 +162,41 @@ def directory_list(request):
     return JsonResponse({"count": len(results), "results": results, "filters": filters})
 
 
+def communities_overview(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    if request.method == "GET":
+        return JsonResponse(_build_communities_payload(request.user))
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    payload = _parse_json_body(request)
+    club_key = str(payload.get("club_key", "")).strip().lower()
+    action = str(payload.get("action", "")).strip().lower()
+    if club_key not in {item["key"] for item in COMMUNITY_CLUB_LIBRARY}:
+        return JsonResponse({"detail": "Invalid community selected."}, status=400)
+    if action not in {"join", "leave"}:
+        return JsonResponse({"detail": "Invalid membership action."}, status=400)
+
+    profile = _get_or_create_profile_for_user(request.user)
+    clubs = normalize_community_clubs(profile.clubs)
+    if action == "join" and club_key not in clubs:
+        clubs.append(club_key)
+    if action == "leave":
+        clubs = [item for item in clubs if item != club_key]
+    profile.clubs = clubs
+    profile.save(update_fields=["clubs", "updated_at"])
+
+    return JsonResponse(_build_communities_payload(request.user))
+
+
 def my_profile(request):
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "Authentication required."}, status=403)
 
-    profile, _ = DirectoryProfile.objects.get_or_create(
-        user=request.user,
-        defaults={
-            "city": request.user.location,
-            "office_location": request.user.location,
-            "department_for_connect": map_department_for_connect(request.user.department),
-            "is_visible": True,
-        },
-    )
+    profile = _get_or_create_profile_for_user(request.user)
 
     if request.method == "GET":
         return JsonResponse(

@@ -40,6 +40,7 @@ class DirectoryProfile(models.Model):
     bio = models.TextField(blank=True)
     expertise = models.CharField(max_length=255, blank=True)
     skills = models.JSONField(default=list, blank=True)
+    clubs = models.JSONField(default=list, blank=True)
     hobbies = models.JSONField(default=list, blank=True)
     interests = models.JSONField(default=list, blank=True)
     profile_photos = models.JSONField(default=list, blank=True)

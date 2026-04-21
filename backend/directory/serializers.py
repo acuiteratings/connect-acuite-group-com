@@ -25,6 +25,7 @@ def serialize_directory_profile(profile, *, coin_balance=None):
             "bio": profile.bio,
             "expertise": profile.expertise,
             "skills": profile.skills,
+            "clubs": profile.clubs,
             "hobbies": profile.hobbies,
             "interests": profile.interests,
             "profile_photos": profile.profile_photos,

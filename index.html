@@ -97,6 +97,12 @@
         </svg>
         Bulletin Board
       </button>
+      <button type="button" class="tab" data-switch-tab="community">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a3 3 0 00-3-3h-2m-4 4H4a3 3 0 01-3-3v-1a3 3 0 013-3h9m4 4v1a3 3 0 003 3M9 7a4 4 0 118 0 4 4 0 01-8 0z"></path>
+        </svg>
+        Community
+      </button>
       <button type="button" class="tab" data-switch-tab="playtime">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M7 4v6m10-6v6M6 20h12a2 2 0 002-2V10H4v8a2 2 0 002 2zm3-6h.01M12 14h.01M15 14h.01"></path>
@@ -879,6 +885,26 @@
         <div class="directory-filter-stack" id="directory-filter-groups"></div>
         <div class="directory-results-meta" id="directory-results-meta"></div>
         <div class="directory-grid" id="directory-grid"></div>
+      </section>
+
+      <section class="panel" id="panel-community">
+        <div class="section-head">
+          <div>
+            <h2>Community</h2>
+            <p>Join employee communities voluntarily and participate with colleagues who share the same interests.</p>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Employee Communities</p>
+              <h2>Choose the clubs you want to join</h2>
+              <div class="mini-item-meta" id="community-results-meta">Loading communities...</div>
+            </div>
+          </div>
+          <div class="clubs-grid" id="community-grid"></div>
+        </section>
       </section>
 
       <section class="panel" id="panel-profile">
