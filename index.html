@@ -268,6 +268,7 @@
             <p>The current Acuité brochure is hosted inside Connect so employees can open it directly from the Resources page.</p>
             <div class="landing-actions">
               <a class="btn-link" href="/static/resources/acuite/acuite-brochure.html" target="_blank" rel="noopener noreferrer">Open brochure</a>
+              <button type="button" class="btn-ghost" data-switch-tab="brochure-builder">Build your own brochure</button>
             </div>
           </article>
 
@@ -354,6 +355,46 @@
             </div>
           </article>
         </section>
+      </section>
+
+      <section class="panel" id="panel-brochure-builder">
+        <div class="section-head">
+          <div>
+            <h2>Brochure Builder</h2>
+            <p>Select brochure slides, review them in click order, then export or present them.</p>
+          </div>
+          <div class="landing-actions">
+            <button type="button" class="btn-ghost" data-switch-tab="resources">Back to Resources</button>
+          </div>
+        </div>
+
+        <div class="brochure-builder-layout">
+          <section class="section-card brochure-builder-column">
+            <div class="section-card-head">
+              <div>
+                <p class="widget-kicker">Slide Library</p>
+                <h2>All brochure slides</h2>
+                <div class="mini-item-meta" id="brochure-builder-meta">Loading brochure slides...</div>
+              </div>
+            </div>
+            <div class="brochure-picker-list" id="brochure-picker-list"></div>
+          </section>
+
+          <section class="section-card brochure-builder-column">
+            <div class="section-card-head brochure-builder-preview-head">
+              <div>
+                <p class="widget-kicker">Selected Brochure</p>
+                <h2>Preview and export</h2>
+                <div class="mini-item-meta" id="brochure-selection-meta">Choose one or more slides from the left.</div>
+              </div>
+              <div class="landing-actions brochure-builder-actions">
+                <button type="button" class="btn-link" data-action="print-brochure-selection">Export / Print PDF</button>
+                <button type="button" class="btn-warm" data-action="present-brochure-selection">PRESENT</button>
+              </div>
+            </div>
+            <div class="brochure-preview-list" id="brochure-preview-list"></div>
+          </section>
+        </div>
       </section>
 
       <section class="panel" id="panel-applications">
@@ -1007,6 +1048,28 @@
           <button type="submit" class="btn-warm">Post comment</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="profile-modal-backdrop brochure-presentation-backdrop" id="brochure-presentation-backdrop" hidden>
+    <div class="profile-modal brochure-presentation-modal" role="dialog" aria-modal="true" aria-labelledby="brochure-presentation-title">
+      <div class="profile-modal-head brochure-presentation-head">
+        <div>
+          <p class="widget-kicker">Presentation</p>
+          <h2 id="brochure-presentation-title">Selected brochure slides</h2>
+          <div class="mini-item-meta" id="brochure-presentation-meta">Slide 1 of 1</div>
+        </div>
+        <button type="button" class="profile-modal-close" data-action="close-brochure-presentation" aria-label="Close presentation">
+          ×
+        </button>
+      </div>
+      <div class="brochure-presentation-frame-shell">
+        <iframe id="brochure-presentation-frame" title="Brochure presentation slide"></iframe>
+      </div>
+      <div class="brochure-presentation-controls">
+        <button type="button" class="btn-ghost" data-action="brochure-prev">Previous</button>
+        <button type="button" class="btn-ghost" data-action="brochure-next">Next</button>
+      </div>
     </div>
   </div>
 

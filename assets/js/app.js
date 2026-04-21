@@ -32,9 +32,10 @@ const STORE_CATEGORY_LABELS = {
   desk: "Desk",
   memorabilia: "Memorabilia",
 };
+const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
-const ENABLED_TABS = new Set(["home", "holidays", "resources", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
+const ENABLED_TABS = new Set(["home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -477,6 +478,7 @@ const defaultState = {
   theme: "",
   activeTab: "home",
   homeAnnouncementFilter: "leadership",
+  brochureBuilderSelectedIds: [],
   storeFilter: "all",
   learningBookFilter: "all",
   learningBookQuery: "",
@@ -504,6 +506,11 @@ let activeCommentsPostId = 0;
 let liveComments = [];
 let liveCommentsError = "";
 let liveCommentsLoading = false;
+let brochureSlides = [];
+let brochureLoadError = "";
+let brochureSlidesLoading = false;
+let brochurePresentationOpen = false;
+let brochurePresentationIndex = 0;
 let selectedAdminUserId = null;
 let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
 
@@ -577,6 +584,8 @@ function renderShell() {
   safeRender("panels", renderPanels);
   safeRender("profile", renderProfile);
   safeRender("profile builder", renderProfileBuilder);
+  safeRender("brochure builder", renderBrochureBuilderPanel);
+  safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
   safeRender("home announcement", renderHomeAnnouncement);
@@ -618,6 +627,13 @@ async function init() {
     myPostsHelpCopy: document.getElementById("my-posts-help-copy"),
     myPostsList: document.getElementById("my-posts-list"),
     myPostsResultsMeta: document.getElementById("my-posts-results-meta"),
+    brochureBuilderMeta: document.getElementById("brochure-builder-meta"),
+    brochurePickerList: document.getElementById("brochure-picker-list"),
+    brochureSelectionMeta: document.getElementById("brochure-selection-meta"),
+    brochurePreviewList: document.getElementById("brochure-preview-list"),
+    brochurePresentationBackdrop: document.getElementById("brochure-presentation-backdrop"),
+    brochurePresentationMeta: document.getElementById("brochure-presentation-meta"),
+    brochurePresentationFrame: document.getElementById("brochure-presentation-frame"),
     adminCreateUserForm: document.getElementById("admin-create-user-form"),
     adminEditUserForm: document.getElementById("admin-edit-user-form"),
     adminBulletinForm: document.getElementById("admin-bulletin-form"),
@@ -892,6 +908,8 @@ function bindEvents() {
   document.addEventListener("click", (event) => {
     void handleDocumentClick(event);
   });
+  document.addEventListener("change", handleDocumentChange);
+  document.addEventListener("keydown", handleDocumentKeydown);
   document.addEventListener("submit", handleSubmit);
 
   if (elements.searchInput) {
@@ -1025,6 +1043,31 @@ async function handleDocumentClick(event) {
     if (actionName === "open-terms-page") {
       closeProfileMenu();
       window.location.href = "/terms-and-conditions.html";
+      return;
+    }
+
+    if (actionName === "print-brochure-selection") {
+      printSelectedBrochureSlides();
+      return;
+    }
+
+    if (actionName === "present-brochure-selection") {
+      openBrochurePresentation();
+      return;
+    }
+
+    if (actionName === "close-brochure-presentation") {
+      closeBrochurePresentation();
+      return;
+    }
+
+    if (actionName === "brochure-prev") {
+      moveBrochurePresentation(-1);
+      return;
+    }
+
+    if (actionName === "brochure-next") {
+      moveBrochurePresentation(1);
       return;
     }
 
@@ -1186,12 +1229,46 @@ async function handleDocumentClick(event) {
     closeLiveComments();
   }
 
+  if (elements.brochurePresentationBackdrop && event.target === elements.brochurePresentationBackdrop) {
+    closeBrochurePresentation();
+  }
+
   if (!event.target.closest(".profile-menu-shell")) {
     closeProfileMenu();
   }
 
   if (!event.target.closest(".topnav-search") || !elements.searchResults) {
     hideSearchResults();
+  }
+}
+
+function handleDocumentChange(event) {
+  const brochureCheckbox = event.target.closest("[data-brochure-slide-checkbox]");
+  if (brochureCheckbox) {
+    toggleBrochureSlideSelection(brochureCheckbox.dataset.brochureSlideCheckbox, brochureCheckbox.checked);
+  }
+}
+
+function handleDocumentKeydown(event) {
+  if (!brochurePresentationOpen) {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeBrochurePresentation();
+    return;
+  }
+
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    moveBrochurePresentation(1);
+    return;
+  }
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    moveBrochurePresentation(-1);
   }
 }
 
@@ -1273,6 +1350,8 @@ function renderAll() {
   safeRender("profile", renderProfile);
   safeRender("profile coin bank", renderProfileCoinBank);
   safeRender("profile builder", renderProfileBuilder);
+  safeRender("brochure builder", renderBrochureBuilderPanel);
+  safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
   safeRender("CEO desk message", renderCeoDeskMessage);
@@ -1291,6 +1370,374 @@ function renderAll() {
   safeRender("sidebar events", renderSidebarEvents);
   safeRender("CEO desk like button", renderCeoDeskLikeButton);
   safeRender("filter buttons", syncFilterButtons);
+}
+
+function renderBrochureBuilderPanel() {
+  if (!elements.brochurePickerList || !elements.brochurePreviewList) {
+    return;
+  }
+
+  if (!brochureSlides.length && !brochureSlidesLoading && !brochureLoadError) {
+    void ensureBrochureSlidesLoaded();
+  }
+
+  if (elements.brochureBuilderMeta) {
+    elements.brochureBuilderMeta.textContent = brochureSlidesLoading
+      ? "Loading brochure slides..."
+      : brochureLoadError
+        ? brochureLoadError
+        : brochureSlides.length
+          ? `${brochureSlides.length} slides available`
+          : "No brochure slides found.";
+  }
+
+  if (brochureLoadError) {
+    elements.brochurePickerList.innerHTML = `<div class="brochure-preview-empty">${escapeHtml(brochureLoadError)}</div>`;
+  } else if (brochureSlidesLoading && !brochureSlides.length) {
+    elements.brochurePickerList.innerHTML = '<div class="brochure-preview-empty">Loading brochure slides...</div>';
+  } else {
+    elements.brochurePickerList.innerHTML = brochureSlides.map((slide) => {
+      const orderIndex = state.brochureBuilderSelectedIds.indexOf(slide.id);
+      const isSelected = orderIndex >= 0;
+      return `
+        <label class="brochure-slide-option ${isSelected ? "selected" : ""}">
+          <input
+            type="checkbox"
+            data-brochure-slide-checkbox="${escapeHtml(slide.id)}"
+            ${isSelected ? "checked" : ""}
+          >
+          <div class="brochure-slide-copy">
+            <div class="brochure-slide-order">${isSelected ? `Selected #${orderIndex + 1}` : `Slide ${escapeHtml(slide.number)}`}</div>
+            <div class="brochure-slide-name">${escapeHtml(slide.name)}</div>
+            <div class="brochure-slide-meta">${escapeHtml(slide.rawLabel)}</div>
+          </div>
+        </label>
+      `;
+    }).join("");
+  }
+
+  const selectedSlides = getSelectedBrochureSlides();
+  if (elements.brochureSelectionMeta) {
+    elements.brochureSelectionMeta.textContent = selectedSlides.length
+      ? `${selectedSlides.length} slide${selectedSlides.length === 1 ? "" : "s"} selected in click order`
+      : "Choose one or more slides from the left.";
+  }
+
+  if (!selectedSlides.length) {
+    elements.brochurePreviewList.innerHTML = `
+      <div class="brochure-preview-empty">
+        Select slides on the left. They will appear here in the exact order you click them.
+      </div>
+    `;
+    return;
+  }
+
+  elements.brochurePreviewList.innerHTML = selectedSlides.map((slide, index) => `
+    <article class="brochure-preview-card">
+      <div class="brochure-preview-headline">
+        <strong>${index + 1}. ${escapeHtml(slide.name)}</strong>
+        <span class="mini-item-meta">Slide ${escapeHtml(slide.number)}</span>
+      </div>
+      <iframe
+        class="brochure-preview-frame"
+        title="${escapeHtml(`Brochure preview ${slide.number}`)}"
+        data-brochure-preview-id="${escapeHtml(slide.id)}"
+        loading="lazy"
+      ></iframe>
+    </article>
+  `).join("");
+
+  hydrateBrochureFrames(elements.brochurePreviewList, selectedSlides);
+}
+
+function renderBrochurePresentation() {
+  if (!elements.brochurePresentationBackdrop || !elements.brochurePresentationFrame || !elements.brochurePresentationMeta) {
+    return;
+  }
+
+  if (!brochurePresentationOpen) {
+    elements.brochurePresentationBackdrop.hidden = true;
+    syncModalState();
+    return;
+  }
+
+  const selectedSlides = getSelectedBrochureSlides();
+  if (!selectedSlides.length) {
+    brochurePresentationOpen = false;
+    elements.brochurePresentationBackdrop.hidden = true;
+    syncModalState();
+    return;
+  }
+
+  if (brochurePresentationIndex >= selectedSlides.length) {
+    brochurePresentationIndex = selectedSlides.length - 1;
+  }
+  if (brochurePresentationIndex < 0) {
+    brochurePresentationIndex = 0;
+  }
+
+  const currentSlide = selectedSlides[brochurePresentationIndex];
+  elements.brochurePresentationBackdrop.hidden = false;
+  elements.brochurePresentationMeta.textContent = `Slide ${brochurePresentationIndex + 1} of ${selectedSlides.length} | ${currentSlide.name}`;
+  elements.brochurePresentationFrame.srcdoc = currentSlide.srcdoc;
+  syncModalState();
+}
+
+async function ensureBrochureSlidesLoaded() {
+  if (brochureSlidesLoading || brochureSlides.length) {
+    return;
+  }
+
+  brochureSlidesLoading = true;
+  brochureLoadError = "";
+  renderBrochureBuilderPanel();
+
+  try {
+    const response = await window.fetch(BROCHURE_RESOURCE_PATH, { credentials: "same-origin" });
+    if (!response.ok) {
+      throw new Error("Could not load the hosted brochure file.");
+    }
+    const brochureHtml = await response.text();
+    brochureSlides = parseBrochureSlides(brochureHtml);
+    if (!brochureSlides.length) {
+      throw new Error("No brochure slides were found in the hosted brochure.");
+    }
+    state.brochureBuilderSelectedIds = state.brochureBuilderSelectedIds.filter((id) => brochureSlides.some((slide) => slide.id === id));
+    saveState();
+  } catch (error) {
+    brochureLoadError = error.message || "Could not load the brochure builder.";
+  } finally {
+    brochureSlidesLoading = false;
+    renderBrochureBuilderPanel();
+    renderBrochurePresentation();
+  }
+}
+
+function parseBrochureSlides(brochureHtml) {
+  const parser = new window.DOMParser();
+  const documentNode = parser.parseFromString(brochureHtml, "text/html");
+  return Array.from(documentNode.querySelectorAll("main .slide")).map((slide, index) => {
+    const iframe = slide.querySelector("iframe");
+    const rawLabel = slide.querySelector(".slide-meta .label")?.textContent?.trim()
+      || slide.querySelector(".slide-meta")?.textContent?.trim()
+      || `Slide ${index + 1}`;
+    const numberMatch = rawLabel.match(/^(\d+)/);
+    const number = numberMatch ? numberMatch[1].padStart(2, "0") : String(index + 1).padStart(2, "0");
+    return {
+      id: slide.id || `brochure-slide-${number}`,
+      number,
+      rawLabel,
+      name: formatBrochureSlideName(rawLabel, number),
+      srcdoc: iframe?.getAttribute("srcdoc") || "",
+    };
+  }).filter((slide) => slide.srcdoc);
+}
+
+function formatBrochureSlideName(rawLabel, fallbackNumber) {
+  const cleaned = String(rawLabel || "")
+    .replace(/^\s*\d+\s*-\s*/, "")
+    .trim();
+  if (!cleaned) {
+    return `Slide ${fallbackNumber}`;
+  }
+  return cleaned
+    .split(" - ")
+    .map((segment) => segment
+      .split(/\s+/)
+      .map((word) => formatBrochureWord(word))
+      .join(" "))
+    .join(" · ");
+}
+
+function formatBrochureWord(word) {
+  const compact = String(word || "").trim();
+  if (!compact) {
+    return "";
+  }
+  const normalized = compact.toLowerCase();
+  const replacements = {
+    md: "MD",
+    ceo: "CEO",
+    sebi: "SEBI",
+    rbi: "RBI",
+    csr: "CSR",
+    llm: "LLM",
+  };
+  if (replacements[normalized]) {
+    return replacements[normalized];
+  }
+  if (compact === "&") {
+    return compact;
+  }
+  return capitalize(normalized);
+}
+
+function getBrochureSlideById(slideId) {
+  return brochureSlides.find((slide) => slide.id === slideId) || null;
+}
+
+function getSelectedBrochureSlides() {
+  return state.brochureBuilderSelectedIds
+    .map((slideId) => getBrochureSlideById(slideId))
+    .filter(Boolean);
+}
+
+function toggleBrochureSlideSelection(slideId, isSelected) {
+  if (!slideId) {
+    return;
+  }
+
+  const selectedIds = state.brochureBuilderSelectedIds.filter((id) => id !== slideId);
+  if (isSelected) {
+    selectedIds.push(slideId);
+  }
+  state.brochureBuilderSelectedIds = selectedIds;
+  saveState();
+
+  const selectedSlides = getSelectedBrochureSlides();
+  if (!selectedSlides.length) {
+    brochurePresentationIndex = 0;
+  } else if (brochurePresentationIndex >= selectedSlides.length) {
+    brochurePresentationIndex = selectedSlides.length - 1;
+  }
+
+  renderBrochureBuilderPanel();
+  renderBrochurePresentation();
+}
+
+function hydrateBrochureFrames(container, slides) {
+  if (!container) {
+    return;
+  }
+  container.querySelectorAll("[data-brochure-preview-id]").forEach((frame) => {
+    const slide = slides.find((item) => item.id === frame.dataset.brochurePreviewId);
+    if (slide) {
+      frame.srcdoc = slide.srcdoc;
+    }
+  });
+}
+
+function printSelectedBrochureSlides() {
+  const selectedSlides = getSelectedBrochureSlides();
+  if (!selectedSlides.length) {
+    showToast("Select at least one slide first.");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showToast("Allow pop-ups to export the brochure.");
+    return;
+  }
+
+  const slidesMarkup = selectedSlides.map((slide, index) => `
+    <section class="print-slide">
+      <div class="print-slide-meta">${escapeHtml(`${index + 1}. ${slide.name}`)}</div>
+      <iframe title="${escapeHtml(slide.name)}" srcdoc="${escapeHtml(slide.srcdoc)}"></iframe>
+    </section>
+  `).join("");
+
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Acuité brochure export</title>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: Helvetica, Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-slide {
+      page-break-after: always;
+      break-after: page;
+    }
+    .print-slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    .print-slide-meta {
+      padding: 8mm 10mm 4mm;
+      font-size: 10pt;
+      font-weight: 700;
+      color: #333333;
+    }
+    iframe {
+      width: 297mm;
+      height: 210mm;
+      border: 0;
+      display: block;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  ${slidesMarkup}
+  <script>
+    window.addEventListener("load", function () {
+      window.setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 700);
+    });
+    window.onafterprint = function () {
+      window.close();
+    };
+  </script>
+</body>
+</html>`);
+  printWindow.document.close();
+  showToast("Print dialog opened. Save the PDF on your machine.");
+}
+
+function openBrochurePresentation() {
+  const selectedSlides = getSelectedBrochureSlides();
+  if (!selectedSlides.length) {
+    showToast("Select at least one slide first.");
+    return;
+  }
+
+  brochurePresentationOpen = true;
+  brochurePresentationIndex = Math.min(brochurePresentationIndex, selectedSlides.length - 1);
+  renderBrochurePresentation();
+
+  if (elements.brochurePresentationBackdrop?.requestFullscreen) {
+    window.requestAnimationFrame(() => {
+      elements.brochurePresentationBackdrop.requestFullscreen().catch(() => {});
+    });
+  }
+}
+
+function closeBrochurePresentation() {
+  brochurePresentationOpen = false;
+  renderBrochurePresentation();
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+function moveBrochurePresentation(direction) {
+  const selectedSlides = getSelectedBrochureSlides();
+  if (!selectedSlides.length) {
+    return;
+  }
+  brochurePresentationIndex = (brochurePresentationIndex + direction + selectedSlides.length) % selectedSlides.length;
+  renderBrochurePresentation();
+}
+
+function syncModalState() {
+  const anyModalOpen = [
+    elements.commentsModalBackdrop,
+    elements.brochurePresentationBackdrop,
+  ].some((modal) => modal && !modal.hidden);
+  document.body.classList.toggle("modal-open", anyModalOpen);
 }
 
 function renderCeoDeskMessage() {
@@ -1520,7 +1967,7 @@ async function openLiveComments(postId) {
   if (elements.commentsModalBackdrop) {
     elements.commentsModalBackdrop.hidden = false;
   }
-  document.body.classList.add("modal-open");
+  syncModalState();
 
   try {
     const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${numericPostId}/comments/`);
@@ -1541,7 +1988,7 @@ function closeLiveComments() {
   if (elements.commentsModalBackdrop) {
     elements.commentsModalBackdrop.hidden = true;
   }
-  document.body.classList.remove("modal-open");
+  syncModalState();
 }
 
 function renderCommentsModal() {
@@ -1551,11 +1998,13 @@ function renderCommentsModal() {
 
   if (!activeCommentsPostId) {
     elements.commentsModalBackdrop.hidden = true;
+    syncModalState();
     return;
   }
 
   const post = findLivePostById(activeCommentsPostId);
   elements.commentsModalBackdrop.hidden = false;
+  syncModalState();
   elements.commentsModalMeta.textContent = post
     ? `${post.title} | ${post.authorName}`
     : "Loading discussion...";
@@ -3519,6 +3968,9 @@ function hydrateState() {
     )
       ? saved.homeAnnouncementFilter
       : defaultState.homeAnnouncementFilter,
+    brochureBuilderSelectedIds: Array.isArray(saved.brochureBuilderSelectedIds)
+      ? saved.brochureBuilderSelectedIds.filter((value) => typeof value === "string")
+      : defaultState.brochureBuilderSelectedIds.slice(),
     storeFilter: (
       typeof saved.storeFilter === "string"
       && ["all", ...Object.keys(STORE_CATEGORY_LABELS)].includes(saved.storeFilter)
