@@ -4152,6 +4152,7 @@ function hideMyPostsPersonSuggestions() {
 
 function getMyPostsPersonSuggestions(query) {
   const trimmedQuery = String(query || "").trim().toLowerCase();
+  const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]+/g, " ");
   if (!trimmedQuery) {
     return [];
   }
@@ -4163,11 +4164,13 @@ function getMyPostsPersonSuggestions(query) {
         person.name,
         person.role,
         getPraiseSomeoneLocation(person),
+        buildPraiseSomeoneHeadline(person),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      return searchText.includes(trimmedQuery);
+      const normalizedSearchText = searchText.replace(/[^a-z0-9]+/g, " ");
+      return searchText.includes(trimmedQuery) || normalizedSearchText.includes(normalizedQuery);
     })
     .sort((left, right) => {
       const leftName = String(left.name || "").toLowerCase();
@@ -4183,7 +4186,7 @@ function getMyPostsPersonSuggestions(query) {
 }
 
 function renderMyPostsPersonSuggestions() {
-  if (!elements.myPostsPersonSuggestions || !elements.myPostsTitleInput) {
+  if (!elements.myPostsPersonSuggestions || !elements.myPostsTitleInput || !elements.myPostsSelectedPersonId) {
     return;
   }
   if (!isPraiseSomeoneMyPostType()) {
@@ -4192,7 +4195,13 @@ function renderMyPostsPersonSuggestions() {
   }
 
   const query = String(elements.myPostsTitleInput.value || "").trim();
+  const selectedHeadline = String(elements.myPostsTitleInput.dataset.selectedHeadline || "").trim();
+  const selectedPersonId = String(elements.myPostsSelectedPersonId.value || "").trim();
   if (!query) {
+    hideMyPostsPersonSuggestions();
+    return;
+  }
+  if (selectedPersonId && selectedHeadline && query === selectedHeadline) {
     hideMyPostsPersonSuggestions();
     return;
   }
