@@ -3597,6 +3597,56 @@ select {
   margin-bottom: 6px;
 }
 
+.resource-brochure-actions {
+  margin-top: 18px;
+  align-items: center;
+  gap: 12px;
+}
+
+.resource-brochure-btn {
+  min-width: 188px;
+  min-height: 44px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  border: 1.5px solid transparent;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.resource-brochure-btn:hover {
+  transform: translateY(-1px);
+}
+
+.resource-brochure-btn-primary {
+  background: var(--grad-warm);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(232, 114, 42, 0.18);
+}
+
+.resource-brochure-btn-primary:hover {
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(232, 114, 42, 0.26);
+}
+
+.resource-brochure-btn-secondary {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  border-color: rgba(125, 96, 67, 0.16);
+}
+
+.resource-brochure-btn-secondary:hover {
+  color: var(--text);
+  border-color: rgba(232, 114, 42, 0.32);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(18, 20, 28, 0.08);
+}
+
 .brochure-builder-layout {
   display: grid;
   grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.35fr);
@@ -4861,6 +4911,16 @@ select {
   .dashboard-grid,
   .tool-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resource-brochure-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resource-brochure-btn {
+    width: 100%;
+    min-width: 0;
   }
 }
 
