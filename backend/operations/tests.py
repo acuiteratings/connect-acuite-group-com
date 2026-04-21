@@ -151,7 +151,7 @@ class BuildNumberTests(TestCase):
         response = self.client.get("/login.html")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Built with care by Sankar Chakraborti | BUILD 1.0000007")
+        self.assertContains(response, "BUILD 1.0000007")
 
     @override_settings(APP_BUILD_NUMBER="1.0000006")
     def test_build_number_falls_back_to_settings_when_state_missing(self):

@@ -4567,19 +4567,18 @@ function formatHolidayLongDate(value) {
   });
 }
 
-function getCurrentMonthHolidayItems() {
+function getUpcomingHolidayItems(daysAhead = 30) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const todayStamp = new Date(year, month, now.getDate()).getTime();
+  const todayStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead).getTime();
   return COMPANY_HOLIDAY_CALENDAR
     .map((item) => ({
       ...item,
       parsedDate: new Date(`${item.date}T00:00:00`),
     }))
     .filter((item) => !Number.isNaN(item.parsedDate.getTime()))
-    .filter((item) => item.parsedDate.getFullYear() === year && item.parsedDate.getMonth() === month)
     .filter((item) => item.parsedDate.getTime() >= todayStamp)
+    .filter((item) => item.parsedDate.getTime() <= endStamp)
     .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
 }
 
@@ -4589,10 +4588,10 @@ function renderSidebarHolidays() {
     return;
   }
 
-  const upcoming = getCurrentMonthHolidayItems();
+  const upcoming = getUpcomingHolidayItems();
 
   if (!upcoming.length) {
-    container.innerHTML = '<div class="empty-state">No more published holidays this month.</div>';
+    container.innerHTML = '<div class="empty-state">No published holidays in the next 30 days.</div>';
     return;
   }
 
@@ -4614,13 +4613,13 @@ function renderHolidayPanel() {
     return;
   }
 
-  const currentMonthItems = getCurrentMonthHolidayItems();
-  if (!currentMonthItems.length) {
-    monthMeta.textContent = "No more published holidays remain in the current month.";
-    monthList.innerHTML = '<div class="empty-state">No more published holidays this month.</div>';
+  const upcomingItems = getUpcomingHolidayItems();
+  if (!upcomingItems.length) {
+    monthMeta.textContent = "No published holidays fall in the next 30 days.";
+    monthList.innerHTML = '<div class="empty-state">No published holidays in the next 30 days.</div>';
   } else {
-    monthMeta.textContent = `${currentMonthItems.length} holiday${currentMonthItems.length === 1 ? "" : "s"} remain in the current month.`;
-    monthList.innerHTML = currentMonthItems.map((item) => `
+    monthMeta.textContent = `${upcomingItems.length} holiday${upcomingItems.length === 1 ? "" : "s"} in the next 30 days.`;
+    monthList.innerHTML = upcomingItems.map((item) => `
       <article class="holiday-card holiday-card-highlight">
         <p class="widget-kicker">${escapeHtml(formatMonthDay(item.date))}</p>
         <h3>${escapeHtml(item.label)}</h3>
