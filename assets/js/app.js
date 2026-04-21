@@ -1632,7 +1632,6 @@ function printSelectedBrochureSlides() {
 
   const slidesMarkup = selectedSlides.map((slide, index) => `
     <section class="print-slide">
-      <div class="print-slide-meta">${escapeHtml(`${index + 1}. ${slide.name}`)}</div>
       <iframe title="${escapeHtml(slide.name)}" srcdoc="${escapeHtml(slide.srcdoc)}"></iframe>
     </section>
   `).join("");
@@ -1655,25 +1654,22 @@ function printSelectedBrochureSlides() {
       print-color-adjust: exact;
     }
     .print-slide {
+      width: 297mm;
+      height: 210mm;
       page-break-after: always;
       break-after: page;
+      overflow: hidden;
     }
     .print-slide:last-child {
       page-break-after: auto;
       break-after: auto;
-    }
-    .print-slide-meta {
-      padding: 8mm 10mm 4mm;
-      font-size: 10pt;
-      font-weight: 700;
-      color: #333333;
     }
     iframe {
       width: 297mm;
       height: 210mm;
       border: 0;
       display: block;
-      margin: 0 auto;
+      margin: 0;
       background: #ffffff;
     }
   </style>
