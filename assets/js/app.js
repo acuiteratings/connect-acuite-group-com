@@ -57,7 +57,9 @@ const MY_POST_TYPES = [
   ["organise_training", "I want to organise a training", "Organising a workshop on sector writing", "Topic, audience or possible timing", "Explain the training idea, who it is for, and what support you need."],
   ["looking_for_training", "I am looking for some training", "Looking for training on presentation skills", "Topic, level or team need", "Explain the skill gap and what kind of training would help."],
   ["share_story", "I want to share a story", "A short workplace story", "Theme or setting", "Write your story clearly so the admin can review it before publishing."],
-  ["share_poem", "I want to share a poem", "Poem title", "Theme or mood", "Paste the poem exactly as you want it reviewed."],
+  ["write_book_review", "I want to write a book review", "Book review title", "Book name, author or theme", "Write your book review clearly for admin review."],
+  ["write_movie_review", "I want to write a movie review", "Movie review title", "Movie name, genre or theme", "Write your movie review clearly for admin review."],
+  ["invite_to_club", "I want to invite people to join a club", "Invitation to join a club", "Club name, theme or activity", "Explain the club, who should join, and how colleagues can participate."],
   ["share_travel", "I want to share about my travel", "A travel note from Ladakh", "Place, season or key highlight", "Share your travel story, key takeaways, and what made the experience memorable."],
 ].map(([key, label, titlePlaceholder, metaPlaceholder, bodyPlaceholder]) => ({
   key,
