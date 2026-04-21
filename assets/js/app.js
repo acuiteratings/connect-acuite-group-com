@@ -1,4 +1,5 @@
 const STORAGE_KEY = "acuite-connect-state-v2-live";
+const DIRECTORY_CACHE_KEY = "acuite-connect-directory-cache-v1";
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -509,6 +510,8 @@ let elements = {};
 let latestSearchResults = [];
 let toastTimeoutId = null;
 let directoryLoadError = "";
+let directoryCachedAt = "";
+let directoryShowingCachedData = false;
 let storeLoadError = "";
 let learningLoadError = "";
 let bulletinLoadError = "";
@@ -716,6 +719,10 @@ async function init() {
   mergeAuthenticatedUser(authenticatedUser);
   renderShell();
   markAppReady();
+  const hydratedDirectoryCache = hydrateDirectoryCache();
+  if (state.activeTab === "directory" && hydratedDirectoryCache) {
+    renderAll();
+  }
 
   try {
     const criticalTasks = [
@@ -761,8 +768,13 @@ async function loadCurrentProfile() {
 
 async function loadDirectoryData() {
   directoryLoadError = "";
-  directoryFilterOptions = createDirectoryFilterOptions();
-  appData.directory = [];
+  const hasCachedDirectory = hydrateDirectoryCache();
+  if (!hasCachedDirectory) {
+    directoryFilterOptions = createDirectoryFilterOptions();
+    appData.directory = [];
+    directoryCachedAt = "";
+    directoryShowingCachedData = false;
+  }
 
   if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
     directoryLoadError = "Directory services are unavailable in this build.";
@@ -779,8 +791,13 @@ async function loadDirectoryData() {
       location: Array.isArray(payload.filters?.location) ? payload.filters.location : [],
       department: Array.isArray(payload.filters?.department) ? payload.filters.department : [],
     };
+    directoryCachedAt = new Date().toISOString();
+    directoryShowingCachedData = false;
+    saveDirectoryCache();
   } catch (error) {
-    directoryLoadError = error.message || "Could not load the people directory.";
+    directoryLoadError = hasCachedDirectory
+      ? ""
+      : (error.message || "Could not load the people directory.");
   }
 }
 
@@ -4332,9 +4349,50 @@ function readState() {
   }
 }
 
+function readDirectoryCache() {
+  try {
+    const raw = window.localStorage.getItem(DIRECTORY_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function hydrateDirectoryCache() {
+  const saved = readDirectoryCache();
+  if (!saved || !Array.isArray(saved.results)) {
+    return false;
+  }
+
+  appData.directory = saved.results;
+  directoryFilterOptions = {
+    company: Array.isArray(saved.filters?.company) ? saved.filters.company : [],
+    location: Array.isArray(saved.filters?.location) ? saved.filters.location : [],
+    department: Array.isArray(saved.filters?.department) ? saved.filters.department : [],
+  };
+  directoryCachedAt = typeof saved.cachedAt === "string" ? saved.cachedAt : "";
+  directoryShowingCachedData = true;
+  return true;
+}
+
 function saveState() {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    return;
+  }
+}
+
+function saveDirectoryCache() {
+  try {
+    window.localStorage.setItem(
+      DIRECTORY_CACHE_KEY,
+      JSON.stringify({
+        cachedAt: directoryCachedAt || new Date().toISOString(),
+        results: appData.directory,
+        filters: directoryFilterOptions,
+      }),
+    );
   } catch (error) {
     return;
   }
@@ -4488,7 +4546,7 @@ function renderDirectory() {
   }
 
   resultsMeta.textContent = appData.directory.length
-    ? `${filtered.length} of ${appData.directory.length} employees shown`
+    ? `${filtered.length} of ${appData.directory.length} employees shown${directoryShowingCachedData ? ` · saved copy${directoryCachedAt ? ` · updated ${formatRelativeTime(directoryCachedAt)}` : ""}` : ""}`
     : "Live employee directory";
 
   if (!appData.directory.length) {
