@@ -3557,8 +3557,19 @@ select {
   gap: 14px;
 }
 
+.resources-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .resource-card {
   padding: 20px;
+}
+
+.resource-feature-card {
+  background:
+    radial-gradient(circle at top right, rgba(244, 124, 37, 0.12), transparent 28%),
+    linear-gradient(135deg, rgba(255, 199, 44, 0.08), rgba(255, 255, 255, 0)),
+    var(--bg2);
 }
 
 .resource-card-head {
@@ -3584,6 +3595,51 @@ select {
   font-weight: 800;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
+}
+
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.logo-card {
+  display: grid;
+  gap: 10px;
+}
+
+.logo-thumb {
+  min-height: 126px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 199, 44, 0.06), rgba(255, 255, 255, 0)),
+    #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.logo-thumb.dark {
+  background:
+    radial-gradient(circle at top right, rgba(244, 124, 37, 0.15), transparent 35%),
+    #17171c;
+}
+
+.logo-thumb:hover {
+  transform: translateY(-2px);
+  border-color: rgba(232, 114, 42, 0.4);
+  box-shadow: var(--shadow-lg);
+}
+
+.logo-thumb img {
+  max-width: 100%;
+  max-height: 72px;
+  display: block;
 }
 
 .widget {
