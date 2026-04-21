@@ -174,6 +174,7 @@ const HOME_ANNOUNCEMENT_FILTERS = [
   ["leadership", "Leadership"],
   ["people_culture", "People & Culture"],
   ["cybersecurity", "Cybersecurity"],
+  ["compliance", "Compliance"],
   ["regulations", "Regulations"],
   ["new_initiatives", "New Initiatives"],
   ["giving", "Giving"],
