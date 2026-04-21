@@ -1,5 +1,6 @@
 const STORAGE_KEY = "acuite-connect-state-v2-live";
 const DIRECTORY_CACHE_KEY = "acuite-connect-directory-cache-v1";
+const CEO_DESK_CACHE_KEY = "acuite-connect-ceo-desk-cache-v1";
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -513,6 +514,8 @@ let toastTimeoutId = null;
 let directoryLoadError = "";
 let directoryCachedAt = "";
 let directoryShowingCachedData = false;
+let ceoDeskCachedAt = "";
+let ceoDeskShowingCachedData = false;
 let storeLoadError = "";
 let learningLoadError = "";
 let bulletinLoadError = "";
@@ -724,6 +727,10 @@ async function init() {
   if (state.activeTab === "directory" && hydratedDirectoryCache) {
     renderAll();
   }
+  const hydratedCeoDeskCache = hydrateCeoDeskCache();
+  if (state.activeTab === "ceo-desk" && hydratedCeoDeskCache) {
+    renderAll();
+  }
 
   try {
     const criticalTasks = [
@@ -904,7 +911,12 @@ async function loadBulletinPosts() {
 }
 
 async function loadCeoDeskPosts() {
-  appData.ceoDeskPosts = [];
+  const hasCachedCeoDesk = hydrateCeoDeskCache();
+  if (!hasCachedCeoDesk) {
+    appData.ceoDeskPosts = [];
+    ceoDeskCachedAt = "";
+    ceoDeskShowingCachedData = false;
+  }
 
   if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
     return;
@@ -917,8 +929,13 @@ async function loadCeoDeskPosts() {
     appData.ceoDeskPosts = Array.isArray(payload.results)
       ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
       : [];
+    ceoDeskCachedAt = new Date().toISOString();
+    ceoDeskShowingCachedData = false;
+    saveCeoDeskCache();
   } catch (error) {
-    appData.ceoDeskPosts = [];
+    if (!hasCachedCeoDesk) {
+      appData.ceoDeskPosts = [];
+    }
   }
 }
 
@@ -2042,7 +2059,9 @@ function renderCeoDeskMessage() {
     titleEl.textContent = message.title;
   }
   if (metaEl) {
-    metaEl.textContent = message.meta;
+    metaEl.textContent = ceoDeskShowingCachedData && ceoDeskCachedAt
+      ? `${message.meta} · saved copy · updated ${formatRelativeTime(ceoDeskCachedAt)}`
+      : message.meta;
   }
   if (copyEl) {
     const bodyParts = Array.isArray(message.body) ? message.body : DEFAULT_CEO_DESK_MESSAGE.body;
@@ -4063,13 +4082,15 @@ function getCurrentCeoDeskMessage() {
 
 function getCeoDeskArchiveItems() {
   const livePosts = getCeoDeskPosts();
+  const fallbackItems = DEFAULT_CEO_DESK_ARCHIVE.map((item) => ({
+    ...item,
+    archiveKey: buildCeoDeskArchiveKey(item),
+  }));
+
   if (!livePosts.length) {
-    return DEFAULT_CEO_DESK_ARCHIVE.slice(0, CEO_DESK_ARCHIVE_LIMIT).map((item) => ({
-      ...item,
-      archiveKey: buildCeoDeskArchiveKey(item),
-    }));
+    return fallbackItems.slice(0, CEO_DESK_ARCHIVE_LIMIT);
   }
-  return livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
+  const liveArchiveItems = livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
     datePosted: post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt),
     headline: post.title || "MD & CEO message",
     subjectLine: post.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
@@ -4079,6 +4100,12 @@ function getCeoDeskArchiveItems() {
     currentUserHasReacted: Boolean(post.currentUserHasReacted),
     archiveKey: buildCeoDeskArchiveKey(post),
   }));
+
+  const liveArchiveKeys = new Set(liveArchiveItems.map((item) => item.archiveKey));
+  return [
+    ...liveArchiveItems,
+    ...fallbackItems.filter((item) => !liveArchiveKeys.has(item.archiveKey)),
+  ].slice(0, CEO_DESK_ARCHIVE_LIMIT);
 }
 
 function buildCeoDeskArchiveKey(item) {
@@ -4379,6 +4406,15 @@ function readDirectoryCache() {
   }
 }
 
+function readCeoDeskCache() {
+  try {
+    const raw = window.localStorage.getItem(CEO_DESK_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
 function hydrateDirectoryCache() {
   const saved = readDirectoryCache();
   if (!saved || !Array.isArray(saved.results)) {
@@ -4396,9 +4432,35 @@ function hydrateDirectoryCache() {
   return true;
 }
 
+function hydrateCeoDeskCache() {
+  const saved = readCeoDeskCache();
+  if (!saved || !Array.isArray(saved.results)) {
+    return false;
+  }
+
+  appData.ceoDeskPosts = saved.results;
+  ceoDeskCachedAt = typeof saved.cachedAt === "string" ? saved.cachedAt : "";
+  ceoDeskShowingCachedData = true;
+  return true;
+}
+
 function saveState() {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    return;
+  }
+}
+
+function saveCeoDeskCache() {
+  try {
+    window.localStorage.setItem(
+      CEO_DESK_CACHE_KEY,
+      JSON.stringify({
+        cachedAt: ceoDeskCachedAt || new Date().toISOString(),
+        results: appData.ceoDeskPosts,
+      }),
+    );
   } catch (error) {
     return;
   }
@@ -5301,6 +5363,9 @@ function updateLivePostFromPayload(postPayload) {
     appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
     if (mapped.bulletinChannel === "ceo_desk") {
       appData.ceoDeskPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.ceoDeskPosts, mapped));
+      ceoDeskCachedAt = new Date().toISOString();
+      ceoDeskShowingCachedData = false;
+      saveCeoDeskCache();
     }
     return;
   }
