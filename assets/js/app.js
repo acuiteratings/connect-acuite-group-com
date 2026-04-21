@@ -881,24 +881,15 @@ async function loadBulletinPosts() {
   }
 
   try {
-    const [bulletinPayload, employeePostsPayload] = await Promise.all([
-      window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&exclude_bulletin_channels=ceo_desk,announcements&exclude_home_announcements=1`,
-      ),
-      window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
-      ),
-    ]);
-    const bulletinResults = Array.isArray(bulletinPayload.results)
-      ? bulletinPayload.results.map(mapBulletinPost)
-      : [];
+    const employeePostsPayload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
+    );
     const employeeResults = Array.isArray(employeePostsPayload.results)
-      ? employeePostsPayload.results.map(mapBulletinPost)
+      ? employeePostsPayload.results
+        .map(mapBulletinPost)
+        .filter((post) => post.userSubmission)
       : [];
-    appData.bulletinPosts = sortBulletinPostsNewestFirst([
-      ...bulletinResults,
-      ...employeeResults,
-    ]);
+    appData.bulletinPosts = sortBulletinPostsNewestFirst(employeeResults);
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
   }
@@ -3901,6 +3892,7 @@ function mapBulletinPost(post) {
       : null,
     bulletinChannel: String(metadata.bulletin_channel || "").trim(),
     ceoDeskSubjectLine: String(metadata.ceo_desk_subject_line || "").trim(),
+    userSubmission: Boolean(metadata.user_submission),
     bulletinCard: metadata.bulletin_card && typeof metadata.bulletin_card === "object" ? metadata.bulletin_card : null,
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
@@ -5388,14 +5380,17 @@ function updateLivePostFromPayload(postPayload) {
       );
       return;
     }
-    appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
     return;
   }
 
   if (postPayload.module === FEED_MODULE_EMPLOYEE_POSTS) {
     const mapped = mapMyPostSubmission(postPayload);
     appData.myPosts = replaceMappedPost(appData.myPosts, mapped);
-    if (String(postPayload.topic || "").trim() === "employee_submission" && String(postPayload.moderation_status || "").trim() === "published") {
+    if (
+      String(postPayload.topic || "").trim() === "employee_submission"
+      && String(postPayload.moderation_status || "").trim() === "published"
+      && Boolean(postPayload.metadata?.user_submission)
+    ) {
       const bulletinMapped = mapBulletinPost(postPayload);
       const existingIndex = appData.bulletinPosts.findIndex((item) => item.sourceId === bulletinMapped.sourceId);
       if (existingIndex >= 0) {
