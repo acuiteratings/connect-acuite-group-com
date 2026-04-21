@@ -36,8 +36,8 @@ def _distinct_values(queryset, field_name):
 
 def _profile_branch_location(profile):
     return resolve_branch_location(
-        profile.city,
         profile.office_location,
+        profile.city,
         profile.user.location,
     )
 

@@ -15,8 +15,8 @@ def serialize_directory_profile(profile, *, coin_balance=None):
             "city": profile.city,
             "office_location": profile.office_location,
             "branch_location": resolve_branch_location(
-                profile.city,
                 profile.office_location,
+                profile.city,
                 profile.user.location,
             ),
             "work_mode": profile.work_mode,

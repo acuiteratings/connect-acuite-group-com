@@ -137,6 +137,32 @@ class DirectoryApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["count"], 2)
 
+    def test_directory_branch_location_prefers_office_location_over_city(self):
+        user = User.objects.create_user(
+            email="wrong.city@acuite.in",
+            first_name="Wrong",
+            last_name="City",
+            title="Analyst",
+            department="Technology",
+            location="Krishna",
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Krishna",
+            office_location="Mumbai 905",
+        )
+
+        response = self.client.get("/api/directory/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("Mumbai", payload["filters"]["location"])
+        self.assertNotIn("Krishna", payload["filters"]["location"])
+        result = next(item for item in payload["results"] if item["email"] == "wrong.city@acuite.in")
+        self.assertEqual(result["branch_location"], "Mumbai")
+
     def test_directory_can_filter_by_department_for_connect(self):
         corporate_user = User.objects.create_user(
             email="chitra.mohan@acuite.in",
