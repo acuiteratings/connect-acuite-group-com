@@ -2216,11 +2216,15 @@ function renderPanels() {
 
 function renderProfile() {
   const canAdminister = currentUserCanAdministerConnect();
-  const postCount = appData.myPosts.length;
+  const totalComments = appData.myPosts.reduce(
+    (sum, post) => sum + Number(post.commentCount || 0),
+    0,
+  );
   const availableCoins = Number(appData.storeBalance.available_points || 0);
-  const libraryRequests = appData.learningRequisitions.filter((item) => ["requested", "approved"].includes(String(item.status || "").toLowerCase())).length;
-  const storeRequests = appData.storeRedemptions.filter((item) => ["requested", "approved"].includes(String(item.status || "").toLowerCase())).length;
-  const openRequests = libraryRequests + storeRequests;
+  const totalLikes = appData.myPosts.reduce(
+    (sum, post) => sum + Number(post.reactionCount || 0),
+    0,
+  );
 
   setAvatarElement(elements.navAvatar, {
     initials: appData.currentUser.initials,
@@ -2238,9 +2242,9 @@ function renderProfile() {
   });
   elements.profileName.textContent = appData.currentUser.name;
   elements.profileRole.textContent = appData.currentUser.role;
-  elements.profileKudos.textContent = String(postCount);
+  elements.profileKudos.textContent = String(totalComments);
   elements.profileClubs.textContent = String(availableCoins);
-  elements.profilePitches.textContent = String(openRequests);
+  elements.profilePitches.textContent = String(totalLikes);
   if (elements.profileMenu) {
     elements.profileMenu.hidden = !profileMenuOpen;
   }
@@ -4135,6 +4139,8 @@ function mapMyPostSubmission(post) {
         : moderationStatus === "rejected"
           ? "Not approved"
           : "Waiting for admin review",
+    commentCount: Number(post.comment_count || 0),
+    reactionCount: Number(post.reaction_count || 0),
     createdAt: post.created_at || "",
     publishedAt: post.published_at || "",
   };
