@@ -2116,7 +2116,7 @@ function renderCeoDeskMessage() {
             data-archive-key="${escapeHtml(item.archiveKey)}"
           >
             <span>${escapeHtml(
-              [item.datePosted, item.headline, item.subjectLine].filter(Boolean).join(" | "),
+              [item.datePosted, item.headline].filter(Boolean).join(" | "),
             )}</span>
           </button>
         `).join("")
@@ -4120,7 +4120,7 @@ function getCurrentCeoDeskMessage() {
   return {
     date: livePost.metaLines[0] || formatDisplayDate(livePost.createdAt) || DEFAULT_CEO_DESK_MESSAGE.date,
     title: livePost.title || DEFAULT_CEO_DESK_MESSAGE.title,
-    meta: livePost.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
+    meta: "",
     body: Array.isArray(livePost.body) && livePost.body.length ? livePost.body : DEFAULT_CEO_DESK_MESSAGE.body,
     sourceId: livePost.sourceId,
     reactionCount: Number(livePost.reactionCount || 0),
