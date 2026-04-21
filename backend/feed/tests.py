@@ -265,6 +265,49 @@ class FeedApiTests(TestCase):
         self.assertFalse(second_response.json()["post"]["current_user_has_reacted"])
         self.assertEqual(PostReaction.objects.count(), 0)
 
+    def test_feed_comment_count_is_not_multiplied_by_reactions(self):
+        post = Post.objects.create(
+            author=self.admin_user,
+            title="Celebration post",
+            body="Visible post",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        Comment.objects.create(
+            post=post,
+            author=self.user,
+            body="One visible comment",
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        other_user = User.objects.create_user(
+            email="second.user@acuite.in",
+            password="testpass123",
+            first_name="Second",
+            last_name="User",
+            title="Analyst",
+            department="Ratings",
+        )
+        third_user = User.objects.create_user(
+            email="third.user@acuite.in",
+            password="testpass123",
+            first_name="Third",
+            last_name="User",
+            title="Analyst",
+            department="Ratings",
+        )
+        PostReaction.objects.create(post=post, user=self.user)
+        PostReaction.objects.create(post=post, user=other_user)
+        PostReaction.objects.create(post=post, user=third_user)
+
+        response = self.client.get("/api/feed/posts/?module=bulletin")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["comment_count"], 1)
+        self.assertEqual(payload["results"][0]["reaction_count"], 3)
+
     def test_author_can_delete_own_post(self):
         post = Post.objects.create(
             author=self.user,

@@ -58,6 +58,7 @@ def posts_collection(request):
             published_comment_count=Count(
                 "comments",
                 filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+                distinct=True,
             ),
             like_reaction_count=Count(
                 "reactions",
@@ -315,6 +316,7 @@ def toggle_post_reaction(request, post_id):
             published_comment_count=Count(
                 "comments",
                 filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+                distinct=True,
             ),
             like_reaction_count=Count(
                 "reactions",
@@ -378,6 +380,7 @@ def post_detail(request, post_id):
                 published_comment_count=Count(
                     "comments",
                     filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+                    distinct=True,
                 ),
                 like_reaction_count=Count(
                     "reactions",
