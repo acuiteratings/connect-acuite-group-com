@@ -2088,7 +2088,6 @@ function syncModalState() {
 function renderCeoDeskMessage() {
   const dateEl = document.getElementById("ceo-desk-message-date");
   const titleEl = document.getElementById("ceo-desk-message-title");
-  const metaEl = document.getElementById("ceo-desk-message-meta");
   const copyEl = document.getElementById("ceo-desk-copy");
   const archiveEl = document.getElementById("ceo-desk-archive-list");
   const form = document.getElementById("ceo-desk-post-form");
@@ -2099,11 +2098,6 @@ function renderCeoDeskMessage() {
   }
   if (titleEl) {
     titleEl.textContent = message.title;
-  }
-  if (metaEl) {
-    metaEl.textContent = ceoDeskShowingCachedData && ceoDeskCachedAt
-      ? `${message.meta} · saved copy · updated ${formatRelativeTime(ceoDeskCachedAt)}`
-      : message.meta;
   }
   if (copyEl) {
     const bodyParts = Array.isArray(message.body) ? message.body : DEFAULT_CEO_DESK_MESSAGE.body;
@@ -2121,14 +2115,15 @@ function renderCeoDeskMessage() {
             data-action="open-ceo-archive-message"
             data-archive-key="${escapeHtml(item.archiveKey)}"
           >
-            <span>${escapeHtml(item.datePosted)} | ${escapeHtml(item.headline)} | ${escapeHtml(item.subjectLine)}</span>
+            <span>${escapeHtml(
+              [item.datePosted, item.headline, item.subjectLine].filter(Boolean).join(" | "),
+            )}</span>
           </button>
         `).join("")
       : '<div class="mini-item-meta">No previous messages yet.</div>';
   }
   if (form && currentUserCanPostCeoMessage() && !form.dataset.seeded) {
     form.elements.headline.value = "";
-    form.elements.subject_line.value = "";
     form.elements.body.value = "";
     form.dataset.seeded = "true";
   }
@@ -2793,12 +2788,11 @@ async function submitCeoDeskPost(form) {
 
   const formData = new FormData(form);
   const headline = String(formData.get("headline") || "").trim();
-  const subjectLine = String(formData.get("subject_line") || "").trim();
   const body = String(formData.get("body") || "").trim();
   const messageDate = formatCeoDeskPostedDate(new Date().toISOString());
 
-  if (!headline || !subjectLine || !body) {
-    showToast("Complete the headline, subject line, and body first.");
+  if (!headline || !body) {
+    showToast("Complete the headline and body first.");
     return;
   }
 
@@ -2818,7 +2812,6 @@ async function submitCeoDeskPost(form) {
           bulletin_channel: "ceo_desk",
           bulletin_template: "ceo_editorial",
           bulletin_meta_lines: [messageDate],
-          ceo_desk_subject_line: subjectLine,
         },
       },
     });
@@ -4148,7 +4141,7 @@ function getCeoDeskArchiveItems() {
   const liveArchiveItems = livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
     datePosted: post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt),
     headline: post.title || "MD & CEO message",
-    subjectLine: post.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
+    subjectLine: post.ceoDeskSubjectLine || "",
     body: Array.isArray(post.body) && post.body.length ? post.body : ["Archived message details are not available in this build."],
     sourceId: post.sourceId,
     reactionCount: Number(post.reactionCount || 0),
@@ -4187,7 +4180,7 @@ function getSelectedCeoDeskArchiveMessage() {
   return {
     date: archiveItem.datePosted || "",
     title: archiveItem.headline || "MD & CEO message",
-    meta: archiveItem.subjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
+    meta: "",
     body: Array.isArray(archiveItem.body) && archiveItem.body.length ? archiveItem.body : DEFAULT_CEO_DESK_MESSAGE.body,
     sourceId: archiveItem.sourceId || "",
     reactionCount: Number(archiveItem.reactionCount || 0),
