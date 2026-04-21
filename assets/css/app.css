@@ -15,9 +15,9 @@
   --bg2: #ffffff;
   --bg3: #f2f1ee;
   --bg-hover: #eeedea;
-  --text: #1a1a1a;
-  --text2: #4a4a4a;
-  --text3: #8a8a8a;
+  --text: #111111;
+  --text2: #111111;
+  --text3: #111111;
   --border: #e6e5e1;
   --radius: 16px;
   --radius-sm: 10px;
@@ -41,8 +41,8 @@
   --bg3: #1f1f23;
   --bg-hover: #27272b;
   --text: #ffffff;
-  --text2: #f2f2f6;
-  --text3: #dadbe2;
+  --text2: #ffffff;
+  --text3: #ffffff;
   --border: #2a2a2f;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -79,7 +79,7 @@ body.modal-open {
   gap: 12px;
   padding: 18px 28px 24px;
   color: var(--text3);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-align: center;
 }
@@ -1402,7 +1402,7 @@ select {
 
 .muted-copy {
   color: var(--text3);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .mini-list,
@@ -1430,7 +1430,7 @@ select {
 }
 
 .mini-item-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text3);
 }
 
@@ -1554,7 +1554,7 @@ select {
 .btn-warm {
   padding: 11px 24px;
   border-radius: 24px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   background: var(--grad-warm);
   color: #fff;
@@ -1568,7 +1568,7 @@ select {
 .btn-ghost {
   padding: 11px 22px;
   border-radius: 24px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   background: var(--bg3);
   border: 1.5px solid var(--border);
@@ -1584,7 +1584,7 @@ select {
 }
 
 .btn-link {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--orange);
 }
@@ -2199,7 +2199,7 @@ select {
 }
 
 .section-head p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text3);
 }
 
@@ -3831,7 +3831,7 @@ select {
 }
 
 .widget-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--text);
@@ -3840,7 +3840,7 @@ select {
 
 .widget-footnote,
 .poll-question {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text3);
 }
 
@@ -3884,7 +3884,7 @@ select {
 }
 
 .profile-role {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text3);
 }
 
