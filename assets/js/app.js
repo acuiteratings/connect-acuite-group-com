@@ -1187,6 +1187,7 @@ async function handleDocumentClick(event) {
       selectedCeoDeskArchiveKey = selectedCeoDeskArchiveKey === archiveKey ? "" : archiveKey;
       renderCeoDeskMessage();
       renderCeoDeskLikeButton();
+      scrollCeoDeskMessageIntoView();
       return;
     }
 
@@ -2131,6 +2132,16 @@ function renderCeoDeskMessage() {
     form.elements.body.value = "";
     form.dataset.seeded = "true";
   }
+}
+
+function scrollCeoDeskMessageIntoView() {
+  const container = document.querySelector(".ceo-desk-editorial");
+  if (!container) {
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    container.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function currentUserAccessRights() {
