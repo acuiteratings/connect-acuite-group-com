@@ -2030,8 +2030,7 @@ function currentUserCanAdministerConnect() {
 }
 
 function currentUserCanPostCeoMessage() {
-  const email = String(appData.currentUser?.email || "").trim().toLowerCase();
-  return currentUserCanAdministerConnect() || email === "ceo@acuite.in";
+  return currentUserCanAdministerConnect();
 }
 
 function renderPanels() {
@@ -2650,7 +2649,7 @@ async function submitCeoDeskComment(form) {
 
 async function submitCeoDeskPost(form) {
   if (!currentUserCanPostCeoMessage()) {
-    showToast("This message form is available only to the MD & CEO and admins.");
+    showToast("This message form is available only to Connect admins.");
     return;
   }
 
@@ -2690,7 +2689,7 @@ async function submitCeoDeskPost(form) {
     renderCeoDeskLikeButton();
     form.reset();
     form.dataset.seeded = "true";
-    showToast("The MD & CEO message is now live and the previous one has moved to the archive.");
+    showToast("The MD & CEO message is now live in the main section and the previous one has moved to the archive.");
   } catch (error) {
     showToast(error.message || "Could not publish the MD & CEO message.");
   }
