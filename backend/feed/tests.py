@@ -1,6 +1,7 @@
 import json
 
-from django.test import Client, TestCase
+from django.core import mail
+from django.test import Client, TestCase, override_settings
 
 from accounts.models import User
 from operations.models import AnalyticsEvent, AuditLog
@@ -438,6 +439,30 @@ class FeedApiTests(TestCase):
         self.assertEqual(post.moderation_status, Post.ModerationStatus.PUBLISHED)
         self.assertIsNotNone(post.published_at)
 
+    def test_admin_can_list_pending_employee_submissions(self):
+        Post.objects.create(
+            author=self.user,
+            title="CEO request pending",
+            body="Please consider this request.",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+            metadata={
+                "ceo_desk_request": True,
+                "ceo_desk_request_key": "masala_chai",
+                "ceo_desk_request_label": "Ready for a cup of masala chai with me?",
+            },
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get("/api/feed/posts/?module=employee_posts&topic=employee_submission")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["moderation_status"], Post.ModerationStatus.PENDING_REVIEW)
+        self.assertTrue(payload["results"][0]["metadata"]["ceo_desk_request"])
+
     def test_admin_can_reject_pending_post(self):
         post = Post.objects.create(
             author=self.user,
@@ -456,6 +481,35 @@ class FeedApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         post.refresh_from_db()
         self.assertEqual(post.moderation_status, Post.ModerationStatus.REJECTED)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_approving_ceo_request_sends_acknowledgement_email(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Ready for a cup of masala chai with me?",
+            body="I would like to request a cup of masala chai with you.",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+            metadata={
+                "ceo_desk_request": True,
+                "ceo_desk_request_key": "masala_chai",
+                "ceo_desk_request_label": "Ready for a cup of masala chai with me?",
+            },
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.patch(
+            f"/api/feed/posts/{post.id}/",
+            data=json.dumps({"moderation_status": "published"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.user.email])
+        self.assertIn("Ready for a cup of masala chai with me?", mail.outbox[0].body)
+        self.assertIn("available slot in due course", mail.outbox[0].body)
 
     def test_employee_can_list_own_pending_posts_with_author_filter(self):
         own_pending = Post.objects.create(

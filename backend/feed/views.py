@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.db.models import Count, Q
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -9,6 +12,8 @@ from operations.services import record_analytics_event, record_audit_event
 
 from .models import Comment, Post, PostReaction
 from .serializers import serialize_comment, serialize_post
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_json_body(request):
@@ -42,6 +47,10 @@ def _can_publish(user):
     )
 
 
+def _can_review_pending_posts(user):
+    return _can_moderate(user) or _can_publish(user)
+
+
 def _can_post_as_company(user):
     return user.is_authenticated and (
         getattr(user, "can_post_as_company", False)
@@ -55,6 +64,45 @@ def _can_comment(user):
 
 def _can_react(user):
     return user.is_authenticated and getattr(user, "can_react_in_connect", False)
+
+
+def _build_ceo_request_approval_email(post):
+    requester = post.author
+    request_label = str(
+        (post.metadata or {}).get("ceo_desk_request_label") or post.title or "your MD & CEO request"
+    ).strip()
+    requester_name = requester.full_name or requester.email
+    subject = "Your MD & CEO request has been received"
+    message = (
+        f"Hello {requester_name},\n\n"
+        f"Your request \"{request_label}\" has been received and acknowledged.\n\n"
+        "You will be notified of an available slot in due course.\n\n"
+        "Regards,\n"
+        "Acuité Connect Admin"
+    )
+    html_message = f"""
+    <div style="font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.6;">
+      <p style="margin: 0 0 16px;">Hello {requester_name},</p>
+      <p style="margin: 0 0 16px;">Your request <strong>{request_label}</strong> has been received and acknowledged.</p>
+      <p style="margin: 0 0 16px;">You will be notified of an available slot in due course.</p>
+      <p style="margin: 0;">Regards,<br>Acuité Connect Admin</p>
+    </div>
+    """
+    email = EmailMultiAlternatives(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [requester.email],
+    )
+    email.attach_alternative(html_message, "text/html")
+    return email
+
+
+def _send_ceo_request_approval_email(post):
+    try:
+        _build_ceo_request_approval_email(post).send(fail_silently=False)
+    except Exception:
+        logger.exception("Could not send MD & CEO request approval email.", extra={"post_id": post.id})
 
 
 def posts_collection(request):
@@ -73,7 +121,7 @@ def posts_collection(request):
         )
         queryset = queryset.exclude(moderation_status=Post.ModerationStatus.REMOVED)
         author_id = request.GET.get("author_id")
-        if not _can_moderate(request.user):
+        if not _can_review_pending_posts(request.user):
             visible_filter = Q(moderation_status=Post.ModerationStatus.PUBLISHED)
             if (
                 request.user.is_authenticated
@@ -380,6 +428,9 @@ def post_detail(request, post_id):
             post.published_at = post.published_at or timezone.now()
             update_fields.append("published_at")
         post.save(update_fields=update_fields)
+
+        if status == Post.ModerationStatus.PUBLISHED and bool((post.metadata or {}).get("ceo_desk_request")):
+            _send_ceo_request_approval_email(post)
 
         action_name = "post.published" if status == Post.ModerationStatus.PUBLISHED else "post.rejected"
         record_audit_event(
