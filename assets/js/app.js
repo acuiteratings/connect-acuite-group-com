@@ -61,12 +61,24 @@ const MY_POST_TYPES = [
 ].map(([key, label, titlePlaceholder, metaPlaceholder, bodyPlaceholder]) => ({
   key,
   label,
-  titleLabel: "What should the post headline say?",
-  titlePlaceholder,
-  metaLabel: "One short line people should know",
-  metaPlaceholder,
-  bodyLabel: key === "share_poem" ? "Poem" : key === "share_story" ? "Story" : "Details",
-  bodyPlaceholder,
+  titleLabel: key === "praise_someone" ? "Select the person" : "What should the post headline say?",
+  titlePlaceholder: key === "praise_someone"
+    ? "Type the first few letters, then choose from the list"
+    : titlePlaceholder,
+  metaLabel: key === "praise_someone" ? "Subject Line" : "One short line people should know",
+  metaPlaceholder: key === "praise_someone" ? "Add the subject line" : metaPlaceholder,
+  bodyLabel: key === "praise_someone"
+    ? "Body of the message"
+    : key === "share_poem"
+      ? "Poem"
+      : key === "share_story"
+        ? "Story"
+        : "Details",
+  bodyPlaceholder: key === "praise_someone"
+    ? "Write the message clearly."
+    : bodyPlaceholder,
+  inputMode: key === "praise_someone" ? "person_picker" : "standard",
+  hideHelpCopy: key === "praise_someone",
 }));
 const BULLETIN_TEMPLATE_LIBRARY = [
   {
@@ -625,6 +637,8 @@ async function init() {
     myPostsFields: document.getElementById("my-posts-fields"),
     myPostsTitleLabel: document.getElementById("my-posts-title-label"),
     myPostsTitleInput: document.getElementById("my-posts-title-input"),
+    myPostsSelectedPersonId: document.getElementById("my-posts-selected-person-id"),
+    myPostsPersonSuggestions: document.getElementById("my-posts-person-suggestions"),
     myPostsMetaLabel: document.getElementById("my-posts-meta-label"),
     myPostsMetaInput: document.getElementById("my-posts-meta-input"),
     myPostsBodyLabel: document.getElementById("my-posts-body-label"),
@@ -1010,6 +1024,15 @@ function bindEvents() {
     });
   }
 
+  if (elements.myPostsTitleInput) {
+    elements.myPostsTitleInput.addEventListener("input", () => {
+      handleMyPostsTitleInput();
+    });
+    elements.myPostsTitleInput.addEventListener("focus", () => {
+      renderMyPostsPersonSuggestions();
+    });
+  }
+
   if (elements.learningBookSearchInput) {
     elements.learningBookSearchInput.addEventListener("input", (event) => {
       state.learningBookQuery = event.target.value;
@@ -1146,6 +1169,11 @@ async function handleDocumentClick(event) {
     if (actionName === "open-admin-console") {
       closeProfileMenu();
       window.location.href = "/admin-console.html";
+      return;
+    }
+
+    if (actionName === "select-my-posts-person") {
+      selectMyPostsPerson(action.dataset.id);
       return;
     }
 
@@ -1325,6 +1353,15 @@ async function handleDocumentClick(event) {
 
   if (!event.target.closest(".topnav-search") || !elements.searchResults) {
     hideSearchResults();
+  }
+
+  if (
+    elements.myPostsPersonSuggestions
+    && !elements.myPostsPersonSuggestions.hidden
+    && !event.target.closest("#my-posts-person-suggestions")
+    && event.target !== elements.myPostsTitleInput
+  ) {
+    hideMyPostsPersonSuggestions();
   }
 }
 
@@ -4168,6 +4205,137 @@ function mapMyPostSubmission(post) {
   };
 }
 
+function getSelectedMyPostType() {
+  if (!elements.myPostsTypeSelect) {
+    return null;
+  }
+  return MY_POST_TYPES.find((item) => item.key === String(elements.myPostsTypeSelect.value || "").trim()) || null;
+}
+
+function isPraiseSomeoneMyPostType(selectedType = getSelectedMyPostType()) {
+  return Boolean(selectedType && selectedType.key === "praise_someone");
+}
+
+function getPraiseSomeoneLocation(person) {
+  return person?.branchLocation || person?.office || person?.city || "";
+}
+
+function buildPraiseSomeoneHeadline(person) {
+  return [person?.name || "", person?.role || "", getPraiseSomeoneLocation(person)].filter(Boolean).join(" | ");
+}
+
+function hideMyPostsPersonSuggestions() {
+  if (!elements.myPostsPersonSuggestions) {
+    return;
+  }
+  elements.myPostsPersonSuggestions.hidden = true;
+  elements.myPostsPersonSuggestions.innerHTML = "";
+}
+
+function getMyPostsPersonSuggestions(query) {
+  const trimmedQuery = String(query || "").trim().toLowerCase();
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  return appData.directory
+    .filter((person) => person.name && person.role)
+    .filter((person) => {
+      const searchText = [
+        person.name,
+        person.role,
+        getPraiseSomeoneLocation(person),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return searchText.includes(trimmedQuery);
+    })
+    .sort((left, right) => {
+      const leftName = String(left.name || "").toLowerCase();
+      const rightName = String(right.name || "").toLowerCase();
+      const leftStarts = leftName.startsWith(trimmedQuery) ? 0 : 1;
+      const rightStarts = rightName.startsWith(trimmedQuery) ? 0 : 1;
+      if (leftStarts !== rightStarts) {
+        return leftStarts - rightStarts;
+      }
+      return leftName.localeCompare(rightName);
+    })
+    .slice(0, 8);
+}
+
+function renderMyPostsPersonSuggestions() {
+  if (!elements.myPostsPersonSuggestions || !elements.myPostsTitleInput) {
+    return;
+  }
+  if (!isPraiseSomeoneMyPostType()) {
+    hideMyPostsPersonSuggestions();
+    return;
+  }
+
+  const query = String(elements.myPostsTitleInput.value || "").trim();
+  if (!query) {
+    hideMyPostsPersonSuggestions();
+    return;
+  }
+
+  const suggestions = getMyPostsPersonSuggestions(query);
+  if (!suggestions.length) {
+    elements.myPostsPersonSuggestions.hidden = false;
+    elements.myPostsPersonSuggestions.innerHTML = appData.directory.length
+      ? `<div class="typeahead-empty">No matching employee found.</div>`
+      : `<div class="typeahead-empty">${escapeHtml(directoryLoadError || "Directory is still loading. Please try again in a moment.")}</div>`;
+    return;
+  }
+
+  elements.myPostsPersonSuggestions.hidden = false;
+  elements.myPostsPersonSuggestions.innerHTML = suggestions.map((person) => `
+    <button
+      type="button"
+      class="typeahead-option"
+      data-action="select-my-posts-person"
+      data-id="${escapeHtml(String(person.sourceUserId))}"
+    >
+      <strong>${escapeHtml(person.name)}</strong>
+      <span>${escapeHtml([person.role, getPraiseSomeoneLocation(person)].filter(Boolean).join(" | "))}</span>
+    </button>
+  `).join("");
+}
+
+function handleMyPostsTitleInput() {
+  if (!elements.myPostsTitleInput || !elements.myPostsSelectedPersonId) {
+    return;
+  }
+  if (!isPraiseSomeoneMyPostType()) {
+    hideMyPostsPersonSuggestions();
+    return;
+  }
+
+  const currentValue = String(elements.myPostsTitleInput.value || "").trim();
+  const selectedHeadline = String(elements.myPostsTitleInput.dataset.selectedHeadline || "").trim();
+  if (!currentValue || currentValue !== selectedHeadline) {
+    elements.myPostsSelectedPersonId.value = "";
+    elements.myPostsTitleInput.dataset.selectedHeadline = "";
+  }
+  renderMyPostsPersonSuggestions();
+}
+
+function selectMyPostsPerson(personId) {
+  if (!elements.myPostsTitleInput || !elements.myPostsSelectedPersonId) {
+    return;
+  }
+  const person = appData.directory.find((item) => String(item.sourceUserId) === String(personId));
+  if (!person) {
+    showToast("Could not find that employee in the directory.");
+    return;
+  }
+  const headline = buildPraiseSomeoneHeadline(person);
+  elements.myPostsTitleInput.value = headline;
+  elements.myPostsTitleInput.dataset.selectedHeadline = headline;
+  elements.myPostsSelectedPersonId.value = String(person.sourceUserId);
+  hideMyPostsPersonSuggestions();
+}
+
 function getFilteredLearningBooks() {
   const query = state.learningBookQuery.trim().toLowerCase();
   let books = appData.learningBooks.slice();
@@ -4235,9 +4403,10 @@ function syncMyPostsComposer() {
     return;
   }
 
-  const selectedType = MY_POST_TYPES.find((item) => item.key === String(elements.myPostsTypeSelect.value || "").trim());
+  const selectedType = getSelectedMyPostType();
   elements.myPostsFields.hidden = !selectedType;
   if (!selectedType) {
+    hideMyPostsPersonSuggestions();
     return;
   }
 
@@ -4246,6 +4415,8 @@ function syncMyPostsComposer() {
   }
   if (elements.myPostsTitleInput) {
     elements.myPostsTitleInput.placeholder = selectedType.titlePlaceholder;
+    elements.myPostsTitleInput.value = "";
+    elements.myPostsTitleInput.dataset.selectedHeadline = "";
   }
   if (elements.myPostsMetaLabel) {
     elements.myPostsMetaLabel.textContent = selectedType.metaLabel;
@@ -4259,9 +4430,14 @@ function syncMyPostsComposer() {
   if (elements.myPostsBodyInput) {
     elements.myPostsBodyInput.placeholder = selectedType.bodyPlaceholder;
   }
+  if (elements.myPostsSelectedPersonId) {
+    elements.myPostsSelectedPersonId.value = "";
+  }
   if (elements.myPostsHelpCopy) {
     elements.myPostsHelpCopy.textContent = `${selectedType.label}. Your post will go to the admin dashboard first for approval.`;
+    elements.myPostsHelpCopy.hidden = Boolean(selectedType.hideHelpCopy);
   }
+  hideMyPostsPersonSuggestions();
 }
 
 async function submitMyPost() {
@@ -4273,13 +4449,37 @@ async function submitMyPost() {
   const formData = new FormData(elements.myPostsForm);
   const submissionKey = String(formData.get("submission_key") || "").trim();
   const selectedType = MY_POST_TYPES.find((item) => item.key === submissionKey);
-  const title = String(formData.get("title") || "").trim();
+  let title = String(formData.get("title") || "").trim();
   const metaLine = String(formData.get("meta_line") || "").trim();
   const body = String(formData.get("body") || "").trim();
+  const selectedPersonId = String(formData.get("selected_person_id") || "").trim();
 
   if (!selectedType || !title || !body) {
     showToast("Choose the post type, add a headline, and write the details.");
     return;
+  }
+
+  const metadata = {
+    bulletin_category: "employee_posts",
+    submission_key: selectedType.key,
+    submission_label: selectedType.label,
+    bulletin_meta_lines: metaLine ? [metaLine] : [],
+    user_submission: true,
+  };
+
+  if (selectedType.key === "praise_someone") {
+    const selectedPerson = appData.directory.find((person) => String(person.sourceUserId) === selectedPersonId);
+    if (!selectedPerson) {
+      showToast("Select a person from the list before submitting.");
+      return;
+    }
+    title = buildPraiseSomeoneHeadline(selectedPerson);
+    metadata.praised_person = {
+      user_id: selectedPerson.sourceUserId,
+      name: selectedPerson.name,
+      designation: selectedPerson.role,
+      location: getPraiseSomeoneLocation(selectedPerson),
+    };
   }
 
   try {
@@ -4291,13 +4491,7 @@ async function submitMyPost() {
         module: FEED_MODULE_EMPLOYEE_POSTS,
         kind: "update",
         topic: "employee_submission",
-        metadata: {
-          bulletin_category: "employee_posts",
-          submission_key: selectedType.key,
-          submission_label: selectedType.label,
-          bulletin_meta_lines: metaLine ? [metaLine] : [],
-          user_submission: true,
-        },
+        metadata,
       },
     });
 

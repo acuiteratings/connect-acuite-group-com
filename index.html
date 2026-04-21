@@ -850,7 +850,9 @@
               <div id="my-posts-fields" hidden>
                 <label class="field">
                   <span id="my-posts-title-label">Title</span>
-                  <input type="text" name="title" id="my-posts-title-input" maxlength="140" placeholder="Add a short headline" required>
+                  <input type="text" name="title" id="my-posts-title-input" maxlength="220" placeholder="Add a short headline" autocomplete="off" required>
+                  <input type="hidden" name="selected_person_id" id="my-posts-selected-person-id">
+                  <div class="typeahead-list" id="my-posts-person-suggestions" hidden></div>
                 </label>
                 <label class="field">
                   <span id="my-posts-meta-label">One short line</span>

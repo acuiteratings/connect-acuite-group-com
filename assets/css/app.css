@@ -2716,6 +2716,53 @@ select {
   color: var(--text3);
 }
 
+.typeahead-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+}
+
+.typeahead-option {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.typeahead-option strong,
+.typeahead-option span {
+  display: block;
+}
+
+.typeahead-option strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.typeahead-option span,
+.typeahead-empty {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.typeahead-option:hover,
+.typeahead-option:focus {
+  border-color: var(--amber);
+  background: rgba(247, 148, 29, 0.08);
+}
+
+.typeahead-empty {
+  padding: 8px 10px;
+}
+
 .compact-form {
   margin-bottom: 0;
 }
