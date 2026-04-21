@@ -111,15 +111,16 @@ const BULLETIN_TEMPLATE_LIBRARY = [
   },
 ];
 const DEFAULT_CEO_DESK_MESSAGE = {
-  date: "April 2, 2026",
-  title: "Hola FY2027",
-  meta: "A steady view on performance, priorities, and the path ahead.",
+  date: "April 21, 2026",
+  title: "Welcome to Acuité Connect",
+  meta: "A new digital space for our people to connect, engage and participate",
   body: [
-    "Dear colleagues,",
-    "As we close another financial year, it is important for all of us to pause and look at both performance and purpose. The year behind us demanded discipline, teamwork, and calm judgement. Across functions and offices, many of you carried that responsibility with seriousness. I want to acknowledge that effort.",
-    "The year ahead now asks us for equal clarity. We must continue strengthening analytical quality, improving operating rhythm, and building a stronger internal culture of ownership. Growth matters, but credible growth matters more. We will therefore stay focused on quality, client trust, and internal capability-building together.",
-    "Connect is meant to support that culture. It should not only inform employees, but also make it easier for ideas, questions, and thoughtful suggestions to reach leadership in a structured way. I encourage you to use that access well. Ask what should be improved. Share what should be protected. Suggest what should be built next.",
-    "Thank you for the work you do, and for the seriousness with which you do it.",
+    "Hello Team,",
+    "I am pleased to introduce Acuité Connect, our new internal platform created to bring our people, ideas and communication together in one place.",
+    "As we continue to grow, it becomes more important for all of us to stay connected, informed and engaged with one another. Acuité Connect has been built to serve as our shared digital workplace where employees can see important announcements, hear directly from leadership, connect with colleagues, participate in discussions, access resources, and contribute meaningfully to the culture of our organisation.",
+    "This platform is meant to make communication more open, structured and accessible. It is also intended to create a stronger sense of community across teams, functions and locations. Whether you want to stay updated, reach out to leadership, celebrate colleagues, explore resources or participate in employee activities, Acuité Connect is designed to support that experience.",
+    "I encourage each of you to explore the platform and use it actively and responsibly. The value of Acuité Connect will come not only from the features it offers, but from the way we as a team use it to share, learn, recognise and engage with each other.",
+    "I hope this becomes a meaningful and useful space for all of us.",
     "Cheers!\nSankar",
   ],
 };
@@ -137,39 +138,9 @@ const DEFAULT_CEO_DESK_ARCHIVE = [
       "Cheers!\nSankar",
     ],
   },
-  {
-    datePosted: "February 1, 2026",
-    headline: "February 2026 message",
-    subjectLine: "MD & CEO message",
-    body: ["Archived message details are not available in this build."],
-  },
-  {
-    datePosted: "January 1, 2017",
-    headline: "Happy New Year - 2017",
-    subjectLine: "Thank you for being here at Acuité",
-    body: [
-      "Hello Friends,",
-      "Who would deny that 2016 was the year of ups and downs! Through the year we have seen announcement changing the business landscape for us. A subsidy announcement for PCR Scheme of Rs. 200 cr., SEBI's announcement of new CRA guidelines and then the ultimate, demonetization. I must have met more than 20 CxO level leaders in last 2 months. Each of them feels and is gearing up for a new world order, trying to find new ways of doing business. Nothing is static anymore. But good news is that the world is changing, and changing for better, at least in India.",
-      "A year with historic events finally comes to an end today. And we have been blessed with another beautiful year filled with opportunities to make it a grand one. But before entering into this new year, let us thank each person who supported and motivated us, who stood beside us to help overcome our challenges and successfully enter 2017. Thanks a ton to each one of you for continuing to be part of the SMERA family. Let us recall some happy events of 2016:",
-      "- We were awarded with our Permanent Registration as a Credit Rating Agency by SEBI, this year. The achievement will be recorded in SMERA's history.",
-      "- We won our very first prestige International Assignment in the very first month of the year.",
-      "- Our true journey to turn global took off this year. We conducted workshops, training programs, and educated the global market participants of Indonesia, Nigeria, Qatar on the importance of MSME ratings.",
-      "- We launched our brand new website this year. The new SMERA website is the most intuitive and vibrant amongst all rating agencies, and probably even in the entire financial services sector.",
-      "- We revamped all our marketing collaterals.",
-      "- We performed really well on IT developments front. We launched several portals this year including STAMP, TAO, SMERA Connect, MIS Portal, Lead Management System, Standard Communication Portal. We are more than half way through in becoming a truly IT enabled organisation.",
-      "- We broke our record of highest deal by acquiring the largest mandate of SMERA so far. I am sure we will break this record next year too.",
-      "- Our SF collection rate of 2016 has been all time high.",
-      "- We entered into strategic tie ups/collaborations with SIDBI, IIT - Madras and SIES College.",
-      "- We entered into three new bright and spacious offices, Chennai, Surat and Delhi.",
-      "Year 2016 will not only be historic for us, but also for the entire Rating Industry in India. Rating industry cheered up when it received RBI's guidelines whereby RBI revised the risk weights on unrated and suspended accounts. This will definitely give a huge boost to bond markets.",
-      "As we grow, our responsibilities would also double. Let's welcome these responsibilities and continue to sow the seeds of hard work as it will bring in more chances of being successful and prosperous in this New Year.",
-      "I wish each one of you and your loved ones a very happy and healthy 2017. A toast to all our yesterday's achievements and tomorrow's brighter future.",
-      "Cheers,\nSankar",
-    ],
-  },
 ];
 const BULLETIN_BOARD_RETENTION_DAYS = 30;
-const CEO_DESK_ARCHIVE_LIMIT = 3;
+const CEO_DESK_ARCHIVE_LIMIT = 12;
 const COMPANY_HOLIDAY_CALENDAR = [
   { date: "2026-04-14", label: "Tamil New Year", applicability: "Chennai" },
   { date: "2026-05-01", label: "Maharashtra Day", applicability: "All Offices" },
@@ -273,6 +244,7 @@ const appData = {
   adminUsers: [],
   learningBooks: [],
   learningRequisitions: [],
+  homeAnnouncementPosts: [],
   bulletinPosts: [
     {
       id: "bulletin-connect-beta",
@@ -742,6 +714,7 @@ async function init() {
   try {
     const criticalTasks = [
       loadCurrentProfile(),
+      loadHomeAnnouncementPosts(),
       loadBulletinPosts(),
       loadCeoDeskPosts(),
       loadMyPosts(),
@@ -908,12 +881,33 @@ async function loadBulletinPosts() {
   }
 
   try {
-    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/?module=${FEED_MODULE_BULLETIN}`);
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&exclude_bulletin_channels=ceo_desk,announcements&exclude_home_announcements=1`,
+    );
     appData.bulletinPosts = Array.isArray(payload.results)
       ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
       : [];
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
+  }
+}
+
+async function loadHomeAnnouncementPosts() {
+  appData.homeAnnouncementPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&home_announcements=1`,
+    );
+    appData.homeAnnouncementPosts = Array.isArray(payload.results)
+      ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
+      : [];
+  } catch (error) {
+    appData.homeAnnouncementPosts = [];
   }
 }
 
@@ -2611,6 +2605,7 @@ async function submitHomeAnnouncementAdminPost(form) {
   let metaLines = [];
   const metadata = {
     bulletin_category: "announcements",
+    bulletin_channel: "announcements",
     home_announcement_tag: state.homeAnnouncementFilter,
     home_announcement_type: announcementType,
   };
@@ -2663,7 +2658,7 @@ async function submitHomeAnnouncementAdminPost(form) {
     });
     form.reset();
     syncHomeAnnouncementAdminForm(form);
-    await loadBulletinPosts();
+    await loadHomeAnnouncementPosts();
     renderHomeAnnouncement();
     showToast(announcementType === "town_hall"
       ? "Town hall announcement published."
@@ -2776,7 +2771,7 @@ async function submitCeoDeskPost(form) {
         },
       },
     });
-    await Promise.all([loadBulletinPosts(), loadCeoDeskPosts()]);
+    await loadCeoDeskPosts();
     selectedCeoDeskArchiveKey = "";
     renderCeoDeskMessage();
     renderCeoDeskLikeButton();
@@ -3940,7 +3935,7 @@ function getSelectedHomeAnnouncementFilterLabel() {
 }
 
 function getHomeAnnouncementPostForTag(tag) {
-  return appData.bulletinPosts
+  return appData.homeAnnouncementPosts
     .filter((post) => post.homeAnnouncementTag === tag)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0] || null;
 }
@@ -5367,13 +5362,20 @@ function updateLivePostFromPayload(postPayload) {
 
   if (postPayload.module === FEED_MODULE_BULLETIN) {
     const mapped = mapBulletinPost(postPayload);
-    appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
     if (mapped.bulletinChannel === "ceo_desk") {
       appData.ceoDeskPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.ceoDeskPosts, mapped));
       ceoDeskCachedAt = new Date().toISOString();
       ceoDeskShowingCachedData = false;
       saveCeoDeskCache();
+      return;
     }
+    if (mapped.homeAnnouncementTag || mapped.bulletinChannel === "announcements") {
+      appData.homeAnnouncementPosts = sortBulletinPostsNewestFirst(
+        replaceMappedPost(appData.homeAnnouncementPosts, mapped),
+      );
+      return;
+    }
+    appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
     return;
   }
 

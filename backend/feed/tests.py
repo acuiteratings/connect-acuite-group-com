@@ -168,6 +168,74 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "CEO Message")
 
+    def test_feed_can_filter_home_announcements(self):
+        Post.objects.create(
+            author=self.admin_user,
+            title="Leadership announcement",
+            body="Shared on announcements page",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={
+                "home_announcement_tag": "leadership",
+                "bulletin_channel": "announcements",
+            },
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="General bulletin",
+            body="Visible on bulletin board",
+            module=Post.Module.BULLETIN,
+            topic="events",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"bulletin_channel": "general"},
+        )
+
+        response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
+
+    def test_feed_can_exclude_ceo_and_home_announcements_from_bulletin_board(self):
+        Post.objects.create(
+            author=self.admin_user,
+            title="CEO Message",
+            body="MD & CEO editorial",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"bulletin_channel": "ceo_desk"},
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="Leadership announcement",
+            body="Shared on announcements page",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"home_announcement_tag": "leadership"},
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="General bulletin",
+            body="Visible on bulletin board",
+            module=Post.Module.BULLETIN,
+            topic="events",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"bulletin_channel": "general"},
+        )
+
+        response = self.client.get(
+            "/api/feed/posts/?module=bulletin&exclude_bulletin_channels=ceo_desk,announcements&exclude_home_announcements=1"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["title"], "General bulletin")
+
     def test_employee_submissions_stay_pending_review_for_authenticated_employee(self):
         self.client.force_login(self.user)
 

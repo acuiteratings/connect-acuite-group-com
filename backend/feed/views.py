@@ -20,6 +20,11 @@ def _parse_json_body(request):
         raise ValueError("Request body must be valid JSON.") from exc
 
 
+def _query_flag_enabled(request, key):
+    value = str(request.GET.get(key, "")).strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 def _can_moderate(user):
     return user.is_authenticated and (
         getattr(user, "can_moderate_connect", False)
@@ -93,6 +98,20 @@ def posts_collection(request):
         bulletin_channel = request.GET.get("bulletin_channel")
         if bulletin_channel:
             queryset = queryset.filter(metadata__bulletin_channel=bulletin_channel)
+
+        exclude_bulletin_channels = [
+            value.strip()
+            for value in str(request.GET.get("exclude_bulletin_channels", "")).split(",")
+            if value.strip()
+        ]
+        if exclude_bulletin_channels:
+            queryset = queryset.exclude(metadata__bulletin_channel__in=exclude_bulletin_channels)
+
+        if _query_flag_enabled(request, "home_announcements"):
+            queryset = queryset.filter(metadata__has_key="home_announcement_tag")
+
+        if _query_flag_enabled(request, "exclude_home_announcements"):
+            queryset = queryset.exclude(metadata__has_key="home_announcement_tag")
 
         if author_id:
             queryset = queryset.filter(author_id=author_id)
