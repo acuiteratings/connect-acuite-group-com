@@ -5000,18 +5000,10 @@ function renderBulletinPostCard(post) {
   const showSupplementaryText = !post.bulletinCard;
   return `
     <article class="card voice-card bulletin-card bulletin-category-${escapeHtml(post.category)}" id="${post.id}">
-      <div class="voice-card-top">
-        <div class="voice-card-tags">
-          <span class="mini-chip">${escapeHtml(post.categoryLabel)}</span>
-          ${post.templateKey ? `<span class="mini-chip success">${escapeHtml(capitalize(post.templateKey.replaceAll("_", " ")))}</span>` : ""}
-        </div>
-        <div class="community-time">${escapeHtml(post.postedAtLabel)}</div>
-      </div>
       <div class="card-header">
         <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
         <div class="card-meta">
           <div class="card-name">${escapeHtml(post.authorName)}</div>
-          <div class="card-sub">${escapeHtml(post.authorMeta)}</div>
         </div>
       </div>
       ${post.bulletinCard ? renderNativeCelebrationCard(post.bulletinCard) : ""}
