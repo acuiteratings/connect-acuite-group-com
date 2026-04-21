@@ -51,30 +51,21 @@
     bindEvents();
     renderRulesCard();
     render();
-
-    if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.fetchCurrentSession) {
-      setAlert("Battleship needs the Connect auth layer to be available.", "error");
-      render();
-      return;
-    }
-
-    try {
-      const session = await window.AcuiteConnectAuth.fetchCurrentSession();
-      if (!session || !session.authenticated || !session.user) {
-        return;
-      }
-      state.currentUser = session.user;
-      await refreshLobby({ silent: true });
-      schedulePoll();
-    } catch (error) {
-      setAlert(error.message || "Could not load Battleship right now.", "error");
-      render();
+    watchPanelState();
+    if (isBattleshipPanelActive()) {
+      await ensureBattleshipReady();
     }
   }
 
   function bindEvents() {
     document.addEventListener("visibilitychange", () => {
-      schedulePoll();
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
+      if (isBattleshipPanelActive()) {
+        void ensureBattleshipReady();
+      }
     });
 
     if (elements.stage) {
@@ -90,17 +81,74 @@
     }
   }
 
+  function watchPanelState() {
+    if (!elements.panel || typeof MutationObserver !== "function") {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (isBattleshipPanelActive()) {
+        void ensureBattleshipReady();
+      } else {
+        stopPolling();
+      }
+    });
+    observer.observe(elements.panel, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+
+  function isBattleshipPanelActive() {
+    return Boolean(elements.panel?.classList.contains("active"));
+  }
+
+  function stopPolling() {
+    if (state.pollTimer) {
+      window.clearTimeout(state.pollTimer);
+      state.pollTimer = 0;
+    }
+  }
+
+  async function ensureBattleshipReady() {
+    if (!isBattleshipPanelActive()) {
+      stopPolling();
+      return;
+    }
+
+    if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.fetchCurrentSession) {
+      setAlert("Battleship needs the Connect auth layer to be available.", "error");
+      render();
+      return;
+    }
+
+    try {
+      if (!state.currentUser) {
+        const session = await window.AcuiteConnectAuth.fetchCurrentSession();
+        if (!session || !session.authenticated || !session.user) {
+          stopPolling();
+          return;
+        }
+        state.currentUser = session.user;
+      }
+      if (!state.lobby) {
+        await refreshLobby({ silent: true });
+      } else {
+        schedulePoll();
+      }
+    } catch (error) {
+      setAlert(error.message || "Could not load Battleship right now.", "error");
+      render();
+    }
+  }
+
   function getPollIntervalMs() {
     const seconds = Number(state.lobby?.office_policy?.poll_interval_seconds || DEFAULT_POLL_SECONDS);
     return Math.max(2, seconds) * 1000;
   }
 
   function schedulePoll() {
-    if (state.pollTimer) {
-      window.clearTimeout(state.pollTimer);
-      state.pollTimer = 0;
-    }
-    if (document.hidden || !state.currentUser) {
+    stopPolling();
+    if (document.hidden || !state.currentUser || !isBattleshipPanelActive()) {
       return;
     }
     state.pollTimer = window.setTimeout(async () => {
@@ -122,6 +170,9 @@
       window.clearTimeout(state.refreshTimer);
       state.refreshTimer = 0;
     }
+    if (!isBattleshipPanelActive()) {
+      return;
+    }
     state.refreshTimer = window.setTimeout(() => {
       state.refreshTimer = 0;
       void refreshLobby({ silent: true });
@@ -129,6 +180,10 @@
   }
 
   async function refreshLobby({ silent = false } = {}) {
+    if (!isBattleshipPanelActive()) {
+      stopPolling();
+      return;
+    }
     if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
       return;
     }
