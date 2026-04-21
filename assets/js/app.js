@@ -122,11 +122,18 @@ const DEFAULT_CEO_DESK_MESSAGE = {
   ],
 };
 const DEFAULT_CEO_DESK_ARCHIVE = [
-  { datePosted: "March 1, 2026", headline: "March 2026 message", subjectLine: "MD & CEO message" },
-  { datePosted: "February 1, 2026", headline: "February 2026 message", subjectLine: "MD & CEO message" },
-  { datePosted: "January 1, 2026", headline: "January 2026 message", subjectLine: "MD & CEO message" },
-  { datePosted: "December 1, 2025", headline: "December 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "November 1, 2025", headline: "November 2025 message", subjectLine: "MD & CEO message" },
+  {
+    datePosted: "March 1, 2026",
+    headline: "March 2026 message",
+    subjectLine: "MD & CEO message",
+    body: ["Archived message details are not available in this build."],
+  },
+  {
+    datePosted: "February 1, 2026",
+    headline: "February 2026 message",
+    subjectLine: "MD & CEO message",
+    body: ["Archived message details are not available in this build."],
+  },
   {
     datePosted: "January 1, 2017",
     headline: "Happy New Year - 2017",
@@ -151,27 +158,9 @@ const DEFAULT_CEO_DESK_ARCHIVE = [
       "Cheers,\nSankar",
     ],
   },
-  { datePosted: "September 1, 2025", headline: "September 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "August 1, 2025", headline: "August 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "July 1, 2025", headline: "July 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "June 1, 2025", headline: "June 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "May 1, 2025", headline: "May 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "April 1, 2025", headline: "April 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "March 1, 2025", headline: "March 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "February 1, 2025", headline: "February 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "January 1, 2025", headline: "January 2025 message", subjectLine: "MD & CEO message" },
-  { datePosted: "December 1, 2024", headline: "December 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "November 1, 2024", headline: "November 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "October 1, 2024", headline: "October 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "September 1, 2024", headline: "September 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "August 1, 2024", headline: "August 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "July 1, 2024", headline: "July 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "June 1, 2024", headline: "June 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "May 1, 2024", headline: "May 2024 message", subjectLine: "MD & CEO message" },
-  { datePosted: "April 1, 2024", headline: "April 2024 message", subjectLine: "MD & CEO message" },
 ];
 const BULLETIN_BOARD_RETENTION_DAYS = 30;
-const CEO_DESK_ARCHIVE_LIMIT = 6;
+const CEO_DESK_ARCHIVE_LIMIT = 3;
 const COMPANY_HOLIDAY_CALENDAR = [
   { date: "2026-04-14", label: "Tamil New Year", applicability: "Chennai" },
   { date: "2026-05-01", label: "Maharashtra Day", applicability: "All Offices" },
@@ -523,6 +512,7 @@ let directoryLoadError = "";
 let storeLoadError = "";
 let learningLoadError = "";
 let bulletinLoadError = "";
+let selectedCeoDeskArchiveKey = "";
 let myPostsLoadError = "";
 let adminUsersLoadError = "";
 let profileBuilderLoadError = "";
@@ -1102,6 +1092,14 @@ async function handleDocumentClick(event) {
 
     if (actionName === "prefill-ceo-request") {
       prefillCeoDeskComment(action.dataset.requestMessage);
+      return;
+    }
+
+    if (actionName === "open-ceo-archive-message") {
+      const archiveKey = String(action.dataset.archiveKey || "").trim();
+      selectedCeoDeskArchiveKey = selectedCeoDeskArchiveKey === archiveKey ? "" : archiveKey;
+      renderCeoDeskMessage();
+      renderCeoDeskLikeButton();
       return;
     }
 
@@ -2018,9 +2016,14 @@ function renderCeoDeskMessage() {
     const archiveItems = getCeoDeskArchiveItems();
     archiveEl.innerHTML = archiveItems.length
       ? archiveItems.map((item) => `
-          <div class="ceo-desk-archive-link">
+          <button
+            type="button"
+            class="ceo-desk-archive-link ${selectedCeoDeskArchiveKey === item.archiveKey ? "active" : ""}"
+            data-action="open-ceo-archive-message"
+            data-archive-key="${escapeHtml(item.archiveKey)}"
+          >
             <span>${escapeHtml(item.datePosted)} | ${escapeHtml(item.headline)} | ${escapeHtml(item.subjectLine)}</span>
-          </div>
+          </button>
         `).join("")
       : '<div class="mini-item-meta">No previous messages yet.</div>';
   }
@@ -2710,6 +2713,7 @@ async function submitCeoDeskPost(form) {
       },
     });
     await loadBulletinPosts();
+    selectedCeoDeskArchiveKey = "";
     renderCeoDeskMessage();
     renderCeoDeskLikeButton();
     form.reset();
@@ -3096,6 +3100,11 @@ function renderCeoDeskLikeButton() {
     return;
   }
   const message = getCurrentCeoDeskMessage();
+  const isArchiveFallbackMessage = Boolean(selectedCeoDeskArchiveKey && !message.sourceId);
+  button.hidden = isArchiveFallbackMessage;
+  if (isArchiveFallbackMessage) {
+    return;
+  }
   const liked = Boolean(message.currentUserHasReacted);
   const totalLikes = Number(message.reactionCount || 0);
   button.textContent = `${liked ? "Liked" : "Like"} (${totalLikes})`;
@@ -3987,6 +3996,11 @@ function getCeoDeskPosts() {
 }
 
 function getCurrentCeoDeskMessage() {
+  const archivedMessage = getSelectedCeoDeskArchiveMessage();
+  if (archivedMessage) {
+    return archivedMessage;
+  }
+
   const livePost = getCeoDeskPosts()[0];
   if (!livePost) {
     const liked = state.likedPostIds.includes(CEO_DESK_EDITORIAL.id);
@@ -4012,13 +4026,53 @@ function getCurrentCeoDeskMessage() {
 function getCeoDeskArchiveItems() {
   const livePosts = getCeoDeskPosts();
   if (!livePosts.length) {
-    return DEFAULT_CEO_DESK_ARCHIVE.slice(0, CEO_DESK_ARCHIVE_LIMIT).map((item) => ({ ...item }));
+    return DEFAULT_CEO_DESK_ARCHIVE.slice(0, CEO_DESK_ARCHIVE_LIMIT).map((item) => ({
+      ...item,
+      archiveKey: buildCeoDeskArchiveKey(item),
+    }));
   }
   return livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
     datePosted: post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt),
     headline: post.title || "MD & CEO message",
     subjectLine: post.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
+    body: Array.isArray(post.body) && post.body.length ? post.body : ["Archived message details are not available in this build."],
+    sourceId: post.sourceId,
+    reactionCount: Number(post.reactionCount || 0),
+    currentUserHasReacted: Boolean(post.currentUserHasReacted),
+    archiveKey: buildCeoDeskArchiveKey(post),
   }));
+}
+
+function buildCeoDeskArchiveKey(item) {
+  const sourceId = String(item?.sourceId || "").trim();
+  if (sourceId) {
+    return `source:${sourceId}`;
+  }
+  return [
+    String(item?.datePosted || item?.date || "").trim(),
+    String(item?.headline || item?.title || "").trim(),
+    String(item?.subjectLine || item?.subject_line || "").trim(),
+  ].join("|");
+}
+
+function getSelectedCeoDeskArchiveMessage() {
+  if (!selectedCeoDeskArchiveKey) {
+    return null;
+  }
+  const archiveItem = getCeoDeskArchiveItems().find((item) => item.archiveKey === selectedCeoDeskArchiveKey);
+  if (!archiveItem) {
+    selectedCeoDeskArchiveKey = "";
+    return null;
+  }
+  return {
+    date: archiveItem.datePosted || "",
+    title: archiveItem.headline || "MD & CEO message",
+    meta: archiveItem.subjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
+    body: Array.isArray(archiveItem.body) && archiveItem.body.length ? archiveItem.body : DEFAULT_CEO_DESK_MESSAGE.body,
+    sourceId: archiveItem.sourceId || "",
+    reactionCount: Number(archiveItem.reactionCount || 0),
+    currentUserHasReacted: Boolean(archiveItem.currentUserHasReacted),
+  };
 }
 
 function mapMyPostSubmission(post) {

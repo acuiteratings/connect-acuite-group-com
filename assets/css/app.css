@@ -1198,6 +1198,11 @@ select {
   background: var(--bg-hover);
 }
 
+.ceo-desk-archive-link.active {
+  border-color: rgba(247, 148, 29, 0.44);
+  background: var(--bg-hover);
+}
+
 .ceo-desk-like-btn {
   display: inline-flex;
   align-items: center;
