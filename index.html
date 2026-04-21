@@ -1052,24 +1052,17 @@
   </div>
 
   <div class="profile-modal-backdrop brochure-presentation-backdrop" id="brochure-presentation-backdrop" hidden>
-    <div class="profile-modal brochure-presentation-modal" role="dialog" aria-modal="true" aria-labelledby="brochure-presentation-title">
-      <div class="profile-modal-head brochure-presentation-head">
-        <div>
-          <p class="widget-kicker">Presentation</p>
-          <h2 id="brochure-presentation-title">Selected brochure slides</h2>
-          <div class="mini-item-meta" id="brochure-presentation-meta">Slide 1 of 1</div>
-        </div>
-        <button type="button" class="profile-modal-close" data-action="close-brochure-presentation" aria-label="Close presentation">
-          ×
+    <div class="brochure-presentation-shell" role="dialog" aria-modal="true" aria-labelledby="brochure-presentation-title">
+      <header class="brochure-presentation-topbar">
+        <div class="brochure-presentation-brand" id="brochure-presentation-title">Acuité <span>· Selected Slides</span></div>
+        <div class="brochure-presentation-topmeta" id="brochure-presentation-meta">0 slides selected</div>
+        <button type="button" class="brochure-presentation-close-btn" data-action="close-brochure-presentation" aria-label="Close presentation">
+          Close
         </button>
-      </div>
-      <div class="brochure-presentation-frame-shell">
-        <iframe id="brochure-presentation-frame" title="Brochure presentation slide"></iframe>
-      </div>
-      <div class="brochure-presentation-controls">
-        <button type="button" class="btn-ghost" data-action="brochure-prev">Previous</button>
-        <button type="button" class="btn-ghost" data-action="brochure-next">Next</button>
-      </div>
+      </header>
+      <main class="brochure-presentation-main" id="brochure-presentation-main"></main>
+      <div class="brochure-presentation-hint" id="brochure-presentation-hint">← → arrows · space · esc to exit</div>
+      <div class="brochure-presentation-hud" id="brochure-presentation-hud">01 / 01</div>
     </div>
   </div>
 

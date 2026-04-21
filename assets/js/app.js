@@ -511,6 +511,9 @@ let brochureLoadError = "";
 let brochureSlidesLoading = false;
 let brochurePresentationOpen = false;
 let brochurePresentationIndex = 0;
+let brochurePresentationSignature = "";
+let brochurePresentationHudTimer = null;
+let brochurePresentationHintTimer = null;
 let selectedAdminUserId = null;
 let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
 
@@ -633,7 +636,9 @@ async function init() {
     brochurePreviewList: document.getElementById("brochure-preview-list"),
     brochurePresentationBackdrop: document.getElementById("brochure-presentation-backdrop"),
     brochurePresentationMeta: document.getElementById("brochure-presentation-meta"),
-    brochurePresentationFrame: document.getElementById("brochure-presentation-frame"),
+    brochurePresentationMain: document.getElementById("brochure-presentation-main"),
+    brochurePresentationHud: document.getElementById("brochure-presentation-hud"),
+    brochurePresentationHint: document.getElementById("brochure-presentation-hint"),
     adminCreateUserForm: document.getElementById("admin-create-user-form"),
     adminEditUserForm: document.getElementById("admin-edit-user-form"),
     adminBulletinForm: document.getElementById("admin-bulletin-form"),
@@ -910,7 +915,9 @@ function bindEvents() {
   });
   document.addEventListener("change", handleDocumentChange);
   document.addEventListener("keydown", handleDocumentKeydown);
+  document.addEventListener("fullscreenchange", handleDocumentFullscreenChange);
   document.addEventListener("submit", handleSubmit);
+  window.addEventListener("resize", handleWindowResize);
 
   if (elements.searchInput) {
     elements.searchInput.addEventListener("input", handleSearchInput);
@@ -1058,16 +1065,6 @@ async function handleDocumentClick(event) {
 
     if (actionName === "close-brochure-presentation") {
       closeBrochurePresentation();
-      return;
-    }
-
-    if (actionName === "brochure-prev") {
-      moveBrochurePresentation(-1);
-      return;
-    }
-
-    if (actionName === "brochure-next") {
-      moveBrochurePresentation(1);
       return;
     }
 
@@ -1229,8 +1226,14 @@ async function handleDocumentClick(event) {
     closeLiveComments();
   }
 
-  if (elements.brochurePresentationBackdrop && event.target === elements.brochurePresentationBackdrop) {
-    closeBrochurePresentation();
+  if (brochurePresentationOpen && isBrochurePresenting()) {
+    if (event.target.closest(".brochure-presentation-hud, .brochure-presentation-hint, .brochure-presentation-topbar")) {
+      return;
+    }
+    if (event.target.closest(".brochure-presentation-slide") || event.target === elements.brochurePresentationBackdrop || event.target === elements.brochurePresentationMain) {
+      moveBrochurePresentation(1);
+      return;
+    }
   }
 
   if (!event.target.closest(".profile-menu-shell")) {
@@ -1254,21 +1257,69 @@ function handleDocumentKeydown(event) {
     return;
   }
 
-  if (event.key === "Escape") {
-    event.preventDefault();
-    closeBrochurePresentation();
+  switch (event.key) {
+    case "Escape":
+      event.preventDefault();
+      closeBrochurePresentation();
+      return;
+    case "ArrowRight":
+    case "PageDown":
+    case " ":
+    case "Enter":
+      event.preventDefault();
+      moveBrochurePresentation(1);
+      return;
+    case "ArrowLeft":
+    case "PageUp":
+    case "Backspace":
+      event.preventDefault();
+      moveBrochurePresentation(-1);
+      return;
+    case "Home":
+      event.preventDefault();
+      setBrochurePresentationCurrent(0);
+      return;
+    case "End":
+      event.preventDefault();
+      setBrochurePresentationCurrent(getBrochurePresentationSlides().length - 1);
+      return;
+    default:
+      return;
+  }
+}
+
+function handleDocumentFullscreenChange() {
+  if (!brochurePresentationOpen) {
     return;
   }
 
-  if (event.key === "ArrowRight") {
-    event.preventDefault();
-    moveBrochurePresentation(1);
+  if (!document.fullscreenElement && isBrochurePresenting()) {
+    closeBrochurePresentation({ skipFullscreenExit: true });
     return;
   }
 
-  if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    moveBrochurePresentation(-1);
+  if (isBrochurePresenting()) {
+    const slides = getBrochurePresentationSlides();
+    const currentSlide = slides[brochurePresentationIndex];
+    if (currentSlide) {
+      window.requestAnimationFrame(() => {
+        scaleBrochurePresentationIframe(currentSlide);
+      });
+    }
+  }
+}
+
+function handleWindowResize() {
+  if (!brochurePresentationOpen || !isBrochurePresenting()) {
+    return;
+  }
+
+  const slides = getBrochurePresentationSlides();
+  const currentSlide = slides[brochurePresentationIndex];
+  if (currentSlide) {
+    window.requestAnimationFrame(() => {
+      scaleBrochurePresentationIframe(currentSlide);
+    });
   }
 }
 
@@ -1451,24 +1502,24 @@ function renderBrochureBuilderPanel() {
 }
 
 function renderBrochurePresentation() {
-  if (!elements.brochurePresentationBackdrop || !elements.brochurePresentationFrame || !elements.brochurePresentationMeta) {
+  if (!elements.brochurePresentationBackdrop || !elements.brochurePresentationMain || !elements.brochurePresentationMeta || !elements.brochurePresentationHud || !elements.brochurePresentationHint) {
     return;
   }
 
   if (!brochurePresentationOpen) {
     elements.brochurePresentationBackdrop.hidden = true;
+    brochurePresentationSignature = "";
     syncModalState();
     return;
   }
 
   const selectedSlides = getSelectedBrochureSlides();
   if (!selectedSlides.length) {
-    brochurePresentationOpen = false;
-    elements.brochurePresentationBackdrop.hidden = true;
-    syncModalState();
+    closeBrochurePresentation({ skipFullscreenExit: true });
     return;
   }
 
+  const signature = selectedSlides.map((slide) => slide.id).join("|");
   if (brochurePresentationIndex >= selectedSlides.length) {
     brochurePresentationIndex = selectedSlides.length - 1;
   }
@@ -1476,11 +1527,159 @@ function renderBrochurePresentation() {
     brochurePresentationIndex = 0;
   }
 
-  const currentSlide = selectedSlides[brochurePresentationIndex];
   elements.brochurePresentationBackdrop.hidden = false;
-  elements.brochurePresentationMeta.textContent = `Slide ${brochurePresentationIndex + 1} of ${selectedSlides.length} | ${currentSlide.name}`;
-  elements.brochurePresentationFrame.srcdoc = currentSlide.srcdoc;
+  elements.brochurePresentationMeta.textContent = `${selectedSlides.length} slide${selectedSlides.length === 1 ? "" : "s"} selected`;
+  if (signature !== brochurePresentationSignature) {
+    elements.brochurePresentationMain.innerHTML = selectedSlides.map((slide, index) => `
+      <section class="brochure-presentation-slide" aria-label="${escapeHtml(`Slide ${index + 1}: ${slide.name}`)}">
+        <div class="brochure-presentation-slide-meta">
+          <span class="num">${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
+          <span class="label">${escapeHtml(slide.name)}</span>
+        </div>
+        <iframe
+          title="${escapeHtml(slide.name)}"
+          srcdoc="${escapeHtml(slide.srcdoc)}"
+          loading="lazy"
+          scrolling="no"
+        ></iframe>
+      </section>
+    `).join("");
+    brochurePresentationSignature = signature;
+  }
+  updateBrochurePresentationHud();
   syncModalState();
+}
+
+function getBrochurePresentationSlides() {
+  if (!elements.brochurePresentationMain) {
+    return [];
+  }
+  return Array.from(elements.brochurePresentationMain.querySelectorAll(".brochure-presentation-slide"));
+}
+
+function updateBrochurePresentationHud() {
+  const slides = getBrochurePresentationSlides();
+  if (!elements.brochurePresentationHud || !slides.length) {
+    return;
+  }
+  const current = Math.min(Math.max(brochurePresentationIndex + 1, 1), slides.length);
+  elements.brochurePresentationHud.textContent = `${String(current).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+}
+
+function showBrochurePresentationHint() {
+  if (!elements.brochurePresentationHint) {
+    return;
+  }
+  elements.brochurePresentationHint.classList.remove("fade");
+  if (brochurePresentationHintTimer) {
+    window.clearTimeout(brochurePresentationHintTimer);
+  }
+  brochurePresentationHintTimer = window.setTimeout(() => {
+    elements.brochurePresentationHint?.classList.add("fade");
+  }, 3000);
+}
+
+function showBrochurePresentationHudBriefly() {
+  if (!elements.brochurePresentationHud) {
+    return;
+  }
+  elements.brochurePresentationHud.classList.remove("fade");
+  if (brochurePresentationHudTimer) {
+    window.clearTimeout(brochurePresentationHudTimer);
+  }
+  brochurePresentationHudTimer = window.setTimeout(() => {
+    elements.brochurePresentationHud?.classList.add("fade");
+  }, 1500);
+}
+
+function scaleBrochurePresentationIframe(slide) {
+  const iframe = slide?.querySelector("iframe");
+  if (!iframe) {
+    return;
+  }
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc || !doc.documentElement) {
+      return;
+    }
+    const iframeWidthPx = iframe.getBoundingClientRect().width;
+    const scale = iframeWidthPx / 1123;
+    doc.documentElement.style.zoom = scale;
+  } catch (error) {
+    // Ignore iframe sizing failures.
+  }
+}
+
+function unscaleBrochurePresentationIframe(slide) {
+  const iframe = slide?.querySelector("iframe");
+  if (!iframe) {
+    return;
+  }
+  try {
+    const doc = iframe.contentDocument;
+    if (doc?.documentElement) {
+      doc.documentElement.style.zoom = "";
+    }
+  } catch (error) {
+    // Ignore iframe sizing failures.
+  }
+}
+
+function setBrochurePresentationCurrent(index) {
+  const slides = getBrochurePresentationSlides();
+  if (!slides.length) {
+    return;
+  }
+
+  if (index < 0) {
+    index = 0;
+  }
+  if (index >= slides.length) {
+    index = slides.length - 1;
+  }
+
+  if (slides[brochurePresentationIndex]) {
+    unscaleBrochurePresentationIframe(slides[brochurePresentationIndex]);
+  }
+  brochurePresentationIndex = index;
+  slides.forEach((slide, slideIndex) => {
+    slide.classList.toggle("current", slideIndex === brochurePresentationIndex);
+  });
+  window.requestAnimationFrame(() => {
+    scaleBrochurePresentationIframe(slides[brochurePresentationIndex]);
+  });
+  updateBrochurePresentationHud();
+  showBrochurePresentationHudBriefly();
+}
+
+function isBrochurePresenting() {
+  return elements.brochurePresentationBackdrop?.classList.contains("is-presenting");
+}
+
+function enterBrochurePresentation(startIndex = 0) {
+  if (!elements.brochurePresentationBackdrop) {
+    return;
+  }
+  elements.brochurePresentationBackdrop.classList.add("is-presenting");
+  document.body.classList.add("brochure-presenting");
+  document.documentElement.classList.add("brochure-presenting");
+  setBrochurePresentationCurrent(startIndex);
+  showBrochurePresentationHint();
+
+  const fullscreenTarget = document.documentElement;
+  const requestFullscreen = fullscreenTarget.requestFullscreen
+    || fullscreenTarget.webkitRequestFullscreen
+    || fullscreenTarget.msRequestFullscreen;
+  if (requestFullscreen) {
+    try {
+      const result = requestFullscreen.call(fullscreenTarget);
+      if (result?.catch) {
+        result.catch(() => {});
+      }
+    } catch (error) {
+      // Ignore fullscreen request failures.
+    }
+  }
 }
 
 async function ensureBrochureSlidesLoaded() {
@@ -1703,29 +1902,56 @@ function openBrochurePresentation() {
   brochurePresentationOpen = true;
   brochurePresentationIndex = Math.min(brochurePresentationIndex, selectedSlides.length - 1);
   renderBrochurePresentation();
-
-  if (elements.brochurePresentationBackdrop?.requestFullscreen) {
-    window.requestAnimationFrame(() => {
-      elements.brochurePresentationBackdrop.requestFullscreen().catch(() => {});
-    });
-  }
+  enterBrochurePresentation(Math.max(brochurePresentationIndex, 0));
 }
 
-function closeBrochurePresentation() {
+function closeBrochurePresentation(options = {}) {
+  const { skipFullscreenExit = false } = options;
   brochurePresentationOpen = false;
+  brochurePresentationSignature = "";
+  brochurePresentationIndex = 0;
+  if (brochurePresentationHudTimer) {
+    window.clearTimeout(brochurePresentationHudTimer);
+    brochurePresentationHudTimer = null;
+  }
+  if (brochurePresentationHintTimer) {
+    window.clearTimeout(brochurePresentationHintTimer);
+    brochurePresentationHintTimer = null;
+  }
+  elements.brochurePresentationBackdrop?.classList.remove("is-presenting");
+  elements.brochurePresentationHud?.classList.remove("fade");
+  elements.brochurePresentationHint?.classList.remove("fade");
+  document.body.classList.remove("brochure-presenting");
+  document.documentElement.classList.remove("brochure-presenting");
+  if (elements.brochurePresentationMain) {
+    getBrochurePresentationSlides().forEach((slide) => {
+      slide.classList.remove("current");
+      unscaleBrochurePresentationIframe(slide);
+    });
+    elements.brochurePresentationMain.innerHTML = "";
+  }
   renderBrochurePresentation();
-  if (document.fullscreenElement && document.exitFullscreen) {
-    document.exitFullscreen().catch(() => {});
+  if (!skipFullscreenExit && document.fullscreenElement) {
+    const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (exitFullscreen) {
+      try {
+        const result = exitFullscreen.call(document);
+        if (result?.catch) {
+          result.catch(() => {});
+        }
+      } catch (error) {
+        // Ignore fullscreen exit failures.
+      }
+    }
   }
 }
 
 function moveBrochurePresentation(direction) {
-  const selectedSlides = getSelectedBrochureSlides();
-  if (!selectedSlides.length) {
+  const slides = getBrochurePresentationSlides();
+  if (!slides.length) {
     return;
   }
-  brochurePresentationIndex = (brochurePresentationIndex + direction + selectedSlides.length) % selectedSlides.length;
-  renderBrochurePresentation();
+  setBrochurePresentationCurrent((brochurePresentationIndex + direction + slides.length) % slides.length);
 }
 
 function syncModalState() {
