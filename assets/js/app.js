@@ -4455,7 +4455,6 @@ function renderDirectory() {
         </div>
         <div class="person-footer">
           <span class="availability">${escapeHtml(person.contactLine)}</span>
-          <button type="button" class="btn-outline" data-action="show-person" data-name="${escapeHtml(person.name)}">View details</button>
         </div>
       </article>
     `).join("")
