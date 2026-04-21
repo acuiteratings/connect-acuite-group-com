@@ -125,10 +125,17 @@ const DEFAULT_CEO_DESK_MESSAGE = {
 };
 const DEFAULT_CEO_DESK_ARCHIVE = [
   {
-    datePosted: "March 1, 2026",
-    headline: "March 2026 message",
-    subjectLine: "MD & CEO message",
-    body: ["Archived message details are not available in this build."],
+    datePosted: "March 31, 2026",
+    headline: "Hola FY2027",
+    subjectLine: "A steady view on performance, priorities, and the path ahead.",
+    body: [
+      "Dear colleagues,",
+      "As we close another financial year, it is important for all of us to pause and look at both performance and purpose. The year behind us demanded discipline, teamwork, and calm judgement. Across functions and offices, many of you carried that responsibility with seriousness. I want to acknowledge that effort.",
+      "The year ahead now asks us for equal clarity. We must continue strengthening analytical quality, improving operating rhythm, and building a stronger internal culture of ownership. Growth matters, but credible growth matters more. We will therefore stay focused on quality, client trust, and internal capability-building together.",
+      "Connect is meant to support that culture. It should not only inform employees, but also make it easier for ideas, questions, and thoughtful suggestions to reach leadership in a structured way. I encourage you to use that access well. Ask what should be improved. Share what should be protected. Suggest what should be built next.",
+      "Thank you for the work you do, and for the seriousness with which you do it.",
+      "Cheers!\nSankar",
+    ],
   },
   {
     datePosted: "February 1, 2026",
