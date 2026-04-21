@@ -2006,6 +2006,10 @@ select {
   margin-top: 16px;
 }
 
+.bulletin-meta-lines .mini-chip {
+  font-size: 13px;
+}
+
 .bulletin-card-image {
   margin-top: 16px;
   border-radius: 18px;
