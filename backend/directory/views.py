@@ -12,6 +12,7 @@ from .utils import (
     PROFILE_SKILL_LIBRARY,
     map_department_for_connect,
     normalize_profile_photos,
+    resolve_branch_location,
     normalize_string_list,
 )
 
@@ -33,6 +34,25 @@ def _distinct_values(queryset, field_name):
     )
 
 
+def _profile_branch_location(profile):
+    return resolve_branch_location(
+        profile.city,
+        profile.office_location,
+        profile.user.location,
+    )
+
+
+def _collect_branch_locations(profiles):
+    return sorted(
+        {
+            branch_location
+            for profile in profiles
+            for branch_location in [_profile_branch_location(profile)]
+            if branch_location
+        }
+    )
+
+
 def directory_list(request):
     base_queryset = DirectoryProfile.objects.select_related("user", "manager").filter(
         user__is_active=True,
@@ -44,7 +64,7 @@ def directory_list(request):
     company = request.GET.get("company")
     department = request.GET.get("department")
     function_name = request.GET.get("function")
-    location = request.GET.get("location")
+    location = resolve_branch_location(request.GET.get("location"))
     query = request.GET.get("q")
 
     if company:
@@ -53,12 +73,6 @@ def directory_list(request):
         queryset = queryset.filter(department_for_connect__iexact=department.strip())
     if function_name:
         queryset = queryset.filter(function_name__iexact=function_name.strip())
-    if location:
-        queryset = queryset.filter(
-            Q(city__iexact=location.strip())
-            | Q(office_location__iexact=location.strip())
-            | Q(user__location__iexact=location.strip())
-        )
     if query:
         needle = query.strip()
         queryset = queryset.filter(
@@ -75,12 +89,19 @@ def directory_list(request):
             | Q(bio__icontains=needle)
         )
 
-    profiles = list(queryset.order_by("user__display_name", "user__email")[:500])
+    profiles = list(queryset.order_by("user__display_name", "user__email"))
+    if location:
+        profiles = [
+            profile for profile in profiles
+            if _profile_branch_location(profile).casefold() == location.casefold()
+        ]
+    profiles = profiles[:500]
     coin_balance_map = build_coin_balance_map([profile.user_id for profile in profiles])
     results = [
         serialize_directory_profile(profile, coin_balance=coin_balance_map.get(profile.user_id))
         for profile in profiles
     ]
+    base_profiles = list(base_queryset.order_by("user__display_name", "user__email"))
     filters = {
         "company": _distinct_values(base_queryset, "company_name"),
         "department": [
@@ -89,15 +110,7 @@ def directory_list(request):
             if base_queryset.filter(department_for_connect=value).exists()
         ],
         "function": _distinct_values(base_queryset, "function_name"),
-        "location": sorted(
-            {
-                value
-                for value in list(base_queryset.values_list("city", flat=True))
-                + list(base_queryset.values_list("office_location", flat=True))
-                + list(base_queryset.values_list("user__location", flat=True))
-                if value
-            }
-        ),
+        "location": _collect_branch_locations(base_profiles),
     }
     return JsonResponse({"count": len(results), "results": results, "filters": filters})
 

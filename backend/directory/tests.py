@@ -59,6 +59,84 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(payload["filters"]["function"], ["Corporate"])
         self.assertEqual(payload["filters"]["location"], ["Mumbai"])
 
+    def test_directory_location_filters_use_normalized_branch_locations(self):
+        mumbai_user = User.objects.create_user(
+            email="mumbai.branch@acuite.in",
+            first_name="Mumbai",
+            last_name="Branch",
+            title="Analyst",
+            department="Technology",
+            location="Mumbai 603",
+        )
+        delhi_user = User.objects.create_user(
+            email="delhi.branch@acuite.in",
+            first_name="Delhi",
+            last_name="Branch",
+            title="Analyst",
+            department="Technology",
+            location="Delhi",
+        )
+        DirectoryProfile.objects.create(
+            user=mumbai_user,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Mumbai",
+            office_location="Mumbai 905",
+        )
+        DirectoryProfile.objects.create(
+            user=delhi_user,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Delhi",
+            office_location="Delhi",
+        )
+
+        response = self.client.get("/api/directory/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["filters"]["location"], ["Delhi", "Mumbai"])
+        mumbai_result = next(item for item in payload["results"] if item["email"] == "mumbai.branch@acuite.in")
+        self.assertEqual(mumbai_result["branch_location"], "Mumbai")
+
+    def test_directory_can_filter_by_normalized_branch_location(self):
+        mumbai_a = User.objects.create_user(
+            email="mumbai.603@acuite.in",
+            first_name="Mumbai",
+            last_name="603",
+            title="Analyst",
+            department="Technology",
+            location="Mumbai 603",
+        )
+        mumbai_b = User.objects.create_user(
+            email="mumbai.905@acuite.in",
+            first_name="Mumbai",
+            last_name="905",
+            title="Analyst",
+            department="Technology",
+            location="Mumbai 905",
+        )
+        DirectoryProfile.objects.create(
+            user=mumbai_a,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Mumbai",
+            office_location="Mumbai 603",
+        )
+        DirectoryProfile.objects.create(
+            user=mumbai_b,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Mumbai",
+            office_location="Mumbai 905",
+        )
+
+        response = self.client.get("/api/directory/", {"location": "Mumbai"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 2)
+
     def test_directory_can_filter_by_department_for_connect(self):
         corporate_user = User.objects.create_user(
             email="chitra.mohan@acuite.in",

@@ -62,6 +62,28 @@ PROFILE_SKILL_LIBRARY = [
 ]
 
 
+def normalize_branch_location(raw_location):
+    location = str(raw_location or "").strip()
+    if not location:
+        return ""
+
+    if location.lower().startswith("mumbai"):
+        return "Mumbai"
+
+    normalized = location.replace("_", " ")
+    normalized = " ".join(normalized.split())
+    normalized = normalized.rstrip("0123456789 -_/")
+    return normalized.strip() or location
+
+
+def resolve_branch_location(*candidates):
+    for candidate in candidates:
+        normalized = normalize_branch_location(candidate)
+        if normalized:
+            return normalized
+    return ""
+
+
 def map_department_for_connect(raw_department):
     department = str(raw_department or "").strip()
     if not department:

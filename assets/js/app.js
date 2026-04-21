@@ -4413,7 +4413,7 @@ function renderDirectory() {
     if (selectedCompanies.length && !selectedCompanies.includes(person.company)) {
       return false;
     }
-    if (selectedLocations.length && !selectedLocations.includes(person.office)) {
+    if (selectedLocations.length && !selectedLocations.includes(person.branchLocation)) {
       return false;
     }
     if (selectedDepartments.length && !selectedDepartments.includes(person.departmentForConnect)) {
@@ -4860,6 +4860,7 @@ function mapDirectoryProfileToCard(profile) {
   const departmentForConnect = profile.department_for_connect || "";
   const functionName = profile.function_name || "";
   const office = profile.office_location || profile.location || profile.city || "";
+  const branchLocation = profile.branch_location || profile.city || profile.location || office;
   const joinedOn = formatDisplayDate(profile.joined_on);
   const contactLine = [profile.email, profile.mobile_number || profile.phone_number].filter(Boolean).join(" | ");
   const skills = Array.isArray(profile.skills) ? profile.skills : [];
@@ -4881,6 +4882,7 @@ function mapDirectoryProfileToCard(profile) {
     departmentForConnect,
     functionName,
     office,
+    branchLocation,
     officeLine: [office, companyLabel].filter(Boolean).join(" | "),
     employeeCode: profile.employee_code || "",
     coinBalance: String(profile.coin_balance?.available_points || 0),
@@ -4901,6 +4903,7 @@ function mapDirectoryProfileToCard(profile) {
       department,
       departmentForConnect,
       functionName,
+      branchLocation,
       office,
       profile.location,
       profile.mobile_number,
