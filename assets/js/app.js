@@ -482,6 +482,7 @@ Object.assign(appData, {
   learningRequisitions: [],
   homePosts: [],
   bulletinPosts: [],
+  ceoDeskPosts: [],
   myPosts: [],
   directory: [],
   birthdays: [],
@@ -728,6 +729,7 @@ async function init() {
     const criticalTasks = [
       loadCurrentProfile(),
       loadBulletinPosts(),
+      loadCeoDeskPosts(),
       loadMyPosts(),
       loadStoreData(),
       loadRecognitionData(),
@@ -898,6 +900,25 @@ async function loadBulletinPosts() {
       : [];
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
+  }
+}
+
+async function loadCeoDeskPosts() {
+  appData.ceoDeskPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&bulletin_channel=ceo_desk`,
+    );
+    appData.ceoDeskPosts = Array.isArray(payload.results)
+      ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
+      : [];
+  } catch (error) {
+    appData.ceoDeskPosts = [];
   }
 }
 
@@ -2729,7 +2750,7 @@ async function submitCeoDeskPost(form) {
         },
       },
     });
-    await loadBulletinPosts();
+    await Promise.all([loadBulletinPosts(), loadCeoDeskPosts()]);
     selectedCeoDeskArchiveKey = "";
     renderCeoDeskMessage();
     renderCeoDeskLikeButton();
@@ -4007,7 +4028,7 @@ function buildTownHallAnnouncementFromPost(post) {
 }
 
 function getCeoDeskPosts() {
-  return appData.bulletinPosts
+  return appData.ceoDeskPosts
     .filter((post) => post.bulletinChannel === "ceo_desk")
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 }
@@ -5278,6 +5299,9 @@ function updateLivePostFromPayload(postPayload) {
   if (postPayload.module === FEED_MODULE_BULLETIN) {
     const mapped = mapBulletinPost(postPayload);
     appData.bulletinPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.bulletinPosts, mapped));
+    if (mapped.bulletinChannel === "ceo_desk") {
+      appData.ceoDeskPosts = sortBulletinPostsNewestFirst(replaceMappedPost(appData.ceoDeskPosts, mapped));
+    }
     return;
   }
 

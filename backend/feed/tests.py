@@ -141,6 +141,33 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["results"][0]["title"], "Bulletin post")
         self.assertEqual(payload["results"][0]["topic"], "announcements")
 
+    def test_feed_can_filter_posts_by_bulletin_channel(self):
+        Post.objects.create(
+            author=self.admin_user,
+            title="CEO Message",
+            body="MD & CEO editorial",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"bulletin_channel": "ceo_desk"},
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="General Bulletin",
+            body="Town hall note",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={"bulletin_channel": "general"},
+        )
+
+        response = self.client.get("/api/feed/posts/?module=bulletin&bulletin_channel=ceo_desk")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["title"], "CEO Message")
+
     def test_employee_submissions_stay_pending_review_for_authenticated_employee(self):
         self.client.force_login(self.user)
 

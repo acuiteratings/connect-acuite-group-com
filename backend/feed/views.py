@@ -90,6 +90,10 @@ def posts_collection(request):
         if topic:
             queryset = queryset.filter(topic=topic)
 
+        bulletin_channel = request.GET.get("bulletin_channel")
+        if bulletin_channel:
+            queryset = queryset.filter(metadata__bulletin_channel=bulletin_channel)
+
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
