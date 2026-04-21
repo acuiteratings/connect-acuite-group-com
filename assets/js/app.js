@@ -881,12 +881,24 @@ async function loadBulletinPosts() {
   }
 
   try {
-    const payload = await window.AcuiteConnectAuth.apiRequest(
-      `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&exclude_bulletin_channels=ceo_desk,announcements&exclude_home_announcements=1`,
-    );
-    appData.bulletinPosts = Array.isArray(payload.results)
-      ? sortBulletinPostsNewestFirst(payload.results.map(mapBulletinPost))
+    const [bulletinPayload, employeePostsPayload] = await Promise.all([
+      window.AcuiteConnectAuth.apiRequest(
+        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&exclude_bulletin_channels=ceo_desk,announcements&exclude_home_announcements=1`,
+      ),
+      window.AcuiteConnectAuth.apiRequest(
+        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
+      ),
+    ]);
+    const bulletinResults = Array.isArray(bulletinPayload.results)
+      ? bulletinPayload.results.map(mapBulletinPost)
       : [];
+    const employeeResults = Array.isArray(employeePostsPayload.results)
+      ? employeePostsPayload.results.map(mapBulletinPost)
+      : [];
+    appData.bulletinPosts = sortBulletinPostsNewestFirst([
+      ...bulletinResults,
+      ...employeeResults,
+    ]);
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
   }
@@ -3863,12 +3875,13 @@ function scoreSearchItem(item, query) {
 function mapBulletinPost(post) {
   const metadata = post.metadata || {};
   const author = post.author || {};
-  const category = (post.topic || metadata.bulletin_category || "announcements").toLowerCase();
+  const category = (metadata.bulletin_category || post.topic || "announcements").toLowerCase();
   const authorName = author.name || "Acuité Ratings & Research";
 
   return {
     id: `bulletin-post-${post.id}`,
     sourceId: post.id,
+    module: String(post.module || FEED_MODULE_BULLETIN),
     title: post.title,
     body: Array.isArray(post.body) ? post.body : [post.body],
     category,
@@ -5308,7 +5321,7 @@ function renderBulletinPostCard(post) {
             `
             : ""
         }
-        ${renderDeleteLivePostButton(post, "general")}
+        ${renderDeleteLivePostButton(post, post.module || FEED_MODULE_BULLETIN)}
       </div>
     </article>
   `;
@@ -5382,6 +5395,16 @@ function updateLivePostFromPayload(postPayload) {
   if (postPayload.module === FEED_MODULE_EMPLOYEE_POSTS) {
     const mapped = mapMyPostSubmission(postPayload);
     appData.myPosts = replaceMappedPost(appData.myPosts, mapped);
+    if (String(postPayload.topic || "").trim() === "employee_submission" && String(postPayload.moderation_status || "").trim() === "published") {
+      const bulletinMapped = mapBulletinPost(postPayload);
+      const existingIndex = appData.bulletinPosts.findIndex((item) => item.sourceId === bulletinMapped.sourceId);
+      if (existingIndex >= 0) {
+        appData.bulletinPosts.splice(existingIndex, 1, bulletinMapped);
+      } else {
+        appData.bulletinPosts.unshift(bulletinMapped);
+      }
+      appData.bulletinPosts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
+    }
   }
 }
 
