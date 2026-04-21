@@ -1180,13 +1180,15 @@ select {
 .ceo-desk-archive-link {
   display: flex;
   width: 100%;
+  align-items: flex-start;
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.5;
   text-align: left;
   transition: border-color 0.2s ease, background 0.2s ease;
 }

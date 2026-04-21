@@ -122,31 +122,33 @@ const DEFAULT_CEO_DESK_MESSAGE = {
   ],
 };
 const DEFAULT_CEO_DESK_ARCHIVE = [
-  { date: "March 1, 2026", title: "March 2026 message" },
-  { date: "February 1, 2026", title: "February 2026 message" },
-  { date: "January 1, 2026", title: "January 2026 message" },
-  { date: "December 1, 2025", title: "December 2025 message" },
-  { date: "November 1, 2025", title: "November 2025 message" },
-  { date: "October 1, 2025", title: "October 2025 message" },
-  { date: "September 1, 2025", title: "September 2025 message" },
-  { date: "August 1, 2025", title: "August 2025 message" },
-  { date: "July 1, 2025", title: "July 2025 message" },
-  { date: "June 1, 2025", title: "June 2025 message" },
-  { date: "May 1, 2025", title: "May 2025 message" },
-  { date: "April 1, 2025", title: "April 2025 message" },
-  { date: "March 1, 2025", title: "March 2025 message" },
-  { date: "February 1, 2025", title: "February 2025 message" },
-  { date: "January 1, 2025", title: "January 2025 message" },
-  { date: "December 1, 2024", title: "December 2024 message" },
-  { date: "November 1, 2024", title: "November 2024 message" },
-  { date: "October 1, 2024", title: "October 2024 message" },
-  { date: "September 1, 2024", title: "September 2024 message" },
-  { date: "August 1, 2024", title: "August 2024 message" },
-  { date: "July 1, 2024", title: "July 2024 message" },
-  { date: "June 1, 2024", title: "June 2024 message" },
-  { date: "May 1, 2024", title: "May 2024 message" },
-  { date: "April 1, 2024", title: "April 2024 message" },
+  { datePosted: "March 1, 2026", headline: "March 2026 message", subjectLine: "MD & CEO message" },
+  { datePosted: "February 1, 2026", headline: "February 2026 message", subjectLine: "MD & CEO message" },
+  { datePosted: "January 1, 2026", headline: "January 2026 message", subjectLine: "MD & CEO message" },
+  { datePosted: "December 1, 2025", headline: "December 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "November 1, 2025", headline: "November 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "October 1, 2025", headline: "October 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "September 1, 2025", headline: "September 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "August 1, 2025", headline: "August 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "July 1, 2025", headline: "July 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "June 1, 2025", headline: "June 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "May 1, 2025", headline: "May 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "April 1, 2025", headline: "April 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "March 1, 2025", headline: "March 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "February 1, 2025", headline: "February 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "January 1, 2025", headline: "January 2025 message", subjectLine: "MD & CEO message" },
+  { datePosted: "December 1, 2024", headline: "December 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "November 1, 2024", headline: "November 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "October 1, 2024", headline: "October 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "September 1, 2024", headline: "September 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "August 1, 2024", headline: "August 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "July 1, 2024", headline: "July 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "June 1, 2024", headline: "June 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "May 1, 2024", headline: "May 2024 message", subjectLine: "MD & CEO message" },
+  { datePosted: "April 1, 2024", headline: "April 2024 message", subjectLine: "MD & CEO message" },
 ];
+const BULLETIN_BOARD_RETENTION_DAYS = 30;
+const CEO_DESK_ARCHIVE_LIMIT = 6;
 const COMPANY_HOLIDAY_CALENDAR = [
   { date: "2026-04-14", label: "Tamil New Year", applicability: "Chennai" },
   { date: "2026-05-01", label: "Maharashtra Day", applicability: "All Offices" },
@@ -1991,16 +1993,15 @@ function renderCeoDeskMessage() {
     const archiveItems = getCeoDeskArchiveItems();
     archiveEl.innerHTML = archiveItems.length
       ? archiveItems.map((item) => `
-          <button type="button" class="ceo-desk-archive-link">
-            <span class="mini-item-meta">${escapeHtml(item.date)}</span>
-            <span>${escapeHtml(item.title)}</span>
-          </button>
+          <div class="ceo-desk-archive-link">
+            <span>${escapeHtml(item.datePosted)} | ${escapeHtml(item.headline)} | ${escapeHtml(item.subjectLine)}</span>
+          </div>
         `).join("")
       : '<div class="mini-item-meta">No previous messages yet.</div>';
   }
   if (form && currentUserCanPostCeoMessage() && !form.dataset.seeded) {
-    form.elements.message_date.value = message.date || "";
-    form.elements.title.value = "";
+    form.elements.headline.value = "";
+    form.elements.subject_line.value = "";
     form.elements.body.value = "";
     form.dataset.seeded = "true";
   }
@@ -2654,12 +2655,13 @@ async function submitCeoDeskPost(form) {
   }
 
   const formData = new FormData(form);
-  const messageDate = String(formData.get("message_date") || "").trim();
-  const title = String(formData.get("title") || "").trim();
+  const headline = String(formData.get("headline") || "").trim();
+  const subjectLine = String(formData.get("subject_line") || "").trim();
   const body = String(formData.get("body") || "").trim();
+  const messageDate = formatCeoDeskPostedDate(new Date().toISOString());
 
-  if (!messageDate || !title || !body) {
-    showToast("Complete the date, subject line, and body first.");
+  if (!headline || !subjectLine || !body) {
+    showToast("Complete the headline, subject line, and body first.");
     return;
   }
 
@@ -2667,7 +2669,7 @@ async function submitCeoDeskPost(form) {
     await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
       method: "POST",
       body: {
-        title,
+        title: headline,
         body,
         kind: "announcement",
         module: FEED_MODULE_BULLETIN,
@@ -2679,6 +2681,7 @@ async function submitCeoDeskPost(form) {
           bulletin_channel: "ceo_desk",
           bulletin_template: "ceo_editorial",
           bulletin_meta_lines: [messageDate],
+          ceo_desk_subject_line: subjectLine,
         },
       },
     });
@@ -2985,11 +2988,11 @@ function renderBulletinPanel() {
     return;
   }
 
-  const posts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
-  if (!appData.bulletinPosts.length) {
+  const posts = getVisibleBulletinBoardPosts();
+  if (!posts.length) {
     container.innerHTML = `
       <div class="empty-state">
-        No company bulletin posts have been published yet. The first town hall, advisory or event note will appear here.
+        No company bulletin posts from the last 30 days are visible right now.
       </div>
     `;
     return;
@@ -3697,7 +3700,7 @@ function jumpToItem(tab, targetId) {
 }
 
 function buildSearchIndex() {
-  const bulletin = appData.bulletinPosts.map((post) => ({
+  const bulletin = getVisibleBulletinBoardPosts().map((post) => ({
     title: post.title,
     subtitle: `${post.authorName} - Bulletin`,
     type: "post",
@@ -3792,6 +3795,7 @@ function mapBulletinPost(post) {
       ? metadata.home_announcement_town_hall
       : null,
     bulletinChannel: String(metadata.bulletin_channel || "").trim(),
+    ceoDeskSubjectLine: String(metadata.ceo_desk_subject_line || "").trim(),
     bulletinCard: metadata.bulletin_card && typeof metadata.bulletin_card === "object" ? metadata.bulletin_card : null,
     authorName,
     authorMeta: [author.title, author.location].filter(Boolean).join(" | ") || "Company bulletin",
@@ -3815,8 +3819,23 @@ function bulletinPostTimestamp(post) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function isBulletinPostWithinRetention(post, days = BULLETIN_BOARD_RETENTION_DAYS) {
+  const timestamp = bulletinPostTimestamp(post);
+  if (!timestamp) {
+    return true;
+  }
+  const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+  return timestamp >= cutoff;
+}
+
 function sortBulletinPostsNewestFirst(items) {
   return items.slice().sort((left, right) => bulletinPostTimestamp(right) - bulletinPostTimestamp(left));
+}
+
+function getVisibleBulletinBoardPosts() {
+  return sortBulletinPostsNewestFirst(
+    appData.bulletinPosts.filter((post) => isBulletinPostWithinRetention(post)),
+  );
 }
 
 function getSelectedHomeAnnouncementFilterLabel() {
@@ -3958,7 +3977,7 @@ function getCurrentCeoDeskMessage() {
   return {
     date: livePost.metaLines[0] || formatDisplayDate(livePost.createdAt) || DEFAULT_CEO_DESK_MESSAGE.date,
     title: livePost.title || DEFAULT_CEO_DESK_MESSAGE.title,
-    meta: DEFAULT_CEO_DESK_MESSAGE.meta,
+    meta: livePost.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
     body: Array.isArray(livePost.body) && livePost.body.length ? livePost.body : DEFAULT_CEO_DESK_MESSAGE.body,
     sourceId: livePost.sourceId,
     reactionCount: Number(livePost.reactionCount || 0),
@@ -3969,11 +3988,12 @@ function getCurrentCeoDeskMessage() {
 function getCeoDeskArchiveItems() {
   const livePosts = getCeoDeskPosts();
   if (!livePosts.length) {
-    return DEFAULT_CEO_DESK_ARCHIVE.map((item) => ({ ...item }));
+    return DEFAULT_CEO_DESK_ARCHIVE.slice(0, CEO_DESK_ARCHIVE_LIMIT).map((item) => ({ ...item }));
   }
-  return livePosts.slice(1, 25).map((post) => ({
-    date: post.metaLines[0] || formatDisplayDate(post.createdAt),
-    title: post.title,
+  return livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
+    datePosted: post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt),
+    headline: post.title || "MD & CEO message",
+    subjectLine: post.ceoDeskSubjectLine || DEFAULT_CEO_DESK_MESSAGE.meta,
   }));
 }
 
@@ -4534,6 +4554,21 @@ function formatDisplayDate(value) {
   return parsed.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
+    year: "numeric",
+  });
+}
+
+function formatCeoDeskPostedDate(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
     year: "numeric",
   });
 }
