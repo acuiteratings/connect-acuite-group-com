@@ -815,12 +815,8 @@ async function loadLearningData() {
   }
 
   try {
-    const [booksPayload, requisitionsPayload] = await Promise.all([
-      window.AcuiteConnectAuth.apiRequest("/api/learning/books/"),
-      window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/"),
-    ]);
+    const booksPayload = await window.AcuiteConnectAuth.apiRequest("/api/learning/books/");
     appData.learningBooks = Array.isArray(booksPayload.results) ? booksPayload.results : [];
-    appData.learningRequisitions = Array.isArray(requisitionsPayload.results) ? requisitionsPayload.results : [];
   } catch (error) {
     learningLoadError = error.message || "Could not load book-club data.";
   }
@@ -1246,11 +1242,6 @@ async function handleDocumentClick(event) {
 
     if (actionName === "celebrate") {
       showToast("Recognition noted. This is ready for a future reactions layer.");
-      return;
-    }
-
-    if (actionName === "request-book") {
-      await requestBook(action.dataset.id);
       return;
     }
 
@@ -2830,7 +2821,6 @@ async function submitCeoDeskPost(form) {
 function renderLearningPanel() {
   renderLearningSummary();
   renderLearningBooks();
-  renderLearningIssuedBooks();
 }
 
 function renderStorePanel() {
@@ -3411,7 +3401,7 @@ function renderLearningSummary() {
     {
       kicker: "Library",
       title: `${appData.learningBooks.length} titles`,
-      copy: "Internal catalog titles ready for employee requisitions.",
+      copy: "Internal catalog titles available for browsing.",
     },
     {
       kicker: "Shelves",
@@ -3459,7 +3449,7 @@ function renderLearningBooks() {
   if (!appData.learningBooks.length) {
     container.innerHTML = `
       <div class="empty-state">
-        The book catalog is empty right now. Once admins upload titles in the backend, employees will be able to requisition them here.
+        The book catalog is empty right now. Once admins upload titles in the backend, they will appear here.
       </div>
     `;
     return;
@@ -3481,12 +3471,7 @@ function renderLearningBooks() {
 function renderLearningBookCard(book) {
   const statusText = book.available_copies > 0
     ? `${book.available_copies} of ${book.total_copies} available`
-    : "Fully requisitioned";
-  const requestLabel = book.requester_has_open_requisition
-    ? "Already requested"
-    : book.available_copies > 0
-      ? "Request book"
-      : "Unavailable";
+    : "Currently unavailable";
 
   const coverMarkup = book.cover_url
     ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} cover" class="learning-book-cover-image" loading="lazy">`
@@ -3494,11 +3479,8 @@ function renderLearningBookCard(book) {
         <span class="learning-book-cover-category">${escapeHtml(book.category || "Library")}</span>
         <strong>${escapeHtml(book.title)}</strong>
       </div>`;
-  const note = book.review_quote || book.summary || "Ready for requisition by employees through the internal library.";
+  const note = book.review_quote || book.summary || "Available in the internal library catalog.";
   const locationLine = [book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | ");
-  const holderLine = book.current_holder
-    ? `${book.current_holder.name} currently has this book`
-    : "";
 
   return `
     <article class="learning-book-card" id="book-${book.id}">
@@ -3513,58 +3495,12 @@ function renderLearningBookCard(book) {
         <h3>${escapeHtml(book.title)}</h3>
         <p class="learning-book-author">${escapeHtml(book.author)}</p>
         <p class="learning-book-note">${escapeHtml(note)}</p>
-        ${holderLine ? `<p class="learning-book-holder">${escapeHtml(holderLine)}</p>` : ""}
         <div class="learning-book-meta">
-          <span class="mini-item-meta">${escapeHtml(locationLine || `${book.open_requisition_count} active requisition${book.open_requisition_count === 1 ? "" : "s"}`)}</span>
-          <button
-            type="button"
-            class="tool-open ${book.can_request ? "live" : ""}"
-            data-action="request-book"
-            data-id="${book.id}"
-            ${book.can_request ? "" : "disabled"}
-          >
-            ${escapeHtml(requestLabel)}
-          </button>
+          <span class="mini-item-meta">${escapeHtml(locationLine || "Library catalog")}</span>
         </div>
       </div>
     </article>
   `;
-}
-
-function renderLearningIssuedBooks() {
-  const section = document.getElementById("learning-issued-section");
-  const list = document.getElementById("learning-issued-list");
-  const meta = document.getElementById("learning-issued-meta");
-  if (!section || !list || !meta) {
-    return;
-  }
-
-  const issuedBooks = appData.learningBooks
-    .filter((book) => book.current_holder)
-    .sort((left, right) => left.title.localeCompare(right.title));
-
-  meta.textContent = issuedBooks.length
-    ? `${issuedBooks.length} book${issuedBooks.length === 1 ? "" : "s"} currently with employees`
-    : "No books are currently issued";
-
-  if (!issuedBooks.length) {
-    list.innerHTML = '<div class="empty-state">No books are currently with employees.</div>';
-    return;
-  }
-
-  list.innerHTML = issuedBooks.map((book) => `
-    <article class="learning-issued-card">
-      <div>
-        <h3>${escapeHtml(book.title)}</h3>
-        <p class="learning-book-author">${escapeHtml(book.author)}</p>
-        <p class="mini-item-meta">${escapeHtml([book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | "))}</p>
-      </div>
-      <div class="learning-issued-person">
-        <strong>${escapeHtml(book.current_holder.name)}</strong>
-        <span>${escapeHtml(book.current_holder.email || "")}</span>
-      </div>
-    </article>
-  `).join("");
 }
 
 function groupLearningBooksByCategory(books) {
@@ -3591,28 +3527,6 @@ function renderLearningShelf(category, books) {
       </div>
     </section>
   `;
-}
-
-async function requestBook(bookId) {
-  try {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/", {
-      method: "POST",
-      body: {
-        book_id: Number(bookId),
-      },
-    });
-
-    if (payload.requisition) {
-      await loadLearningData();
-      renderLearningPanel();
-      showToast(`Book requisition placed for ${payload.requisition.book.title}.`);
-      return;
-    }
-
-    showToast("Book requisition submitted.");
-  } catch (error) {
-    showToast(error.message || "Could not place the book requisition.");
-  }
 }
 
 async function redeemStoreItem(itemId) {
@@ -4346,8 +4260,6 @@ function getFilteredLearningBooks() {
 
   if (state.learningBookFilter === "available") {
     books = books.filter((book) => book.available_copies > 0);
-  } else if (state.learningBookFilter === "requested") {
-    books = books.filter((book) => book.requester_has_open_requisition);
   }
 
   if (!query) {
@@ -4570,7 +4482,7 @@ function hydrateState() {
       : defaultState.storeFilter,
     learningBookFilter: (
       typeof saved.learningBookFilter === "string"
-      && ["all", "available", "requested"].includes(saved.learningBookFilter)
+      && ["all", "available"].includes(saved.learningBookFilter)
     )
       ? saved.learningBookFilter
       : defaultState.learningBookFilter,
