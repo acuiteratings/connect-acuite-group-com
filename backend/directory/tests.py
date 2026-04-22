@@ -265,7 +265,7 @@ class DirectoryApiTests(TestCase):
             user=user,
             company_name="Acuite",
             department_for_connect="Rating Operations",
-            skills=["Python"],
+            skills=["Python & SQL"],
             hobbies=["Reading"],
             interests=["Training"],
             profile_photos=["data:image/png;base64,AAAA"],
@@ -279,8 +279,11 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["profile"]["email"], user.email)
-        self.assertIn("Python", payload["profile"]["skills"])
-        self.assertIn("Credit Analysis", payload["skill_library"])
+        self.assertIn("Python & SQL", payload["profile"]["skills"])
+        self.assertIn("MS Excel", payload["skill_library"])
+        self.assertNotIn("Credit Analysis", payload["skill_library"])
+        self.assertEqual(payload["limits"]["max_skills"], 3)
+        self.assertEqual(payload["limits"]["max_hobbies"], 3)
 
     def test_authenticated_user_can_update_profile_builder_fields(self):
         user = User.objects.create_user(
@@ -296,8 +299,8 @@ class DirectoryApiTests(TestCase):
         response = self.client.post(
             "/api/directory/me/",
             data={
-                "skills": ["Compliance", "Mentoring", "Not In Library"],
-                "hobbies": ["Reading Club", "Cricket Club", "Running"],
+                "skills": ["Leadership", "Public Speaking", "MS Excel", "Not In Library"],
+                "hobbies": ["Reading Club", "Cricket Club", "Health Club", "Running"],
                 "interests": "Training Delivery, CSR",
                 "profile_photos": [
                     "data:image/png;base64,AAAA",
@@ -310,8 +313,8 @@ class DirectoryApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         user.directory_profile.refresh_from_db()
-        self.assertEqual(user.directory_profile.skills, ["Compliance", "Mentoring"])
-        self.assertEqual(user.directory_profile.hobbies, ["Reading Club", "Cricket Club"])
+        self.assertEqual(user.directory_profile.skills, ["Leadership", "Public Speaking", "MS Excel"])
+        self.assertEqual(user.directory_profile.hobbies, ["Reading Club", "Cricket Club", "Health Club"])
         self.assertEqual(user.directory_profile.interests, ["Training Delivery", "CSR"])
         self.assertEqual(len(user.directory_profile.profile_photos), 2)
 

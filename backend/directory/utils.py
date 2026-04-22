@@ -1,3 +1,6 @@
+import re
+
+
 CORPORATE_DEPARTMENTS = {
     "Administration",
     "Compliance",
@@ -35,30 +38,19 @@ CONNECT_DEPARTMENT_LABELS = [
 ]
 
 PROFILE_SKILL_LIBRARY = [
-    "Credit Analysis",
-    "Financial Modelling",
-    "Committee Preparation",
-    "Issuer Monitoring",
-    "Corporate Ratings",
-    "Financial Sector Ratings",
-    "Research Writing",
-    "Customized Research",
-    "Data Operations",
-    "Technology",
-    "ESG Assessment",
-    "Compliance",
-    "Quality Control",
-    "Rating Administration",
-    "Client Servicing",
-    "Business Development",
-    "Marketing Outreach",
-    "Training Delivery",
-    "Mentoring",
-    "Presentation Design",
-    "Workflow Design",
-    "Power BI",
-    "Excel",
-    "Python",
+    "MS Excel",
+    "PowerBI",
+    "Python & SQL",
+    "Rating Criteria",
+    "Rating Modelling",
+    "Financial Forecasting",
+    "Economic Forecasting",
+    "Business Writing",
+    "Creative Writing",
+    "Influencing",
+    "Public Speaking",
+    "Leadership",
+    "Quality Management",
 ]
 
 
@@ -67,13 +59,22 @@ def normalize_branch_location(raw_location):
     if not location:
         return ""
 
-    if location.lower().startswith("mumbai"):
+    normalized = " ".join(location.replace("_", " ").split())
+    lowered = normalized.casefold()
+
+    if lowered in {"ahmedabad", "chennai", "hyderabad", "kolkata"}:
+        return normalized.title()
+
+    if lowered in {"bangalore", "bengaluru"}:
+        return "Bangalore"
+
+    if lowered in {"new delhi", "delhi"}:
+        return "New Delhi"
+
+    if re.fullmatch(r"mumbai(?:\s+\d+)?", lowered):
         return "Mumbai"
 
-    normalized = location.replace("_", " ")
-    normalized = " ".join(normalized.split())
-    normalized = normalized.rstrip("0123456789 -_/")
-    return normalized.strip() or location
+    return ""
 
 
 def resolve_branch_location(*candidates):

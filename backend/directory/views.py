@@ -203,7 +203,7 @@ def my_profile(request):
             {
                 "profile": serialize_directory_profile(profile),
                 "skill_library": PROFILE_SKILL_LIBRARY,
-                "limits": {"max_photos": 2, "max_skills": 10},
+                "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
             }
         )
 
@@ -213,14 +213,14 @@ def my_profile(request):
     payload = _parse_json_body(request)
     selected_skills = [
         skill
-        for skill in normalize_string_list(payload.get("skills"), max_items=10)
+        for skill in normalize_string_list(payload.get("skills"), max_items=3)
         if skill in PROFILE_SKILL_LIBRARY
     ]
     allowed_hobby_labels = {item["label"] for item in COMMUNITY_CLUB_LIBRARY}
     profile.skills = selected_skills
     profile.hobbies = [
         hobby
-        for hobby in normalize_string_list(payload.get("hobbies"), max_items=12)
+        for hobby in normalize_string_list(payload.get("hobbies"), max_items=3)
         if hobby in allowed_hobby_labels
     ]
     profile.interests = normalize_string_list(payload.get("interests"), max_items=12)
@@ -232,6 +232,6 @@ def my_profile(request):
             "detail": "Profile updated successfully.",
             "profile": serialize_directory_profile(profile),
             "skill_library": PROFILE_SKILL_LIBRARY,
-            "limits": {"max_photos": 2, "max_skills": 10},
+            "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
         }
     )

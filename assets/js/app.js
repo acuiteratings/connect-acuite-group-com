@@ -2484,7 +2484,7 @@ function renderProfileBuilder() {
   if (elements.profileBuilderStatus) {
     elements.profileBuilderStatus.textContent = profileBuilderLoadError
       ? profileBuilderLoadError
-      : "Add up to 2 photos, choose up to 10 skills, and tell colleagues what you enjoy.";
+      : "Add up to 2 photos, choose up to 3 skills and 3 hobbies, and tell colleagues what you enjoy.";
   }
 }
 
@@ -5004,8 +5004,8 @@ function createProfileDraftFromProfile(profile) {
     return createProfileBuilderDraft();
   }
   return {
-    skills: Array.isArray(profile.skills) ? profile.skills.slice(0, 10) : [],
-    hobbies: Array.isArray(profile.hobbies) ? profile.hobbies.slice(0, 12) : [],
+    skills: Array.isArray(profile.skills) ? profile.skills.slice(0, 3) : [],
+    hobbies: Array.isArray(profile.hobbies) ? profile.hobbies.slice(0, 3) : [],
     interestsText: Array.isArray(profile.interests) ? profile.interests.join(", ") : "",
     photos: Array.isArray(profile.profile_photos) ? profile.profile_photos.slice(0, 2) : [],
   };
@@ -5615,8 +5615,8 @@ function toggleProfileSkill(skill) {
     renderProfileBuilder();
     return;
   }
-  if (profileBuilderDraft.skills.length >= 10) {
-    showToast("You can select up to 10 skills.");
+  if (profileBuilderDraft.skills.length >= 3) {
+    showToast("You can select up to 3 skills.");
     return;
   }
   profileBuilderDraft.skills = [...profileBuilderDraft.skills, skill];
@@ -5632,8 +5632,8 @@ function toggleProfileHobby(hobby) {
     renderProfileBuilder();
     return;
   }
-  if (profileBuilderDraft.hobbies.length >= 12) {
-    showToast("You can select up to 12 hobbies.");
+  if (profileBuilderDraft.hobbies.length >= 3) {
+    showToast("You can select up to 3 hobbies.");
     return;
   }
   profileBuilderDraft.hobbies = [...profileBuilderDraft.hobbies, hobby];
