@@ -3459,21 +3459,29 @@ function renderProfileCoinBank() {
     return;
   }
 
-  const earned = Number(appData.storeBalance.earned_points || 0);
-  const locked = Number(appData.storeBalance.locked_points || 0);
-  const spent = Number(appData.storeBalance.spent_points || 0);
-  const expired = Number(appData.storeBalance.expired_points || 0);
-  const balance = Number(appData.storeBalance.available_points || 0);
+  const monthlySummary = appData.storeBalance.monthly_summary && typeof appData.storeBalance.monthly_summary === "object"
+    ? appData.storeBalance.monthly_summary
+    : {};
+  const openingBalance = Number(monthlySummary.opening_balance || 0);
+  const earnedThisMonth = Number(monthlySummary.earned_this_month || 0);
+  const spentThisMonth = Number(monthlySummary.spent_this_month || 0);
+  const expiredThisMonth = Number(monthlySummary.expired_this_month || 0);
+  const closingBalance = Number(monthlySummary.closing_balance || 0);
 
   container.innerHTML = `
     <p class="widget-kicker">Acuite Coin Bank</p>
-    <h3>${escapeHtml(String(balance))} balance</h3>
-    <ul class="simple-list">
-      <li>Earned: ${escapeHtml(String(earned))} coins</li>
-      <li>Locked: ${escapeHtml(String(locked))} coins</li>
-      <li>Spent: ${escapeHtml(String(spent))} coins</li>
-      <li>Expired: ${escapeHtml(String(expired))} coins</li>
-    </ul>
+    <div class="coin-bank-balance-line">
+      <span><strong>Opening Balance</strong>: ${escapeHtml(String(openingBalance))}</span>
+      <span class="coin-bank-separator">|</span>
+      <span><strong>Earned this month</strong>: ${escapeHtml(String(earnedThisMonth))}</span>
+      <span class="coin-bank-separator">|</span>
+      <span><strong>Spent this month</strong>: ${escapeHtml(String(spentThisMonth))}</span>
+      <span class="coin-bank-separator">|</span>
+      <span><strong>Expired this month</strong>: ${escapeHtml(String(expiredThisMonth))}</span>
+      <span class="coin-bank-separator">|</span>
+      <span><strong>Closing Balance</strong>: ${escapeHtml(String(closingBalance))}</span>
+    </div>
+    <div class="mini-item-meta">Opening Balance + Earned this month - Spent this month - Expired this month = Closing Balance</div>
     <div class="mini-item-meta">Unused balance expires on 31 March or on the employee’s day of exit.</div>
   `;
 }

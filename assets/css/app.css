@@ -4156,6 +4156,25 @@ select {
   color: var(--text);
 }
 
+.coin-bank-balance-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 12px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text2);
+}
+
+.coin-bank-balance-line strong {
+  color: var(--text);
+}
+
+.coin-bank-separator {
+  color: var(--text3);
+}
+
 .comments-modal-meta {
   margin-bottom: 16px;
   font-size: 13px;

@@ -10,7 +10,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post, PostReaction
 
 from .models import BrandStoreItem, BrandStoreRedemption, CoinLedgerEntry
-from .services import backfill_coin_ledger, build_coin_balance_map
+from .services import backfill_coin_ledger, build_coin_balance_map, monthly_coin_balance_summary_for_user
 
 
 class BrandStoreApiTests(TestCase):
@@ -75,8 +75,77 @@ class BrandStoreApiTests(TestCase):
         self.assertGreaterEqual(payload["balance"]["earned_points"], 10)
         self.assertIn("spent_points", payload["balance"])
         self.assertIn("register", payload["balance"])
+        self.assertIn("monthly_summary", payload["balance"])
         self.assertTrue(any(item["name"] == "Acuite Coffee Mug" for item in payload["items"]))
         self.assertEqual(payload["balance"]["locked_points"], 0)
+
+    def test_store_overview_returns_monthly_coin_summary(self):
+        CoinLedgerEntry.objects.all().delete()
+        self.client.force_login(self.user)
+
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="idea_shared",
+            amount=1000,
+            reference_key="monthly-opening-earn",
+            summary="Opening balance earn",
+            occurred_at=timezone.make_aware(datetime(2026, 4, 10, 10, 0, 0)),
+        )
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.SPEND,
+            event_key="brand_store",
+            amount=100,
+            reference_key="monthly-opening-spend",
+            summary="Opening balance spend",
+            occurred_at=timezone.make_aware(datetime(2026, 4, 18, 10, 0, 0)),
+        )
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EXPIRE,
+            event_key="coin_expiry",
+            amount=50,
+            reference_key="monthly-opening-expire",
+            summary="Opening balance expiry",
+            occurred_at=timezone.make_aware(datetime(2026, 4, 20, 10, 0, 0)),
+        )
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="question_asked",
+            amount=200,
+            reference_key="monthly-current-earn",
+            summary="Current month earn",
+            occurred_at=timezone.make_aware(datetime(2026, 5, 3, 10, 0, 0)),
+        )
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.SPEND,
+            event_key="brand_store",
+            amount=25,
+            reference_key="monthly-current-spend",
+            summary="Current month spend",
+            occurred_at=timezone.make_aware(datetime(2026, 5, 4, 10, 0, 0)),
+        )
+        CoinLedgerEntry.objects.create(
+            user=self.user,
+            entry_type=CoinLedgerEntry.EntryType.EXPIRE,
+            event_key="coin_expiry",
+            amount=10,
+            reference_key="monthly-current-expire",
+            summary="Current month expiry",
+            occurred_at=timezone.make_aware(datetime(2026, 5, 5, 10, 0, 0)),
+        )
+
+        with patch("store.services.timezone.now", return_value=timezone.make_aware(datetime(2026, 5, 22, 9, 0, 0))):
+            summary = monthly_coin_balance_summary_for_user(self.user)
+
+        self.assertEqual(summary["opening_balance"], 850)
+        self.assertEqual(summary["earned_this_month"], 200)
+        self.assertEqual(summary["spent_this_month"], 25)
+        self.assertEqual(summary["expired_this_month"], 10)
+        self.assertEqual(summary["closing_balance"], 1015)
 
     def test_user_can_request_redemption_when_points_are_available(self):
         self.client.force_login(self.user)

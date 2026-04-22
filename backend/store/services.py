@@ -51,6 +51,13 @@ def default_coin_balance(*, include_register=False):
         "spent_points": 0,
         "expired_points": 0,
         "available_points": 0,
+        "monthly_summary": {
+            "opening_balance": 0,
+            "earned_this_month": 0,
+            "spent_this_month": 0,
+            "expired_this_month": 0,
+            "closing_balance": 0,
+        },
     }
     if include_register:
         payload["register"] = []
@@ -77,6 +84,92 @@ def _current_fiscal_cycle_start(now=None):
     today = timezone.localtime(now).date()
     fiscal_year = today.year if today.month >= 4 else today.year - 1
     return _local_day_start(date(fiscal_year, 4, 1))
+
+
+def _current_month_cycle_start(now=None):
+    now = now or timezone.now()
+    today = timezone.localtime(now).date()
+    return _local_day_start(date(today.year, today.month, 1))
+
+
+def _coin_totals_for_queryset(queryset):
+    aggregates = queryset.aggregate(
+        earned_total=Coalesce(
+            Sum(
+                Case(
+                    When(entry_type=CoinLedgerEntry.EntryType.EARN, then="amount"),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ),
+            0,
+        ),
+        earned_reversals=Coalesce(
+            Sum(
+                Case(
+                    When(entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL, then="amount"),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ),
+            0,
+        ),
+        spent_points=Coalesce(
+            Sum(
+                Case(
+                    When(entry_type=CoinLedgerEntry.EntryType.SPEND, then="amount"),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ),
+            0,
+        ),
+        expired_points=Coalesce(
+            Sum(
+                Case(
+                    When(entry_type=CoinLedgerEntry.EntryType.EXPIRE, then="amount"),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ),
+            0,
+        ),
+    )
+    earned_points = max(aggregates["earned_total"] - aggregates["earned_reversals"], 0)
+    return {
+        "earned_points": earned_points,
+        "spent_points": aggregates["spent_points"],
+        "expired_points": aggregates["expired_points"],
+    }
+
+
+def monthly_coin_balance_summary_for_user(user, now=None):
+    if not getattr(user, "is_authenticated", False):
+        return default_coin_balance()["monthly_summary"]
+
+    month_start = _current_month_cycle_start(now=now)
+    entries = CoinLedgerEntry.objects.filter(user=user)
+    before_month = _coin_totals_for_queryset(entries.filter(occurred_at__lt=month_start))
+    during_month = _coin_totals_for_queryset(entries.filter(occurred_at__gte=month_start))
+
+    opening_balance = max(
+        before_month["earned_points"] - before_month["spent_points"] - before_month["expired_points"],
+        0,
+    )
+    earned_this_month = during_month["earned_points"]
+    spent_this_month = during_month["spent_points"]
+    expired_this_month = during_month["expired_points"]
+    closing_balance = max(
+        opening_balance + earned_this_month - spent_this_month - expired_this_month,
+        0,
+    )
+    return {
+        "opening_balance": opening_balance,
+        "earned_this_month": earned_this_month,
+        "spent_this_month": spent_this_month,
+        "expired_this_month": expired_this_month,
+        "closing_balance": closing_balance,
+    }
 
 
 def _coin_exit_date(user):
@@ -756,6 +849,7 @@ def build_store_overview(user):
         else BrandStoreRedemption.objects.none()
     )
     balance = coin_balance_for_user(user, include_register=True)
+    balance["monthly_summary"] = monthly_coin_balance_summary_for_user(user)
 
     return {
         "items": items,
