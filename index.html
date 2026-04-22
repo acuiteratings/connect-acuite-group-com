@@ -1064,6 +1064,25 @@
     </div>
   </div>
 
+  <div class="profile-modal-backdrop" id="announcement-reminder-backdrop" hidden>
+    <div class="profile-modal announcement-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="announcement-reminder-title">
+      <div class="profile-modal-head">
+        <div>
+          <p class="widget-kicker">Important Reminder</p>
+          <h2 id="announcement-reminder-title">Please check all the announcements.</h2>
+        </div>
+        <button type="button" class="profile-modal-close" data-action="close-announcement-reminder" aria-label="Close reminder">
+          ×
+        </button>
+      </div>
+      <p class="announcement-reminder-copy">Do not miss out on importance information.</p>
+      <div class="form-actions profile-builder-actions">
+        <p>This reminder appears only once per day after login.</p>
+        <button type="button" class="btn-warm" data-action="close-announcement-reminder">Understood</button>
+      </div>
+    </div>
+  </div>
+
   <div class="profile-modal-backdrop brochure-presentation-backdrop" id="brochure-presentation-backdrop" hidden>
     <div class="brochure-presentation-shell" role="dialog" aria-modal="true" aria-labelledby="brochure-presentation-title">
       <header class="brochure-presentation-topbar">

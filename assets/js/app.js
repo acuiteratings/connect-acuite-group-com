@@ -2,6 +2,7 @@ const STORAGE_KEY = "acuite-connect-state-v2-live";
 const DIRECTORY_CACHE_KEY = "acuite-connect-directory-cache-v1";
 const CEO_DESK_CACHE_KEY = "acuite-connect-ceo-desk-cache-v1";
 const LEARNING_CACHE_KEY = "acuite-connect-library-cache-v1";
+const ANNOUNCEMENT_REMINDER_KEY = "acuite-connect-announcement-reminder-v1";
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -716,6 +717,7 @@ async function init() {
     profileMenu: document.getElementById("profile-menu"),
     profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
     commentsModalBackdrop: document.getElementById("comments-modal-backdrop"),
+    announcementReminderBackdrop: document.getElementById("announcement-reminder-backdrop"),
     commentsModalList: document.getElementById("comments-modal-list"),
     commentsModalMeta: document.getElementById("comments-modal-meta"),
     commentsModalForm: document.getElementById("comments-modal-form"),
@@ -753,6 +755,7 @@ async function init() {
   mergeAuthenticatedUser(authenticatedUser);
   renderShell();
   markAppReady();
+  showAnnouncementReminderIfNeeded();
   const hydratedDirectoryCache = hydrateDirectoryCache();
   if (state.activeTab === "directory" && hydratedDirectoryCache) {
     renderAll();
@@ -1297,6 +1300,11 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "close-announcement-reminder") {
+      closeAnnouncementReminder();
+      return;
+    }
+
     if (actionName === "toggle-profile-skill") {
       toggleProfileSkill(action.dataset.skill);
       return;
@@ -1460,6 +1468,12 @@ function handleDocumentChange(event) {
 }
 
 function handleDocumentKeydown(event) {
+  if (event.key === "Escape" && elements.announcementReminderBackdrop && !elements.announcementReminderBackdrop.hidden) {
+    event.preventDefault();
+    closeAnnouncementReminder();
+    return;
+  }
+
   if (!brochurePresentationOpen) {
     return;
   }
@@ -2167,9 +2181,71 @@ function moveBrochurePresentation(direction) {
 function syncModalState() {
   const anyModalOpen = [
     elements.commentsModalBackdrop,
+    elements.announcementReminderBackdrop,
     elements.brochurePresentationBackdrop,
   ].some((modal) => modal && !modal.hidden);
   document.body.classList.toggle("modal-open", anyModalOpen);
+}
+
+function getCurrentLocalDateStamp() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getAnnouncementReminderUserKey() {
+  return String(appData.currentUser?.id || appData.currentUser?.email || "").trim();
+}
+
+function readAnnouncementReminderState() {
+  try {
+    const raw = window.localStorage.getItem(ANNOUNCEMENT_REMINDER_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveAnnouncementReminderState(stateSnapshot) {
+  try {
+    window.localStorage.setItem(ANNOUNCEMENT_REMINDER_KEY, JSON.stringify(stateSnapshot));
+  } catch (error) {
+    return;
+  }
+}
+
+function closeAnnouncementReminder() {
+  if (!elements.announcementReminderBackdrop) {
+    return;
+  }
+  elements.announcementReminderBackdrop.hidden = true;
+  syncModalState();
+}
+
+function openAnnouncementReminder() {
+  if (!elements.announcementReminderBackdrop) {
+    return;
+  }
+  elements.announcementReminderBackdrop.hidden = false;
+  syncModalState();
+}
+
+function showAnnouncementReminderIfNeeded() {
+  const userKey = getAnnouncementReminderUserKey();
+  if (!userKey) {
+    return;
+  }
+  const today = getCurrentLocalDateStamp();
+  const saved = readAnnouncementReminderState();
+  if (saved[userKey] === today) {
+    return;
+  }
+  saved[userKey] = today;
+  saveAnnouncementReminderState(saved);
+  openAnnouncementReminder();
 }
 
 function renderCeoDeskMessage() {

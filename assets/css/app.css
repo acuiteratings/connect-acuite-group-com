@@ -4145,6 +4145,17 @@ select {
   width: min(680px, 100%);
 }
 
+.announcement-reminder-modal {
+  width: min(560px, 100%);
+}
+
+.announcement-reminder-copy {
+  margin: 0 0 18px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
 .comments-modal-meta {
   margin-bottom: 16px;
   font-size: 13px;
