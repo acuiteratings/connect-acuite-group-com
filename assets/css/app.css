@@ -3921,6 +3921,58 @@ select {
   padding: 20px;
 }
 
+.applications-grid .resource-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.22), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.96)),
+    var(--bg2);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .applications-grid .resource-card {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(31, 31, 35, 0.96), rgba(23, 23, 27, 0.98)),
+    var(--bg2);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.applications-grid .resource-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(90deg, var(--orange), var(--amber));
+}
+
+.applications-grid .resource-card:nth-child(4n + 1)::before {
+  background: linear-gradient(90deg, #f47c25, #ffc72c);
+}
+
+.applications-grid .resource-card:nth-child(4n + 2)::before {
+  background: linear-gradient(90deg, #8dc63f, #ffc72c);
+}
+
+.applications-grid .resource-card:nth-child(4n + 3)::before {
+  background: linear-gradient(90deg, #7b241c, #f47c25);
+}
+
+.applications-grid .resource-card:nth-child(4n + 4)::before {
+  background: linear-gradient(90deg, #4b1d1a, #8dc63f);
+}
+
+.applications-grid .resource-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="dark"] .applications-grid .resource-card:hover {
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.28);
+}
+
 .resource-feature-card {
   background:
     radial-gradient(circle at top right, rgba(244, 124, 37, 0.12), transparent 28%),
