@@ -5233,7 +5233,7 @@ async function toggleBookLike(bookId) {
     appData.learningBooks = appData.learningBooks.map((book) => (
       Number(book.id) === targetId ? { ...book, ...payload.book } : book
     ));
-    persistLearningCache();
+    saveLearningCache();
     renderAll();
   } catch (error) {
     showToast(error.message || "Could not update the book like right now.");
