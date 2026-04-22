@@ -40,6 +40,7 @@ const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
 const IAM_ACUITE_TILE_COUNT = 400;
 const IAM_ACUITE_COLUMNS = 25;
 const IAM_ACUITE_ROWS = 16;
+const IAM_ACUITE_PLACEHOLDER_COLOR = "#7b241c";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
@@ -547,7 +548,6 @@ let iamAcuitePosterState = {
   photoCount: 0,
   loading: false,
   error: "",
-  contrastMode: "",
 };
 let iamAcuiteRenderToken = 0;
 let ceoDeskCachedAt = "";
@@ -5596,15 +5596,13 @@ function invalidateIamAcuitePoster() {
     photoCount: 0,
     loading: false,
     error: "",
-    contrastMode: "",
   };
 }
 
 function renderIamAcuitePanel() {
   const stage = document.getElementById("iam-acuite-stage");
   const meta = document.getElementById("iam-acuite-meta");
-  const caption = document.getElementById("iam-acuite-caption");
-  if (!stage || !meta || !caption) {
+  if (!stage || !meta) {
     return;
   }
 
@@ -5615,11 +5613,10 @@ function renderIamAcuitePanel() {
     iamAcuitePosterState.loading = true;
     iamAcuitePosterState.error = "";
     meta.textContent = `Building a 400-tile wall from ${photos.length} real portrait${photos.length === 1 ? "" : "s"}...`;
-    caption.textContent = "Replacing brand-colour tiles with real portraits wherever photos are available.";
     stage.innerHTML = `
       <div class="iam-acuite-empty">
         <strong>Building the wall</strong>
-        <span>Preparing a fresh mosaic with brand-colour tiles and the latest employee photos.</span>
+        <span>Preparing a fresh mosaic with deep-red tiles and the latest employee photos.</span>
       </div>
     `;
     void buildIamAcuitePoster(photos, signature);
@@ -5628,12 +5625,11 @@ function renderIamAcuitePanel() {
 
   if (iamAcuitePosterState.loading) {
     meta.textContent = `Building a 400-tile wall from ${photos.length} real portrait${photos.length === 1 ? "" : "s"}...`;
-    caption.textContent = "Replacing brand-colour tiles with real portraits wherever photos are available.";
     if (!stage.innerHTML.trim()) {
       stage.innerHTML = `
         <div class="iam-acuite-empty">
           <strong>Building the wall</strong>
-          <span>Preparing a fresh mosaic with brand-colour tiles and the latest employee photos.</span>
+          <span>Preparing a fresh mosaic with deep-red tiles and the latest employee photos.</span>
         </div>
       `;
     }
@@ -5642,7 +5638,6 @@ function renderIamAcuitePanel() {
 
   if (iamAcuitePosterState.error) {
     meta.textContent = iamAcuitePosterState.error;
-    caption.textContent = "Please try refreshing with the latest photos.";
     stage.innerHTML = `
       <div class="iam-acuite-empty">
         <strong>I am Acuite</strong>
@@ -5653,14 +5648,11 @@ function renderIamAcuitePanel() {
   }
 
   meta.textContent = `${iamAcuitePosterState.photoCount} of ${IAM_ACUITE_TILE_COUNT} portrait slots are live right now.`;
-  caption.textContent = iamAcuitePosterState.contrastMode
-    ? `Using ${iamAcuitePosterState.contrastMode} portrait tones for the lettering and the opposite tones for the background. The remaining slots stay in brand colours until more photos arrive.`
-    : "This wall starts with brand-colour tiles and replaces them with real employee portraits over time.";
   stage.innerHTML = `
     <img
       class="iam-acuite-poster"
       src="${escapeHtml(iamAcuitePosterState.dataUrl)}"
-      alt="I am Acuite mosaic built from employee portraits and brand-colour tiles"
+      alt="I am Acuite mosaic built from employee portraits and deep-red tiles"
     >
   `;
 }
@@ -5689,7 +5681,6 @@ async function buildIamAcuitePoster(photos, signature) {
       photoCount: photos.length,
       loading: false,
       error: "",
-      contrastMode: poster.contrastMode,
     };
   } catch (error) {
     if (currentToken !== iamAcuiteRenderToken) {
@@ -5701,16 +5692,15 @@ async function buildIamAcuitePoster(photos, signature) {
       photoCount: photos.length,
       loading: false,
       error: error.message || "Could not build the portrait wall right now.",
-      contrastMode: "",
     };
   }
   renderAll();
 }
 
 async function generateIamAcuitePoster(photos) {
-  const preparedPhotos = (await Promise.all(
+  const preparedPhotos = deterministicShuffle((await Promise.all(
     photos.map((item) => prepareIamAcuiteTile(item.photo)),
-  )).filter(Boolean);
+  )).filter(Boolean), signatureHash(getIamAcuiteSignature(photos)) + 17);
   const width = 1500;
   const height = 960;
   const tileSize = Math.floor(width / IAM_ACUITE_COLUMNS);
@@ -5751,67 +5741,94 @@ async function generateIamAcuitePoster(photos) {
   }
 
   const hashSeed = signatureHash(getIamAcuiteSignature(photos));
-  const darkPhotos = deterministicShuffle(preparedPhotos.filter((item) => item.brightness < 128), hashSeed + 11);
-  const lightPhotos = deterministicShuffle(preparedPhotos.filter((item) => item.brightness >= 128), hashSeed + 29);
-  const textUsesDark = darkPhotos.length >= lightPhotos.length;
-  let textPhotoQueue = textUsesDark ? darkPhotos.slice() : lightPhotos.slice();
-  let backgroundPhotoQueue = textUsesDark ? lightPhotos.slice() : darkPhotos.slice();
-  const textPlaceholderQueue = createIamAcuitePlaceholderTiles(IAM_ACUITE_TILE_COUNT, textUsesDark ? "dark" : "light", hashSeed + 101);
-  const backgroundPlaceholderQueue = createIamAcuitePlaceholderTiles(IAM_ACUITE_TILE_COUNT, textUsesDark ? "light" : "dark", hashSeed + 211);
+  const textPositions = deterministicShuffle(positions.filter((position) => position.isTextPixel), hashSeed + 71);
+  const backgroundPositions = deterministicShuffle(positions.filter((position) => !position.isTextPixel), hashSeed + 131);
+  const fillOrder = interleaveIamAcuitePositions(textPositions, backgroundPositions);
+  const livePlacements = new Map(
+    fillOrder.slice(0, preparedPhotos.length).map((position, index) => [
+      `${position.x}:${position.y}`,
+      preparedPhotos[index],
+    ]),
+  );
+  const placeholderTile = createIamAcuitePlaceholderTile();
 
   positions.forEach((position) => {
-    const tile = position.isTextPixel
-      ? pullIamAcuiteTile(textPhotoQueue, backgroundPhotoQueue, textPlaceholderQueue)
-      : pullIamAcuiteTile(backgroundPhotoQueue, textPhotoQueue, backgroundPlaceholderQueue);
-    outputContext.drawImage(tile.canvas, position.x, position.y, tileSize, tileSize);
+    const placementKey = `${position.x}:${position.y}`;
+    const liveTile = livePlacements.get(placementKey);
+    const tileCanvas = liveTile
+      ? transformIamAcuitePhotoTile(liveTile.canvas, position.isTextPixel ? "text" : "background")
+      : placeholderTile.canvas;
+    outputContext.drawImage(tileCanvas, position.x, position.y, tileSize, tileSize);
   });
-
-  outputContext.fillStyle = textUsesDark
-    ? "rgba(255,255,255,0.08)"
-    : "rgba(9,12,18,0.12)";
-  outputContext.fillRect(0, 0, width, height);
-  drawIamAcuiteTextOverlay(outputContext, width, height, textUsesDark);
 
   return {
     dataUrl: outputCanvas.toDataURL("image/jpeg", 0.92),
-    contrastMode: textUsesDark ? "darker" : "lighter",
   };
 }
 
-function pullIamAcuiteTile(primaryQueue, secondaryQueue, placeholderQueue) {
-  return primaryQueue.shift() || secondaryQueue.shift() || placeholderQueue.shift() || createSingleIamAcuitePlaceholder("light", 0);
-}
-
-function createIamAcuitePlaceholderTiles(count, tone, seed) {
-  const tiles = [];
-  for (let index = 0; index < count; index += 1) {
-    tiles.push(createSingleIamAcuitePlaceholder(tone, index));
+function interleaveIamAcuitePositions(textPositions, backgroundPositions) {
+  const positions = [];
+  const textQueue = textPositions.slice();
+  const backgroundQueue = backgroundPositions.slice();
+  while (textQueue.length || backgroundQueue.length) {
+    if (textQueue.length) {
+      positions.push(textQueue.shift());
+    }
+    if (backgroundQueue.length) {
+      positions.push(backgroundQueue.shift());
+    }
   }
-  return deterministicShuffle(tiles, seed);
+  return positions;
 }
 
-function createSingleIamAcuitePlaceholder(tone, index) {
-  const palette = tone === "dark"
-    ? ["#181818", "#2a1206", "#35210b", "#5c1f12", "#143119", "#27323c"]
-    : ["#f7941d", "#ffc72c", "#8dc63f", "#f1e1b8", "#f6b66b", "#dce7b1"];
-  const color = palette[index % palette.length];
+function createIamAcuitePlaceholderTile() {
   const canvas = document.createElement("canvas");
   canvas.width = 72;
   canvas.height = 72;
   const context = canvas.getContext("2d");
-  if (!context) {
-    return {
-      canvas,
-      brightness: tone === "dark" ? 40 : 220,
-    };
+  if (context) {
+    context.fillStyle = IAM_ACUITE_PLACEHOLDER_COLOR;
+    context.fillRect(0, 0, canvas.width, canvas.height);
   }
-  context.fillStyle = color;
-  context.fillRect(0, 0, canvas.width, canvas.height);
   return {
-    id: `placeholder-${tone}-${index}`,
+    id: "placeholder-deep-red",
     canvas,
-    brightness: tone === "dark" ? 48 : 210,
+    brightness: 64,
   };
+}
+
+function transformIamAcuitePhotoTile(sourceCanvas, variant) {
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return sourceCanvas;
+  }
+  context.drawImage(sourceCanvas, 0, 0);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = imageData.data;
+  for (let index = 0; index < pixels.length; index += 4) {
+    let red = pixels[index];
+    let green = pixels[index + 1];
+    let blue = pixels[index + 2];
+
+    if (variant === "text") {
+      red = clampIamAcuiteChannel(((red - 128) * 1.18) + 116);
+      green = clampIamAcuiteChannel(((green - 128) * 1.14) + 98);
+      blue = clampIamAcuiteChannel(((blue - 128) * 1.12) + 90);
+    } else {
+      red = clampIamAcuiteChannel(((red - 128) * 0.9) + 170);
+      green = clampIamAcuiteChannel(((green - 128) * 0.9) + 160);
+      blue = clampIamAcuiteChannel(((blue - 128) * 0.9) + 154);
+    }
+
+    pixels[index] = red;
+    pixels[index + 1] = green;
+    pixels[index + 2] = blue;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas;
 }
 
 function drawIamAcuiteMask(context, width, height) {
@@ -5827,22 +5844,8 @@ function drawIamAcuiteMask(context, width, height) {
   context.fillText("Acuite", width / 2, height * 0.63);
 }
 
-function drawIamAcuiteTextOverlay(context, width, height, textUsesDark) {
-  context.save();
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.lineJoin = "round";
-  context.font = "700 120px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.fillStyle = textUsesDark ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.18)";
-  context.strokeStyle = textUsesDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)";
-  context.lineWidth = 4;
-  context.fillText("I am", width / 2, height * 0.33);
-  context.strokeText("I am", width / 2, height * 0.33);
-  context.font = "800 232px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.lineWidth = 8;
-  context.fillText("Acuite", width / 2, height * 0.63);
-  context.strokeText("Acuite", width / 2, height * 0.63);
-  context.restore();
+function clampIamAcuiteChannel(value) {
+  return Math.max(0, Math.min(255, Math.round(value)));
 }
 
 async function prepareIamAcuiteTile(photoUrl) {

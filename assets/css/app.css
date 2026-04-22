@@ -2299,13 +2299,6 @@ select {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.iam-acuite-caption {
-  margin-top: 12px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text3);
-}
-
 .voice-feed {
   display: grid;
   gap: 16px;
