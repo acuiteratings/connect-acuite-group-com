@@ -40,7 +40,7 @@ const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
-const ENABLED_TABS = new Set(["home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
+const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -535,6 +535,15 @@ let toastTimeoutId = null;
 let directoryLoadError = "";
 let directoryCachedAt = "";
 let directoryShowingCachedData = false;
+let iamAcuitePosterState = {
+  signature: "",
+  dataUrl: "",
+  photoCount: 0,
+  loading: false,
+  error: "",
+  contrastMode: "",
+};
+let iamAcuiteRenderToken = 0;
 let ceoDeskCachedAt = "";
 let ceoDeskShowingCachedData = false;
 let learningCachedAt = "";
@@ -842,6 +851,7 @@ async function loadDirectoryData() {
     directoryCachedAt = new Date().toISOString();
     directoryShowingCachedData = false;
     saveDirectoryCache();
+    invalidateIamAcuitePoster();
   } catch (error) {
     directoryLoadError = hasCachedDirectory
       ? ""
@@ -1390,6 +1400,11 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "refresh-iam-acuite") {
+      void refreshIamAcuitePoster();
+      return;
+    }
+
     if (actionName === "placeholder-comment") {
       showToast("Comments can be attached once the backend layer is in place.");
       return;
@@ -1622,6 +1637,7 @@ function renderAll() {
   safeRender("profile", renderProfile);
   safeRender("profile coin bank", renderProfileCoinBank);
   safeRender("profile builder", renderProfileBuilder);
+  safeRender("I am Acuite panel", renderIamAcuitePanel);
   safeRender("brochure builder", renderBrochureBuilderPanel);
   safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
@@ -5166,6 +5182,328 @@ function renderDirectoryAttributeBlock(label, values) {
       <div class="person-attribute-value ${items.length ? "" : "empty"}">${escapeHtml(displayValue)}</div>
     </div>
   `;
+}
+
+function getIamAcuiteSourcePhotos() {
+  return appData.directory
+    .map((person) => ({
+      id: String(person.sourceUserId || person.id || person.name),
+      name: person.name || "Employee",
+      photo: Array.isArray(person.profilePhotos) ? person.profilePhotos.find(Boolean) || "" : "",
+    }))
+    .filter((item) => item.photo);
+}
+
+function getIamAcuiteSignature(photos) {
+  return photos.map((item) => `${item.id}:${item.photo}`).join("|");
+}
+
+function invalidateIamAcuitePoster() {
+  iamAcuitePosterState = {
+    signature: "",
+    dataUrl: "",
+    photoCount: 0,
+    loading: false,
+    error: "",
+    contrastMode: "",
+  };
+}
+
+function renderIamAcuitePanel() {
+  const stage = document.getElementById("iam-acuite-stage");
+  const meta = document.getElementById("iam-acuite-meta");
+  const caption = document.getElementById("iam-acuite-caption");
+  if (!stage || !meta || !caption) {
+    return;
+  }
+
+  const photos = getIamAcuiteSourcePhotos();
+  const signature = getIamAcuiteSignature(photos);
+
+  if (!photos.length) {
+    meta.textContent = appData.directory.length
+      ? "Waiting for colleagues to upload profile photos."
+      : directoryLoadError
+        ? directoryLoadError
+        : "Loading employee portraits...";
+    caption.textContent = "The portrait wall will start forming as soon as profile photos are available.";
+    stage.innerHTML = `
+      <div class="iam-acuite-empty">
+        <strong>I am Acuit&eacute;</strong>
+        <span>The image will build itself from employee profile photos.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (iamAcuitePosterState.signature !== signature && !iamAcuitePosterState.loading) {
+    iamAcuitePosterState.loading = true;
+    iamAcuitePosterState.error = "";
+    meta.textContent = `Building from ${photos.length} employee portrait${photos.length === 1 ? "" : "s"}...`;
+    caption.textContent = "Balancing lighter and darker portraits to shape the lettering.";
+    stage.innerHTML = `
+      <div class="iam-acuite-empty">
+        <strong>Building the wall</strong>
+        <span>Preparing a fresh portrait mosaic from the latest employee photos.</span>
+      </div>
+    `;
+    void buildIamAcuitePoster(photos, signature);
+    return;
+  }
+
+  if (iamAcuitePosterState.loading) {
+    meta.textContent = `Building from ${photos.length} employee portrait${photos.length === 1 ? "" : "s"}...`;
+    caption.textContent = "Balancing lighter and darker portraits to shape the lettering.";
+    if (!stage.innerHTML.trim()) {
+      stage.innerHTML = `
+        <div class="iam-acuite-empty">
+          <strong>Building the wall</strong>
+          <span>Preparing a fresh portrait mosaic from the latest employee photos.</span>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  if (iamAcuitePosterState.error) {
+    meta.textContent = iamAcuitePosterState.error;
+    caption.textContent = "Please try refreshing with the latest photos.";
+    stage.innerHTML = `
+      <div class="iam-acuite-empty">
+        <strong>I am Acuit&eacute;</strong>
+        <span>${escapeHtml(iamAcuitePosterState.error)}</span>
+      </div>
+    `;
+    return;
+  }
+
+  meta.textContent = `${iamAcuitePosterState.photoCount} employee portrait${iamAcuitePosterState.photoCount === 1 ? "" : "s"} in the current wall`;
+  caption.textContent = iamAcuitePosterState.contrastMode
+    ? `Using ${iamAcuitePosterState.contrastMode} portraits for the lettering and the opposite tones for the background.`
+    : "This wall uses one thumbnail from each employee profile.";
+  stage.innerHTML = `
+    <img
+      class="iam-acuite-poster"
+      src="${escapeHtml(iamAcuitePosterState.dataUrl)}"
+      alt="I am Acuit&eacute; mosaic built from employee portraits"
+    >
+  `;
+}
+
+async function refreshIamAcuitePoster() {
+  iamAcuitePosterState.loading = true;
+  iamAcuitePosterState.error = "";
+  renderAll();
+  await loadDirectoryData();
+  renderAll();
+}
+
+async function buildIamAcuitePoster(photos, signature) {
+  const currentToken = ++iamAcuiteRenderToken;
+  try {
+    const poster = await generateIamAcuitePoster(photos);
+    if (currentToken !== iamAcuiteRenderToken) {
+      return;
+    }
+    iamAcuitePosterState = {
+      signature,
+      dataUrl: poster.dataUrl,
+      photoCount: photos.length,
+      loading: false,
+      error: "",
+      contrastMode: poster.contrastMode,
+    };
+  } catch (error) {
+    if (currentToken !== iamAcuiteRenderToken) {
+      return;
+    }
+    iamAcuitePosterState = {
+      signature: "",
+      dataUrl: "",
+      photoCount: photos.length,
+      loading: false,
+      error: error.message || "Could not build the portrait wall right now.",
+      contrastMode: "",
+    };
+  }
+  renderAll();
+}
+
+async function generateIamAcuitePoster(photos) {
+  const preparedPhotos = (await Promise.all(
+    photos.map((item) => prepareIamAcuiteTile(item.photo)),
+  )).filter(Boolean);
+  if (!preparedPhotos.length) {
+    throw new Error("No usable profile photos were found.");
+  }
+
+  const pools = createIamAcuiteContrastPools(preparedPhotos);
+  const width = 1600;
+  const height = 920;
+  const tileSize = 40;
+  const columns = Math.ceil(width / tileSize);
+  const rows = Math.ceil(height / tileSize);
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = width;
+  outputCanvas.height = height;
+  const outputContext = outputCanvas.getContext("2d");
+  if (!outputContext) {
+    throw new Error("Canvas rendering is unavailable in this browser.");
+  }
+
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = width;
+  maskCanvas.height = height;
+  const maskContext = maskCanvas.getContext("2d");
+  if (!maskContext) {
+    throw new Error("Canvas masking is unavailable in this browser.");
+  }
+
+  drawIamAcuiteMask(maskContext, width, height);
+  const maskData = maskContext.getImageData(0, 0, width, height).data;
+  const hashSeed = signatureHash(getIamAcuiteSignature(photos));
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const x = column * tileSize;
+      const y = row * tileSize;
+      const sampleX = Math.min(width - 1, x + Math.floor(tileSize / 2));
+      const sampleY = Math.min(height - 1, y + Math.floor(tileSize / 2));
+      const alphaIndex = ((sampleY * width) + sampleX) * 4 + 3;
+      const isTextPixel = maskData[alphaIndex] > 20;
+      const pool = isTextPixel ? pools.text : pools.background;
+      const poolIndex = (hashSeed + column * 17 + row * 31) % pool.length;
+      const tile = pool[poolIndex];
+      outputContext.drawImage(tile.canvas, x, y, tileSize, tileSize);
+    }
+  }
+
+  outputContext.fillStyle = pools.textUsesDark
+    ? "rgba(255,255,255,0.08)"
+    : "rgba(9,12,18,0.12)";
+  outputContext.fillRect(0, 0, width, height);
+  drawIamAcuiteTextOverlay(outputContext, width, height, pools.textUsesDark);
+
+  return {
+    dataUrl: outputCanvas.toDataURL("image/jpeg", 0.92),
+    contrastMode: pools.textUsesDark ? "darker" : "lighter",
+  };
+}
+
+function createIamAcuiteContrastPools(preparedPhotos) {
+  const sorted = preparedPhotos.slice().sort((left, right) => left.brightness - right.brightness);
+  let darkPool = sorted.filter((item) => item.brightness < 125);
+  let brightPool = sorted.filter((item) => item.brightness >= 150);
+
+  if (!darkPool.length || !brightPool.length) {
+    const midpoint = Math.max(1, Math.floor(sorted.length / 2));
+    darkPool = sorted.slice(0, midpoint);
+    brightPool = sorted.slice(midpoint);
+  }
+
+  if (!brightPool.length) {
+    brightPool = sorted.slice(Math.floor(sorted.length / 2));
+  }
+  if (!darkPool.length) {
+    darkPool = sorted.slice(0, Math.max(1, Math.ceil(sorted.length / 2)));
+  }
+  if (!brightPool.length) {
+    brightPool = sorted.slice(-1);
+  }
+  if (!darkPool.length) {
+    darkPool = sorted.slice(0, 1);
+  }
+
+  const textUsesDark = brightPool.length >= darkPool.length;
+  return {
+    textUsesDark,
+    text: textUsesDark ? darkPool : brightPool,
+    background: textUsesDark ? brightPool : darkPool,
+  };
+}
+
+function drawIamAcuiteMask(context, width, height) {
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#000";
+  context.fillRect(0, 0, width, height);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = "#fff";
+  context.font = "700 140px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillText("I AM", width / 2, height * 0.34);
+  context.font = "800 255px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillText("ACUITÉ", width / 2, height * 0.62);
+}
+
+function drawIamAcuiteTextOverlay(context, width, height, textUsesDark) {
+  context.save();
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineJoin = "round";
+  context.font = "700 140px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillStyle = textUsesDark ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.18)";
+  context.strokeStyle = textUsesDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)";
+  context.lineWidth = 4;
+  context.fillText("I AM", width / 2, height * 0.34);
+  context.strokeText("I AM", width / 2, height * 0.34);
+  context.font = "800 255px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.lineWidth = 8;
+  context.fillText("ACUITÉ", width / 2, height * 0.62);
+  context.strokeText("ACUITÉ", width / 2, height * 0.62);
+  context.restore();
+}
+
+async function prepareIamAcuiteTile(photoUrl) {
+  const image = await loadImage(photoUrl);
+  if (!image) {
+    return null;
+  }
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  if (!sourceWidth || !sourceHeight) {
+    return null;
+  }
+  const size = Math.min(sourceWidth, sourceHeight);
+  const offsetX = Math.max(0, (sourceWidth - size) / 2);
+  const offsetY = Math.max(0, (sourceHeight - size) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = 72;
+  canvas.height = 72;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  context.drawImage(image, offsetX, offsetY, size, size, 0, 0, canvas.width, canvas.height);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let total = 0;
+  let count = 0;
+  for (let index = 0; index < pixels.length; index += 16) {
+    const red = pixels[index];
+    const green = pixels[index + 1];
+    const blue = pixels[index + 2];
+    total += (red * 0.299) + (green * 0.587) + (blue * 0.114);
+    count += 1;
+  }
+  return {
+    canvas,
+    brightness: count ? total / count : 0,
+  };
+}
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function signatureHash(value) {
+  return String(value || "").split("").reduce((total, character) => {
+    return (total + character.charCodeAt(0)) % 100000;
+  }, 0);
 }
 
 function gradientValue(key) {

@@ -79,6 +79,12 @@
 
   <div class="layout">
     <aside class="sidebar-left">
+      <button type="button" class="tab" data-switch-tab="iam-acuite">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v14H4V5zm4 0v14M12 5v14M20 10H4m16 4H4"></path>
+        </svg>
+        I am Acuit&eacute;
+      </button>
       <button type="button" class="tab" data-switch-tab="home">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path>
@@ -146,6 +152,24 @@
     </aside>
 
     <main class="main">
+      <section class="panel" id="panel-iam-acuite">
+        <div class="iam-acuite-shell">
+          <div class="iam-acuite-copy">
+            <p class="widget-kicker">Portrait Wall</p>
+            <h1>I am Acuit&eacute;</h1>
+            <p class="iam-acuite-lead">A living image built from employee profile photos. As more colleagues upload their photographs, the wall becomes richer and sharper.</p>
+            <div class="iam-acuite-actions">
+              <button type="button" class="btn-warm" data-action="refresh-iam-acuite">Refresh with latest photos</button>
+            </div>
+            <div class="mini-item-meta" id="iam-acuite-meta">Waiting for employee portraits...</div>
+          </div>
+          <div class="iam-acuite-stage-wrap">
+            <div class="iam-acuite-stage" id="iam-acuite-stage"></div>
+            <div class="iam-acuite-caption" id="iam-acuite-caption">This wall uses one thumbnail from each employee profile.</div>
+          </div>
+        </div>
+      </section>
+
       <section class="panel" id="panel-home">
         <div class="announcement-filter-row" id="home-announcement-filters">
           <button type="button" class="announcement-filter-pill active" data-action="set-home-announcement-filter" data-filter="leadership">Leadership</button>
