@@ -5773,7 +5773,7 @@ async function generateIamAcuitePoster(photos) {
     throw new Error("Canvas masking is unavailable in this browser.");
   }
 
-  drawIamAcuiteMask(maskContext, width, height);
+  drawIamAcuiteMask(maskContext, width, height, tileSize);
   const maskData = maskContext.getImageData(0, 0, width, height).data;
   const positions = [];
   for (let row = 0; row < rows; row += 1) {
@@ -5786,28 +5786,31 @@ async function generateIamAcuitePoster(photos) {
       positions.push({
         x,
         y,
+        row,
+        column,
         isTextPixel: maskData[alphaIndex] > 20,
       });
     }
   }
 
   const hashSeed = signatureHash(getIamAcuiteSignature(photos));
-  const textPositions = deterministicShuffle(positions.filter((position) => position.isTextPixel), hashSeed + 71);
-  const backgroundPositions = deterministicShuffle(positions.filter((position) => !position.isTextPixel), hashSeed + 131);
-  const fillOrder = interleaveIamAcuitePositions(textPositions, backgroundPositions);
-  const livePlacements = new Map(
-    fillOrder.slice(0, preparedPhotos.length).map((position, index) => [
-      `${position.x}:${position.y}`,
-      preparedPhotos[index],
-    ]),
-  );
+  const cellProfiles = positions.map((position) => buildIamAcuiteCellProfile(position, columns, rows, hashSeed));
+  const textCells = cellProfiles
+    .filter((cell) => cell.isTextPixel)
+    .sort((left, right) => left.scatterRank - right.scatterRank);
+  const backgroundCells = cellProfiles
+    .filter((cell) => !cell.isTextPixel)
+    .sort((left, right) => left.scatterRank - right.scatterRank);
+  const fillOrder = buildIamAcuiteFillOrder(textCells, backgroundCells);
+  const selectedCells = fillOrder.slice(0, preparedPhotos.length);
+  const livePlacements = assignIamAcuitePhotosToCells(selectedCells, preparedPhotos);
   const placeholderTile = createIamAcuitePlaceholderTile();
 
-  positions.forEach((position) => {
-    const placementKey = `${position.x}:${position.y}`;
+  cellProfiles.forEach((position) => {
+    const placementKey = position.key;
     const liveTile = livePlacements.get(placementKey);
     const tileCanvas = liveTile
-      ? transformIamAcuitePhotoTile(liveTile.canvas, position.isTextPixel ? "text" : "background")
+      ? renderIamAcuitePhotoTile(liveTile.photo, position)
       : placeholderTile.canvas;
     outputContext.drawImage(tileCanvas, position.x, position.y, tileSize, tileSize);
   });
@@ -5817,19 +5820,100 @@ async function generateIamAcuitePoster(photos) {
   };
 }
 
-function interleaveIamAcuitePositions(textPositions, backgroundPositions) {
+function buildIamAcuiteCellProfile(position, columns, rows, hashSeed) {
+  const columnRatio = columns > 1 ? position.column / (columns - 1) : 0.5;
+  const rowRatio = rows > 1 ? position.row / (rows - 1) : 0.5;
+  const centerBias = 1 - Math.min(1, Math.abs(columnRatio - 0.5) * 1.9);
+  const wave = (
+    Math.sin((position.column + 1) * 0.72 + hashSeed * 0.013) +
+    Math.cos((position.row + 1) * 0.81 + hashSeed * 0.017)
+  ) * 0.5;
+  const scatterRank = hashStringToUnit(`iam-acuite:${hashSeed}:${position.row}:${position.column}`);
+  const key = `${position.x}:${position.y}`;
+
+  if (position.isTextPixel) {
+    return {
+      ...position,
+      key,
+      scatterRank,
+      targetBrightness: clampNumber(170 + (centerBias * 34) + (wave * 10), 146, 228),
+      targetHue: clampHue(28 + (wave * 9)),
+      targetSaturation: clampNumber(58 + (centerBias * 18) + (wave * 12), 34, 90),
+      brightnessRange: [132, 236],
+      hueRange: [8, 56],
+      saturationRange: [24, 100],
+    };
+  }
+
+  return {
+    ...position,
+    key,
+    scatterRank,
+    targetBrightness: clampNumber(78 + (wave * 9), 44, 122),
+    targetHue: clampHue(8 + (wave * 5)),
+    targetSaturation: clampNumber(52 + (centerBias * 8) + (wave * 10), 24, 84),
+    brightnessRange: [36, 132],
+    hueRange: [0, 22],
+    saturationRange: [18, 92],
+  };
+}
+
+function buildIamAcuiteFillOrder(textCells, backgroundCells) {
   const positions = [];
-  const textQueue = textPositions.slice();
-  const backgroundQueue = backgroundPositions.slice();
+  const textQueue = textCells.slice();
+  const backgroundQueue = backgroundCells.slice();
   while (textQueue.length || backgroundQueue.length) {
-    if (textQueue.length) {
-      positions.push(textQueue.shift());
+    for (let step = 0; step < 3; step += 1) {
+      if (textQueue.length) {
+        positions.push(textQueue.shift());
+      }
     }
     if (backgroundQueue.length) {
       positions.push(backgroundQueue.shift());
     }
   }
   return positions;
+}
+
+function assignIamAcuitePhotosToCells(cells, photos) {
+  const placements = new Map();
+  const remainingPhotos = photos.slice();
+
+  cells.forEach((cell) => {
+    if (!remainingPhotos.length) {
+      return;
+    }
+
+    let bestIndex = 0;
+    let bestScore = Number.POSITIVE_INFINITY;
+    remainingPhotos.forEach((photo, index) => {
+      const score = scoreIamAcuitePhotoForCell(photo, cell);
+      if (score < bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    const [selectedPhoto] = remainingPhotos.splice(bestIndex, 1);
+    if (selectedPhoto) {
+      placements.set(cell.key, {
+        photo: selectedPhoto,
+        score: bestScore,
+      });
+    }
+  });
+
+  return placements;
+}
+
+function scoreIamAcuitePhotoForCell(photo, cell) {
+  const brightnessPenalty = rangePenalty(photo.brightness, cell.brightnessRange[0], cell.brightnessRange[1])
+    + (Math.abs(photo.brightness - cell.targetBrightness) * 0.45);
+  const huePenalty = rangePenaltyHue(photo.hue, cell.hueRange[0], cell.hueRange[1])
+    + (circularHueDistance(photo.hue, cell.targetHue) * 0.75);
+  const saturationPenalty = rangePenalty(photo.saturation, cell.saturationRange[0], cell.saturationRange[1])
+    + (Math.abs(photo.saturation - cell.targetSaturation) * 0.28);
+  return brightnessPenalty + huePenalty + saturationPenalty;
 }
 
 function createIamAcuitePlaceholderTile() {
@@ -5848,7 +5932,8 @@ function createIamAcuitePlaceholderTile() {
   };
 }
 
-function transformIamAcuitePhotoTile(sourceCanvas, variant) {
+function renderIamAcuitePhotoTile(photo, cell) {
+  const sourceCanvas = photo.canvas;
   const canvas = document.createElement("canvas");
   canvas.width = sourceCanvas.width;
   canvas.height = sourceCanvas.height;
@@ -5856,47 +5941,86 @@ function transformIamAcuitePhotoTile(sourceCanvas, variant) {
   if (!context) {
     return sourceCanvas;
   }
-  context.drawImage(sourceCanvas, 0, 0);
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  const pixels = imageData.data;
-  for (let index = 0; index < pixels.length; index += 4) {
-    let red = pixels[index];
-    let green = pixels[index + 1];
-    let blue = pixels[index + 2];
+  const brightnessFactor = clampNumber(cell.targetBrightness / Math.max(photo.brightness || 1, 1), 0.58, cell.isTextPixel ? 1.55 : 1.18);
+  const saturationFactor = clampNumber(cell.targetSaturation / Math.max(photo.saturation || 1, 1), 0.7, cell.isTextPixel ? 1.95 : 1.55);
+  const hueRotate = clampNumber(normalizeHueRotation(cell.targetHue - photo.hue), cell.isTextPixel ? -42 : -18, cell.isTextPixel ? 42 : 18);
+  const contrastFactor = cell.isTextPixel ? 1.16 : 1.06;
 
-    if (variant === "text") {
-      red = clampIamAcuiteChannel(((red - 128) * 1.18) + 116);
-      green = clampIamAcuiteChannel(((green - 128) * 1.14) + 98);
-      blue = clampIamAcuiteChannel(((blue - 128) * 1.12) + 90);
-    } else {
-      red = clampIamAcuiteChannel(((red - 128) * 0.9) + 170);
-      green = clampIamAcuiteChannel(((green - 128) * 0.9) + 160);
-      blue = clampIamAcuiteChannel(((blue - 128) * 0.9) + 154);
-    }
+  context.filter = `brightness(${brightnessFactor}) saturate(${saturationFactor}) hue-rotate(${hueRotate}deg) contrast(${contrastFactor})`;
+  context.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+  context.filter = "none";
 
-    pixels[index] = red;
-    pixels[index + 1] = green;
-    pixels[index + 2] = blue;
-  }
-  context.putImageData(imageData, 0, 0);
+  context.fillStyle = cell.isTextPixel ? "rgba(255, 223, 196, 0.09)" : "rgba(123, 36, 28, 0.22)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
-function drawIamAcuiteMask(context, width, height) {
+function drawIamAcuiteMask(context, width, height, tileSize) {
   context.clearRect(0, 0, width, height);
   context.fillStyle = "#000";
   context.fillRect(0, 0, width, height);
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = "#fff";
-  context.font = "700 120px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.fillText("I am", width / 2, height * 0.33);
-  context.font = "800 232px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.fillText("Acuite", width / 2, height * 0.63);
+
+  const horizontalInset = tileSize || 0;
+  const maxHeadlineWidth = width - (horizontalInset * 2);
+  const acuiteSize = fitIamAcuiteTextSize(context, "Acuite", "900", maxHeadlineWidth, 360, 180);
+  const iamSize = fitIamAcuiteTextSize(context, "I am", "700", maxHeadlineWidth * 0.36, 132, 84);
+
+  context.font = `700 ${iamSize}px 'Avenir Next', 'Segoe UI', sans-serif`;
+  context.fillText("I am", width / 2, height * 0.28);
+  context.font = `900 ${acuiteSize}px 'Avenir Next', 'Segoe UI', sans-serif`;
+  context.fillText("Acuite", width / 2, height * 0.62);
 }
 
-function clampIamAcuiteChannel(value) {
-  return Math.max(0, Math.min(255, Math.round(value)));
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampHue(value) {
+  return ((value % 360) + 360) % 360;
+}
+
+function circularHueDistance(left, right) {
+  const difference = Math.abs(clampHue(left) - clampHue(right));
+  return Math.min(difference, 360 - difference);
+}
+
+function normalizeHueRotation(value) {
+  const normalized = ((value + 180) % 360 + 360) % 360 - 180;
+  return normalized === -180 ? 180 : normalized;
+}
+
+function rangePenalty(value, min, max) {
+  if (value < min) {
+    return (min - value) * 1.4;
+  }
+  if (value > max) {
+    return (value - max) * 1.4;
+  }
+  return 0;
+}
+
+function rangePenaltyHue(value, min, max) {
+  const lowDistance = circularHueDistance(value, min);
+  const highDistance = circularHueDistance(value, max);
+  const targetDistance = circularHueDistance(min, max);
+  const insideRange = lowDistance + highDistance <= targetDistance + 0.001;
+  if (insideRange) {
+    return 0;
+  }
+  return Math.min(lowDistance, highDistance) * 0.9;
+}
+
+function fitIamAcuiteTextSize(context, text, weight, maxWidth, startSize, minSize) {
+  for (let size = startSize; size >= minSize; size -= 2) {
+    context.font = `${weight} ${size}px 'Avenir Next', 'Segoe UI', sans-serif`;
+    if (context.measureText(text).width <= maxWidth) {
+      return size;
+    }
+  }
+  return minSize;
 }
 
 async function prepareIamAcuiteTile(photoUrl) {
@@ -5923,16 +6047,68 @@ async function prepareIamAcuiteTile(photoUrl) {
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   let total = 0;
   let count = 0;
+  let hueX = 0;
+  let hueY = 0;
+  let saturationTotal = 0;
   for (let index = 0; index < pixels.length; index += 16) {
     const red = pixels[index];
     const green = pixels[index + 1];
     const blue = pixels[index + 2];
     total += (red * 0.299) + (green * 0.587) + (blue * 0.114);
+    const { hue, saturation } = rgbToHsl(red, green, blue);
+    const hueWeight = Math.max(0.08, saturation);
+    hueX += Math.cos(hue * Math.PI * 2) * hueWeight;
+    hueY += Math.sin(hue * Math.PI * 2) * hueWeight;
+    saturationTotal += saturation * 100;
     count += 1;
   }
+  const averagedHue = hueX === 0 && hueY === 0
+    ? 0
+    : clampHue((Math.atan2(hueY, hueX) * 180) / Math.PI);
   return {
+    id: `${photoUrl}:${count}`,
     canvas,
     brightness: count ? total / count : 0,
+    hue: averagedHue,
+    saturation: count ? saturationTotal / count : 0,
+  };
+}
+
+function rgbToHsl(red, green, blue) {
+  const r = red / 255;
+  const g = green / 255;
+  const b = blue / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+
+  if (!delta) {
+    return { hue: 0, saturation: 0, lightness };
+  }
+
+  const saturation = lightness > 0.5
+    ? delta / (2 - max - min)
+    : delta / (max + min);
+
+  let hue;
+  switch (max) {
+    case r:
+      hue = ((g - b) / delta) + (g < b ? 6 : 0);
+      break;
+    case g:
+      hue = ((b - r) / delta) + 2;
+      break;
+    default:
+      hue = ((r - g) / delta) + 4;
+      break;
+  }
+  hue /= 6;
+
+  return {
+    hue,
+    saturation,
+    lightness,
   };
 }
 
@@ -5950,6 +6126,16 @@ function signatureHash(value) {
   return String(value || "").split("").reduce((total, character) => {
     return (total + character.charCodeAt(0)) % 100000;
   }, 0);
+}
+
+function hashStringToUnit(value) {
+  let hash = 2166136261;
+  const input = String(value || "");
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
 }
 
 function deterministicShuffle(items, seed) {
