@@ -37,6 +37,9 @@ const STORE_CATEGORY_LABELS = {
   memorabilia: "Memorabilia",
 };
 const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
+const IAM_ACUITE_TILE_COUNT = 400;
+const IAM_ACUITE_COLUMNS = 25;
+const IAM_ACUITE_ROWS = 16;
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
@@ -5186,12 +5189,15 @@ function renderDirectoryAttributeBlock(label, values) {
 
 function getIamAcuiteSourcePhotos() {
   return appData.directory
-    .map((person) => ({
-      id: String(person.sourceUserId || person.id || person.name),
-      name: person.name || "Employee",
-      photo: Array.isArray(person.profilePhotos) ? person.profilePhotos.find(Boolean) || "" : "",
-    }))
-    .filter((item) => item.photo);
+    .flatMap((person) => {
+      const photos = Array.isArray(person.profilePhotos) ? person.profilePhotos.filter(Boolean).slice(0, 2) : [];
+      return photos.map((photo, index) => ({
+        id: `${String(person.sourceUserId || person.id || person.name)}-${index + 1}`,
+        name: person.name || "Employee",
+        photo,
+      }));
+    })
+    .slice(0, IAM_ACUITE_TILE_COUNT);
 }
 
 function getIamAcuiteSignature(photos) {
@@ -5220,31 +5226,15 @@ function renderIamAcuitePanel() {
   const photos = getIamAcuiteSourcePhotos();
   const signature = getIamAcuiteSignature(photos);
 
-  if (!photos.length) {
-    meta.textContent = appData.directory.length
-      ? "Waiting for colleagues to upload profile photos."
-      : directoryLoadError
-        ? directoryLoadError
-        : "Loading employee portraits...";
-    caption.textContent = "The portrait wall will start forming as soon as profile photos are available.";
-    stage.innerHTML = `
-      <div class="iam-acuite-empty">
-        <strong>I am Acuit&eacute;</strong>
-        <span>The image will build itself from employee profile photos.</span>
-      </div>
-    `;
-    return;
-  }
-
-  if (iamAcuitePosterState.signature !== signature && !iamAcuitePosterState.loading) {
+  if ((iamAcuitePosterState.signature !== signature || !iamAcuitePosterState.dataUrl) && !iamAcuitePosterState.loading) {
     iamAcuitePosterState.loading = true;
     iamAcuitePosterState.error = "";
-    meta.textContent = `Building from ${photos.length} employee portrait${photos.length === 1 ? "" : "s"}...`;
-    caption.textContent = "Balancing lighter and darker portraits to shape the lettering.";
+    meta.textContent = `Building a 400-tile wall from ${photos.length} real portrait${photos.length === 1 ? "" : "s"}...`;
+    caption.textContent = "Replacing brand-colour tiles with real portraits wherever photos are available.";
     stage.innerHTML = `
       <div class="iam-acuite-empty">
         <strong>Building the wall</strong>
-        <span>Preparing a fresh portrait mosaic from the latest employee photos.</span>
+        <span>Preparing a fresh mosaic with brand-colour tiles and the latest employee photos.</span>
       </div>
     `;
     void buildIamAcuitePoster(photos, signature);
@@ -5252,13 +5242,13 @@ function renderIamAcuitePanel() {
   }
 
   if (iamAcuitePosterState.loading) {
-    meta.textContent = `Building from ${photos.length} employee portrait${photos.length === 1 ? "" : "s"}...`;
-    caption.textContent = "Balancing lighter and darker portraits to shape the lettering.";
+    meta.textContent = `Building a 400-tile wall from ${photos.length} real portrait${photos.length === 1 ? "" : "s"}...`;
+    caption.textContent = "Replacing brand-colour tiles with real portraits wherever photos are available.";
     if (!stage.innerHTML.trim()) {
       stage.innerHTML = `
         <div class="iam-acuite-empty">
           <strong>Building the wall</strong>
-          <span>Preparing a fresh portrait mosaic from the latest employee photos.</span>
+          <span>Preparing a fresh mosaic with brand-colour tiles and the latest employee photos.</span>
         </div>
       `;
     }
@@ -5270,22 +5260,22 @@ function renderIamAcuitePanel() {
     caption.textContent = "Please try refreshing with the latest photos.";
     stage.innerHTML = `
       <div class="iam-acuite-empty">
-        <strong>I am Acuit&eacute;</strong>
+        <strong>I am Acuite</strong>
         <span>${escapeHtml(iamAcuitePosterState.error)}</span>
       </div>
     `;
     return;
   }
 
-  meta.textContent = `${iamAcuitePosterState.photoCount} employee portrait${iamAcuitePosterState.photoCount === 1 ? "" : "s"} in the current wall`;
+  meta.textContent = `${iamAcuitePosterState.photoCount} of ${IAM_ACUITE_TILE_COUNT} portrait slots are live right now.`;
   caption.textContent = iamAcuitePosterState.contrastMode
-    ? `Using ${iamAcuitePosterState.contrastMode} portraits for the lettering and the opposite tones for the background.`
-    : "This wall uses one thumbnail from each employee profile.";
+    ? `Using ${iamAcuitePosterState.contrastMode} portrait tones for the lettering and the opposite tones for the background. The remaining slots stay in brand colours until more photos arrive.`
+    : "This wall starts with brand-colour tiles and replaces them with real employee portraits over time.";
   stage.innerHTML = `
     <img
       class="iam-acuite-poster"
       src="${escapeHtml(iamAcuitePosterState.dataUrl)}"
-      alt="I am Acuit&eacute; mosaic built from employee portraits"
+      alt="I am Acuite mosaic built from employee portraits and brand-colour tiles"
     >
   `;
 }
@@ -5295,6 +5285,9 @@ async function refreshIamAcuitePoster() {
   iamAcuitePosterState.error = "";
   renderAll();
   await loadDirectoryData();
+  if (directoryLoadError) {
+    iamAcuitePosterState.loading = false;
+  }
   renderAll();
 }
 
@@ -5333,16 +5326,11 @@ async function generateIamAcuitePoster(photos) {
   const preparedPhotos = (await Promise.all(
     photos.map((item) => prepareIamAcuiteTile(item.photo)),
   )).filter(Boolean);
-  if (!preparedPhotos.length) {
-    throw new Error("No usable profile photos were found.");
-  }
-
-  const pools = createIamAcuiteContrastPools(preparedPhotos);
-  const width = 1600;
-  const height = 920;
-  const tileSize = 40;
-  const columns = Math.ceil(width / tileSize);
-  const rows = Math.ceil(height / tileSize);
+  const width = 1500;
+  const height = 960;
+  const tileSize = Math.floor(width / IAM_ACUITE_COLUMNS);
+  const columns = IAM_ACUITE_COLUMNS;
+  const rows = IAM_ACUITE_ROWS;
   const outputCanvas = document.createElement("canvas");
   outputCanvas.width = width;
   outputCanvas.height = height;
@@ -5361,8 +5349,7 @@ async function generateIamAcuitePoster(photos) {
 
   drawIamAcuiteMask(maskContext, width, height);
   const maskData = maskContext.getImageData(0, 0, width, height).data;
-  const hashSeed = signatureHash(getIamAcuiteSignature(photos));
-
+  const positions = [];
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
       const x = column * tileSize;
@@ -5370,55 +5357,75 @@ async function generateIamAcuitePoster(photos) {
       const sampleX = Math.min(width - 1, x + Math.floor(tileSize / 2));
       const sampleY = Math.min(height - 1, y + Math.floor(tileSize / 2));
       const alphaIndex = ((sampleY * width) + sampleX) * 4 + 3;
-      const isTextPixel = maskData[alphaIndex] > 20;
-      const pool = isTextPixel ? pools.text : pools.background;
-      const poolIndex = (hashSeed + column * 17 + row * 31) % pool.length;
-      const tile = pool[poolIndex];
-      outputContext.drawImage(tile.canvas, x, y, tileSize, tileSize);
+      positions.push({
+        x,
+        y,
+        isTextPixel: maskData[alphaIndex] > 20,
+      });
     }
   }
 
-  outputContext.fillStyle = pools.textUsesDark
+  const hashSeed = signatureHash(getIamAcuiteSignature(photos));
+  const darkPhotos = deterministicShuffle(preparedPhotos.filter((item) => item.brightness < 128), hashSeed + 11);
+  const lightPhotos = deterministicShuffle(preparedPhotos.filter((item) => item.brightness >= 128), hashSeed + 29);
+  const textUsesDark = darkPhotos.length >= lightPhotos.length;
+  let textPhotoQueue = textUsesDark ? darkPhotos.slice() : lightPhotos.slice();
+  let backgroundPhotoQueue = textUsesDark ? lightPhotos.slice() : darkPhotos.slice();
+  const textPlaceholderQueue = createIamAcuitePlaceholderTiles(IAM_ACUITE_TILE_COUNT, textUsesDark ? "dark" : "light", hashSeed + 101);
+  const backgroundPlaceholderQueue = createIamAcuitePlaceholderTiles(IAM_ACUITE_TILE_COUNT, textUsesDark ? "light" : "dark", hashSeed + 211);
+
+  positions.forEach((position) => {
+    const tile = position.isTextPixel
+      ? pullIamAcuiteTile(textPhotoQueue, backgroundPhotoQueue, textPlaceholderQueue)
+      : pullIamAcuiteTile(backgroundPhotoQueue, textPhotoQueue, backgroundPlaceholderQueue);
+    outputContext.drawImage(tile.canvas, position.x, position.y, tileSize, tileSize);
+  });
+
+  outputContext.fillStyle = textUsesDark
     ? "rgba(255,255,255,0.08)"
     : "rgba(9,12,18,0.12)";
   outputContext.fillRect(0, 0, width, height);
-  drawIamAcuiteTextOverlay(outputContext, width, height, pools.textUsesDark);
+  drawIamAcuiteTextOverlay(outputContext, width, height, textUsesDark);
 
   return {
     dataUrl: outputCanvas.toDataURL("image/jpeg", 0.92),
-    contrastMode: pools.textUsesDark ? "darker" : "lighter",
+    contrastMode: textUsesDark ? "darker" : "lighter",
   };
 }
 
-function createIamAcuiteContrastPools(preparedPhotos) {
-  const sorted = preparedPhotos.slice().sort((left, right) => left.brightness - right.brightness);
-  let darkPool = sorted.filter((item) => item.brightness < 125);
-  let brightPool = sorted.filter((item) => item.brightness >= 150);
+function pullIamAcuiteTile(primaryQueue, secondaryQueue, placeholderQueue) {
+  return primaryQueue.shift() || secondaryQueue.shift() || placeholderQueue.shift() || createSingleIamAcuitePlaceholder("light", 0);
+}
 
-  if (!darkPool.length || !brightPool.length) {
-    const midpoint = Math.max(1, Math.floor(sorted.length / 2));
-    darkPool = sorted.slice(0, midpoint);
-    brightPool = sorted.slice(midpoint);
+function createIamAcuitePlaceholderTiles(count, tone, seed) {
+  const tiles = [];
+  for (let index = 0; index < count; index += 1) {
+    tiles.push(createSingleIamAcuitePlaceholder(tone, index));
   }
+  return deterministicShuffle(tiles, seed);
+}
 
-  if (!brightPool.length) {
-    brightPool = sorted.slice(Math.floor(sorted.length / 2));
+function createSingleIamAcuitePlaceholder(tone, index) {
+  const palette = tone === "dark"
+    ? ["#181818", "#2a1206", "#35210b", "#5c1f12", "#143119", "#27323c"]
+    : ["#f7941d", "#ffc72c", "#8dc63f", "#f1e1b8", "#f6b66b", "#dce7b1"];
+  const color = palette[index % palette.length];
+  const canvas = document.createElement("canvas");
+  canvas.width = 72;
+  canvas.height = 72;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return {
+      canvas,
+      brightness: tone === "dark" ? 40 : 220,
+    };
   }
-  if (!darkPool.length) {
-    darkPool = sorted.slice(0, Math.max(1, Math.ceil(sorted.length / 2)));
-  }
-  if (!brightPool.length) {
-    brightPool = sorted.slice(-1);
-  }
-  if (!darkPool.length) {
-    darkPool = sorted.slice(0, 1);
-  }
-
-  const textUsesDark = brightPool.length >= darkPool.length;
+  context.fillStyle = color;
+  context.fillRect(0, 0, canvas.width, canvas.height);
   return {
-    textUsesDark,
-    text: textUsesDark ? darkPool : brightPool,
-    background: textUsesDark ? brightPool : darkPool,
+    id: `placeholder-${tone}-${index}`,
+    canvas,
+    brightness: tone === "dark" ? 48 : 210,
   };
 }
 
@@ -5429,10 +5436,10 @@ function drawIamAcuiteMask(context, width, height) {
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = "#fff";
-  context.font = "700 140px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.fillText("I AM", width / 2, height * 0.34);
-  context.font = "800 255px 'Avenir Next', 'Segoe UI', sans-serif";
-  context.fillText("ACUITÉ", width / 2, height * 0.62);
+  context.font = "700 120px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillText("I am", width / 2, height * 0.33);
+  context.font = "800 232px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillText("Acuite", width / 2, height * 0.63);
 }
 
 function drawIamAcuiteTextOverlay(context, width, height, textUsesDark) {
@@ -5440,16 +5447,16 @@ function drawIamAcuiteTextOverlay(context, width, height, textUsesDark) {
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.lineJoin = "round";
-  context.font = "700 140px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.font = "700 120px 'Avenir Next', 'Segoe UI', sans-serif";
   context.fillStyle = textUsesDark ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.18)";
   context.strokeStyle = textUsesDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)";
   context.lineWidth = 4;
-  context.fillText("I AM", width / 2, height * 0.34);
-  context.strokeText("I AM", width / 2, height * 0.34);
-  context.font = "800 255px 'Avenir Next', 'Segoe UI', sans-serif";
+  context.fillText("I am", width / 2, height * 0.33);
+  context.strokeText("I am", width / 2, height * 0.33);
+  context.font = "800 232px 'Avenir Next', 'Segoe UI', sans-serif";
   context.lineWidth = 8;
-  context.fillText("ACUITÉ", width / 2, height * 0.62);
-  context.strokeText("ACUITÉ", width / 2, height * 0.62);
+  context.fillText("Acuite", width / 2, height * 0.63);
+  context.strokeText("Acuite", width / 2, height * 0.63);
   context.restore();
 }
 
@@ -5504,6 +5511,16 @@ function signatureHash(value) {
   return String(value || "").split("").reduce((total, character) => {
     return (total + character.charCodeAt(0)) % 100000;
   }, 0);
+}
+
+function deterministicShuffle(items, seed) {
+  return items
+    .map((item, index) => ({
+      item,
+      order: signatureHash(`${seed}:${index}:${item.id || item.brightness || "tile"}`),
+    }))
+    .sort((left, right) => left.order - right.order)
+    .map((entry) => entry.item);
 }
 
 function gradientValue(key) {
