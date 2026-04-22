@@ -1254,6 +1254,14 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "return-ceo-current-message") {
+      selectedCeoDeskArchiveKey = "";
+      renderCeoDeskMessage();
+      renderCeoDeskLikeButton();
+      scrollCeoDeskMessageIntoView();
+      return;
+    }
+
     if (actionName === "close-profile-builder") {
       closeProfileBuilder();
       return;
@@ -2148,9 +2156,11 @@ function renderCeoDeskMessage() {
   const dateEl = document.getElementById("ceo-desk-message-date");
   const titleEl = document.getElementById("ceo-desk-message-title");
   const copyEl = document.getElementById("ceo-desk-copy");
+  const actionsEl = document.querySelector(".ceo-desk-actions");
   const archiveEl = document.getElementById("ceo-desk-archive-list");
   const form = document.getElementById("ceo-desk-post-form");
   const message = getCurrentCeoDeskMessage();
+  const viewingArchive = Boolean(selectedCeoDeskArchiveKey);
 
   if (dateEl) {
     dateEl.textContent = message.date;
@@ -2163,6 +2173,16 @@ function renderCeoDeskMessage() {
     copyEl.innerHTML = bodyParts
       .map((paragraph) => `<p>${escapeHtml(String(paragraph || "")).replace(/\n/g, "<br>")}</p>`)
       .join("");
+  }
+  if (actionsEl) {
+    actionsEl.innerHTML = `
+      ${
+        viewingArchive
+          ? '<button type="button" class="btn-ghost ceo-desk-return-btn" data-action="return-ceo-current-message">Back to current message</button>'
+          : ""
+      }
+      <button type="button" class="ceo-desk-like-btn" id="ceo-desk-like-btn"></button>
+    `;
   }
   if (archiveEl) {
     const archiveItems = getCeoDeskArchiveItems();
@@ -3367,18 +3387,22 @@ function renderCeoDeskLikeButton() {
   if (!button) {
     return;
   }
-  const message = getCurrentCeoDeskMessage();
-  const isArchiveFallbackMessage = Boolean(selectedCeoDeskArchiveKey && !message.sourceId);
-  button.hidden = isArchiveFallbackMessage;
-  if (isArchiveFallbackMessage) {
+  const currentMessage = getPrimaryCeoDeskMessage();
+  const viewingArchive = Boolean(selectedCeoDeskArchiveKey);
+  const liked = Boolean(currentMessage.currentUserHasReacted);
+  const totalLikes = Number(currentMessage.reactionCount || 0);
+  button.textContent = viewingArchive
+    ? `Current message likes (${totalLikes})`
+    : `${liked ? "Liked" : "Like"} (${totalLikes})`;
+  button.classList.toggle("liked", liked);
+  button.disabled = viewingArchive;
+  if (viewingArchive) {
+    button.removeAttribute("data-action");
+    button.removeAttribute("data-id");
     return;
   }
-  const liked = Boolean(message.currentUserHasReacted);
-  const totalLikes = Number(message.reactionCount || 0);
-  button.textContent = `${liked ? "Liked" : "Like"} (${totalLikes})`;
-  button.classList.toggle("liked", liked);
-  button.dataset.action = message.sourceId ? "toggle-live-reaction" : "toggle-like";
-  button.dataset.id = String(message.sourceId || CEO_DESK_EDITORIAL.id);
+  button.dataset.action = currentMessage.sourceId ? "toggle-live-reaction" : "toggle-like";
+  button.dataset.id = String(currentMessage.sourceId || CEO_DESK_EDITORIAL.id);
 }
 
 function renderAdminPanel() {
@@ -4195,6 +4219,10 @@ function getCurrentCeoDeskMessage() {
     return archivedMessage;
   }
 
+  return getPrimaryCeoDeskMessage();
+}
+
+function getPrimaryCeoDeskMessage() {
   const livePost = getCeoDeskPosts()[0];
   if (!livePost) {
     const liked = state.likedPostIds.includes(CEO_DESK_EDITORIAL.id);
