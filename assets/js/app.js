@@ -125,6 +125,15 @@ const BULLETIN_TEMPLATE_LIBRARY = [
       "We are planning an upcoming offsite focused on collaboration, reflection and future priorities. Please indicate your availability once dates and logistics are shared.",
   },
 ];
+
+function getCurrentBuildNumber() {
+  const buildDisplay = document.getElementById("build-number-display");
+  if (!buildDisplay) {
+    return "";
+  }
+  const match = String(buildDisplay.textContent || "").match(/BUILD\s+([0-9.]+)/i);
+  return match ? match[1] : "";
+}
 const DEFAULT_CEO_DESK_MESSAGE = {
   date: "April 21, 2026",
   title: "Welcome to Acuité Connect",
@@ -4781,7 +4790,16 @@ function hydrateCeoDeskCache() {
 function readLearningCache() {
   try {
     const raw = window.localStorage.getItem(LEARNING_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    const currentBuildNumber = getCurrentBuildNumber();
+    if (parsed && currentBuildNumber && parsed.buildNumber !== currentBuildNumber) {
+      window.localStorage.removeItem(LEARNING_CACHE_KEY);
+      return null;
+    }
+    return parsed;
   } catch (error) {
     return null;
   }
@@ -4826,6 +4844,7 @@ function saveLearningCache() {
     window.localStorage.setItem(
       LEARNING_CACHE_KEY,
       JSON.stringify({
+        buildNumber: getCurrentBuildNumber(),
         cachedAt: learningCachedAt || new Date().toISOString(),
         results: appData.learningBooks,
       }),
