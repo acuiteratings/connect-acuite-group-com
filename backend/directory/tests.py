@@ -119,7 +119,7 @@ class DirectoryApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["filters"]["location"], ["Delhi", "Mumbai"])
+        self.assertEqual(payload["filters"]["location"], ["Mumbai", "New Delhi"])
         mumbai_result = next(item for item in payload["results"] if item["email"] == "mumbai.branch@acuite.in")
         self.assertEqual(mumbai_result["branch_location"], "Mumbai")
 
@@ -186,6 +186,32 @@ class DirectoryApiTests(TestCase):
         self.assertNotIn("Krishna", payload["filters"]["location"])
         result = next(item for item in payload["results"] if item["email"] == "wrong.city@acuite.in")
         self.assertEqual(result["branch_location"], "Mumbai")
+
+    def test_directory_locations_are_limited_to_official_offices(self):
+        user = User.objects.create_user(
+            email="stray.city@acuite.in",
+            first_name="Stray",
+            last_name="City",
+            title="Analyst",
+            department="Technology",
+            location="West Delhi",
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            company_name="Acuite",
+            department_for_connect="Rating Operations",
+            city="Krishna",
+            office_location="",
+        )
+
+        response = self.client.get("/api/directory/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertNotIn("Krishna", payload["filters"]["location"])
+        self.assertNotIn("West Delhi", payload["filters"]["location"])
+        result = next(item for item in payload["results"] if item["email"] == "stray.city@acuite.in")
+        self.assertEqual(result["branch_location"], "")
 
     def test_directory_can_filter_by_department_for_connect(self):
         corporate_user = User.objects.create_user(
@@ -271,7 +297,7 @@ class DirectoryApiTests(TestCase):
             "/api/directory/me/",
             data={
                 "skills": ["Compliance", "Mentoring", "Not In Library"],
-                "hobbies": ["Reading", "Running"],
+                "hobbies": ["Reading Club", "Cricket Club", "Running"],
                 "interests": "Training Delivery, CSR",
                 "profile_photos": [
                     "data:image/png;base64,AAAA",
@@ -285,7 +311,7 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         user.directory_profile.refresh_from_db()
         self.assertEqual(user.directory_profile.skills, ["Compliance", "Mentoring"])
-        self.assertEqual(user.directory_profile.hobbies, ["Reading", "Running"])
+        self.assertEqual(user.directory_profile.hobbies, ["Reading Club", "Cricket Club"])
         self.assertEqual(user.directory_profile.interests, ["Training Delivery", "CSR"])
         self.assertEqual(len(user.directory_profile.profile_photos), 2)
 

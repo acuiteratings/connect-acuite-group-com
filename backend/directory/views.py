@@ -216,8 +216,13 @@ def my_profile(request):
         for skill in normalize_string_list(payload.get("skills"), max_items=10)
         if skill in PROFILE_SKILL_LIBRARY
     ]
+    allowed_hobby_labels = {item["label"] for item in COMMUNITY_CLUB_LIBRARY}
     profile.skills = selected_skills
-    profile.hobbies = normalize_string_list(payload.get("hobbies"), max_items=12)
+    profile.hobbies = [
+        hobby
+        for hobby in normalize_string_list(payload.get("hobbies"), max_items=12)
+        if hobby in allowed_hobby_labels
+    ]
     profile.interests = normalize_string_list(payload.get("interests"), max_items=12)
     profile.profile_photos = normalize_profile_photos(payload.get("profile_photos"), max_items=2)
     profile.save(update_fields=["skills", "hobbies", "interests", "profile_photos", "department_for_connect", "updated_at"])

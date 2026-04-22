@@ -4084,6 +4084,13 @@ select {
   gap: 8px;
 }
 
+.profile-hobby-library {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+}
+
 .profile-skill-chip {
   padding: 7px 12px;
   border-radius: 999px;
@@ -4100,6 +4107,10 @@ select {
   border-color: rgba(247, 148, 29, 0.22);
   background: rgba(247, 148, 29, 0.14);
   color: var(--orange);
+}
+
+.profile-hobby-library .profile-skill-chip {
+  font-size: 13px;
 }
 
 .profile-builder-actions {

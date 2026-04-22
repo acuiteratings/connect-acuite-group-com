@@ -772,6 +772,7 @@ async function init() {
   try {
     const criticalTasks = [
       loadCurrentProfile(),
+      loadCommunityData(),
       loadHomeAnnouncementPosts(),
       loadBulletinPosts(),
       loadCeoDeskPosts(),
@@ -1141,12 +1142,6 @@ function bindEvents() {
     renderDirectory();
   });
 
-  if (elements.profileHobbiesInput) {
-    elements.profileHobbiesInput.addEventListener("input", (event) => {
-      profileBuilderDraft.hobbiesText = event.target.value;
-    });
-  }
-
   if (elements.profileInterestsInput) {
     elements.profileInterestsInput.addEventListener("input", (event) => {
       profileBuilderDraft.interestsText = event.target.value;
@@ -1307,6 +1302,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "toggle-profile-skill") {
       toggleProfileSkill(action.dataset.skill);
+      return;
+    }
+
+    if (actionName === "toggle-profile-hobby") {
+      toggleProfileHobby(action.dataset.hobby);
       return;
     }
 
@@ -2423,9 +2423,6 @@ function renderProfileBuilder() {
   }
 
   elements.profileBuilderForm.classList.toggle("is-disabled", Boolean(profileBuilderLoadError));
-  if (elements.profileHobbiesInput) {
-    elements.profileHobbiesInput.value = profileBuilderDraft.hobbiesText;
-  }
   if (elements.profileInterestsInput) {
     elements.profileInterestsInput.value = profileBuilderDraft.interestsText;
   }
@@ -2464,6 +2461,24 @@ function renderProfileBuilder() {
           </button>
         `).join("")
       : `<div class="mini-item-meta">Skill library is loading...</div>`;
+  }
+
+  if (elements.profileHobbiesInput) {
+    const hobbyOptions = appData.communityClubs.length
+      ? appData.communityClubs.map((club) => club.label)
+      : [];
+    elements.profileHobbiesInput.innerHTML = hobbyOptions.length
+      ? hobbyOptions.map((hobby) => `
+          <button
+            type="button"
+            class="profile-skill-chip ${profileBuilderDraft.hobbies.includes(hobby) ? "active" : ""}"
+            data-action="toggle-profile-hobby"
+            data-hobby="${escapeHtml(hobby)}"
+          >
+            ${escapeHtml(hobby)}
+          </button>
+        `).join("")
+      : `<div class="mini-item-meta">Community clubs are loading...</div>`;
   }
 
   if (elements.profileBuilderStatus) {
@@ -4979,7 +4994,7 @@ function createDirectoryFilterOptions() {
 function createProfileBuilderDraft() {
   return {
     skills: [],
-    hobbiesText: "",
+    hobbies: [],
     interestsText: "",
     photos: [],
   };
@@ -4991,7 +5006,7 @@ function createProfileDraftFromProfile(profile) {
   }
   return {
     skills: Array.isArray(profile.skills) ? profile.skills.slice(0, 10) : [],
-    hobbiesText: Array.isArray(profile.hobbies) ? profile.hobbies.join(", ") : "",
+    hobbies: Array.isArray(profile.hobbies) ? profile.hobbies.slice(0, 12) : [],
     interestsText: Array.isArray(profile.interests) ? profile.interests.join(", ") : "",
     photos: Array.isArray(profile.profile_photos) ? profile.profile_photos.slice(0, 2) : [],
   };
@@ -5609,6 +5624,23 @@ function toggleProfileSkill(skill) {
   renderProfileBuilder();
 }
 
+function toggleProfileHobby(hobby) {
+  if (!hobby) {
+    return;
+  }
+  if (profileBuilderDraft.hobbies.includes(hobby)) {
+    profileBuilderDraft.hobbies = profileBuilderDraft.hobbies.filter((item) => item !== hobby);
+    renderProfileBuilder();
+    return;
+  }
+  if (profileBuilderDraft.hobbies.length >= 12) {
+    showToast("You can select up to 12 hobbies.");
+    return;
+  }
+  profileBuilderDraft.hobbies = [...profileBuilderDraft.hobbies, hobby];
+  renderProfileBuilder();
+}
+
 function clearProfilePhoto(index) {
   if (Number.isNaN(index) || index < 0 || index > 1) {
     return;
@@ -5659,7 +5691,7 @@ async function saveProfileBuilder() {
       method: "POST",
       body: {
         skills: profileBuilderDraft.skills,
-        hobbies: profileBuilderDraft.hobbiesText,
+        hobbies: profileBuilderDraft.hobbies,
         interests: profileBuilderDraft.interestsText,
         profile_photos: profileBuilderDraft.photos.filter(Boolean),
       },
