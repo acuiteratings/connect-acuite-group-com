@@ -156,6 +156,12 @@
           </svg>
           Report an Error
         </button>
+        <button type="button" class="tab admin-tab" id="engagement-score-sidebar-tab" data-switch-tab="engagement-score" hidden>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h3v7H5v-7zm5-5h3v12h-3V7zm5 3h3v9h-3v-9z"></path>
+          </svg>
+          Engagement Score
+        </button>
       </div>
     </aside>
 
@@ -1019,6 +1025,45 @@
               <button type="submit" class="btn-warm">Send report</button>
             </div>
           </form>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-engagement-score">
+        <div class="section-head">
+          <div>
+            <h2>Engagement Score</h2>
+            <p>Admin-only employee engagement view based on likes, comments, logins and published messages.</p>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Admin Analytics</p>
+              <h2>Employee engagement table</h2>
+              <div class="mini-item-meta" id="engagement-score-meta">Loading engagement scores...</div>
+            </div>
+          </div>
+          <div class="engagement-score-table-wrap">
+            <table class="engagement-score-table">
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Employee Code</th>
+                  <th>Likes given</th>
+                  <th>Comments given</th>
+                  <th>Logins done</th>
+                  <th>Messages posted</th>
+                  <th>Engagement Score</th>
+                </tr>
+              </thead>
+              <tbody id="engagement-score-table-body">
+                <tr>
+                  <td colspan="7">Loading engagement scores...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       </section>
 

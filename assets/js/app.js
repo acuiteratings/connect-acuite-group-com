@@ -45,7 +45,7 @@ const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
-const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "report-error", "help"]);
+const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "report-error", "engagement-score", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -512,6 +512,8 @@ Object.assign(appData, {
   myPosts: [],
   communityClubs: [],
   communityPostsByClub: {},
+  engagementScores: [],
+  engagementScoreFormula: null,
   directory: [],
   birthdays: [],
   anniversaries: [],
@@ -567,6 +569,8 @@ let communityPostsLoadingKey = "";
 let communityPostsSubmittingKey = "";
 let communityPostsErrorByClub = {};
 let profileBuilderLoadError = "";
+let engagementScoreLoadError = "";
+let engagementScoreLoading = false;
 let profileBuilderDraft = createProfileBuilderDraft();
 let profileMenuOpen = false;
 let activeCommentsPostId = 0;
@@ -738,6 +742,9 @@ async function init() {
     reportErrorSourceMeta: document.getElementById("report-error-source-meta"),
     reportErrorTitleInput: document.getElementById("report-error-title"),
     reportErrorDetailsInput: document.getElementById("report-error-details"),
+    engagementScoreSidebarTab: document.getElementById("engagement-score-sidebar-tab"),
+    engagementScoreMeta: document.getElementById("engagement-score-meta"),
+    engagementScoreTableBody: document.getElementById("engagement-score-table-body"),
     profileMenu: document.getElementById("profile-menu"),
     profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
     commentsModalBackdrop: document.getElementById("comments-modal-backdrop"),
@@ -1166,6 +1173,47 @@ async function loadAdminUsers() {
     appData.adminUsers = Array.isArray(payload.results) ? payload.results : [];
   } catch (error) {
     adminUsersLoadError = error.message || "Could not load employee admin tools.";
+  }
+}
+
+async function loadEngagementScores({ force = false } = {}) {
+  if (engagementScoreLoading) {
+    return;
+  }
+  if (!currentUserCanAdministerConnect()) {
+    appData.engagementScores = [];
+    appData.engagementScoreFormula = null;
+    engagementScoreLoadError = "Admin access required.";
+    renderEngagementScorePanel();
+    return;
+  }
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    appData.engagementScores = [];
+    appData.engagementScoreFormula = null;
+    engagementScoreLoadError = "Engagement analytics are unavailable in this build.";
+    renderEngagementScorePanel();
+    return;
+  }
+  if (!force && appData.engagementScores.length) {
+    return;
+  }
+
+  engagementScoreLoading = true;
+  engagementScoreLoadError = "";
+  renderEngagementScorePanel();
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/engagement-score/");
+    appData.engagementScores = Array.isArray(payload.results) ? payload.results : [];
+    appData.engagementScoreFormula = payload.formula && typeof payload.formula === "object"
+      ? payload.formula
+      : null;
+  } catch (error) {
+    appData.engagementScores = [];
+    appData.engagementScoreFormula = null;
+    engagementScoreLoadError = error.message || "Could not load the engagement score table.";
+  } finally {
+    engagementScoreLoading = false;
+    renderEngagementScorePanel();
   }
 }
 
@@ -1751,6 +1799,7 @@ function renderAll() {
   safeRender("my posts panel", renderMyPostsPanel);
   safeRender("community panel", renderCommunityPanel);
   safeRender("report error panel", renderReportErrorPanel);
+  safeRender("engagement score panel", renderEngagementScorePanel);
   safeRender("admin panel", renderAdminPanel);
   if (state.activeTab === "directory") {
     safeRender("directory filters", renderDirectoryChips);
@@ -2463,6 +2512,10 @@ function renderPanels() {
     state.activeTab = "library";
     saveState();
   }
+  if (!canAdminister && state.activeTab === "engagement-score") {
+    state.activeTab = "home";
+    saveState();
+  }
   if (!ENABLED_TABS.has(state.activeTab)) {
     state.activeTab = "home";
     saveState();
@@ -2474,14 +2527,21 @@ function renderPanels() {
   }
   applyTheme();
   const adminPanel = document.getElementById("panel-admin");
+  const engagementScorePanel = document.getElementById("panel-engagement-score");
   if (elements.adminSidebarTab) {
     elements.adminSidebarTab.hidden = !canAdminister;
+  }
+  if (elements.engagementScoreSidebarTab) {
+    elements.engagementScoreSidebarTab.hidden = !canAdminister;
   }
   if (elements.bulletinAdminOpenButton) {
     elements.bulletinAdminOpenButton.hidden = !canAdminister;
   }
   if (adminPanel) {
     adminPanel.hidden = !canAdminister;
+  }
+  if (engagementScorePanel) {
+    engagementScorePanel.hidden = !canAdminister;
   }
   const ceoPostForm = document.getElementById("ceo-desk-post-form");
   if (ceoPostForm) {
@@ -3577,6 +3637,7 @@ function reportErrorSourceLabel(tabId) {
     directory: "People Directory",
     profile: "My Profile",
     "report-error": "Report an Error",
+    "engagement-score": "Engagement Score",
     help: "Help",
   };
   return labels[String(tabId || "").trim()] || "Unknown page";
@@ -3588,6 +3649,63 @@ function renderReportErrorPanel() {
   }
   const sourceTab = state.reportErrorSourceTab || state.activeTab;
   elements.reportErrorSourceMeta.textContent = `This report will include the page: ${reportErrorSourceLabel(sourceTab)}.`;
+}
+
+function renderEngagementScorePanel() {
+  if (!elements.engagementScoreMeta || !elements.engagementScoreTableBody) {
+    return;
+  }
+
+  if (!currentUserCanAdministerConnect()) {
+    elements.engagementScoreMeta.textContent = "Admin access required.";
+    elements.engagementScoreTableBody.innerHTML = '<tr><td colspan="7">Admin access required.</td></tr>';
+    return;
+  }
+
+  if (
+    state.activeTab === "engagement-score"
+    && !engagementScoreLoading
+    && !engagementScoreLoadError
+    && !appData.engagementScores.length
+  ) {
+    void loadEngagementScores();
+  }
+
+  if (engagementScoreLoading && !appData.engagementScores.length) {
+    elements.engagementScoreMeta.textContent = "Loading engagement scores...";
+    elements.engagementScoreTableBody.innerHTML = '<tr><td colspan="7">Loading engagement scores...</td></tr>';
+    return;
+  }
+
+  if (engagementScoreLoadError) {
+    elements.engagementScoreMeta.textContent = "Engagement score issue";
+    elements.engagementScoreTableBody.innerHTML = `<tr><td colspan="7">${escapeHtml(engagementScoreLoadError)}</td></tr>`;
+    return;
+  }
+
+  if (!appData.engagementScores.length) {
+    elements.engagementScoreMeta.textContent = "No engagement records yet.";
+    elements.engagementScoreTableBody.innerHTML = '<tr><td colspan="7">No employee engagement records are available yet.</td></tr>';
+    return;
+  }
+
+  const weights = appData.engagementScoreFormula?.weights || {};
+  const messagesWeight = Math.round(Number(weights.messages_posted || 0) * 100);
+  const loginsWeight = Math.round(Number(weights.logins_done || 0) * 100);
+  const likesWeight = Math.round(Number(weights.likes_given || 0) * 100);
+  const commentsWeight = Math.round(Number(weights.comments_given || 0) * 100);
+  elements.engagementScoreMeta.textContent = `${appData.engagementScores.length} employees | 0-10 scale | messages ${messagesWeight}% | logins ${loginsWeight}% | likes ${likesWeight}% | comments ${commentsWeight}%`;
+  elements.engagementScoreTableBody.innerHTML = appData.engagementScores.map((row) => `
+    <tr>
+      <td>${escapeHtml(String(row.employee_name || "Unknown employee"))}</td>
+      <td>${escapeHtml(String(row.employee_code || "—"))}</td>
+      <td>${escapeHtml(Number(row.likes_given || 0).toLocaleString())}</td>
+      <td>${escapeHtml(Number(row.comments_given || 0).toLocaleString())}</td>
+      <td>${escapeHtml(Number(row.logins_done || 0).toLocaleString())}</td>
+      <td>${escapeHtml(Number(row.messages_posted || 0).toLocaleString())}</td>
+      <td><span class="engagement-score-pill">${escapeHtml(Number(row.engagement_score || 0).toFixed(1))}</span></td>
+    </tr>
+  `).join("");
 }
 
 async function submitReportedError() {
@@ -5083,6 +5201,9 @@ function switchTab(tabId) {
   saveState();
   if (state.activeTab === "community" && !communityLoading && !appData.communityClubs.length) {
     void loadCommunityData();
+  }
+  if (state.activeTab === "engagement-score") {
+    void loadEngagementScores();
   }
   hideSearchResults();
   renderPanels();

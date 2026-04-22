@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from directory.models import DirectoryProfile
-from feed.models import Comment, Post
+from feed.models import Comment, Post, PostReaction
 from feed.serializers import serialize_comment, serialize_post
 
 from .models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
@@ -354,6 +354,109 @@ def reported_error_detail(request, reported_error_id):
     )
     event.delete()
     return JsonResponse({"reported_error": serialized, "deleted": True})
+
+
+def engagement_score_overview(request):
+    if not _is_admin_user(request.user):
+        return _forbidden("Admin access required.")
+
+    login_event_names = [
+        "login_completed",
+        "employee_sso_login_completed",
+        "password_changed_during_login",
+    ]
+    users = list(
+        User.objects.filter(
+            is_active=True,
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+        .annotate(
+            likes_given=Count(
+                "post_reactions",
+                filter=Q(post_reactions__reaction_type=PostReaction.ReactionType.LIKE),
+                distinct=True,
+            ),
+            comments_given=Count(
+                "comments",
+                filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
+                distinct=True,
+            ),
+            logins_done=Count(
+                "analytics_events",
+                filter=Q(
+                    analytics_events__category="auth",
+                    analytics_events__event_name__in=login_event_names,
+                ),
+                distinct=True,
+            ),
+            messages_posted=Count(
+                "posts",
+                filter=Q(posts__moderation_status=Post.ModerationStatus.PUBLISHED),
+                distinct=True,
+            ),
+        )
+        .order_by("display_name", "first_name", "last_name", "email")
+    )
+
+    maxima = {
+        "likes_given": max((int(getattr(user, "likes_given", 0) or 0) for user in users), default=0),
+        "comments_given": max((int(getattr(user, "comments_given", 0) or 0) for user in users), default=0),
+        "logins_done": max((int(getattr(user, "logins_done", 0) or 0) for user in users), default=0),
+        "messages_posted": max((int(getattr(user, "messages_posted", 0) or 0) for user in users), default=0),
+    }
+
+    weights = {
+        "likes_given": 0.20,
+        "comments_given": 0.20,
+        "logins_done": 0.25,
+        "messages_posted": 0.35,
+    }
+
+    results = []
+    for user in users:
+        values = {
+            "likes_given": int(getattr(user, "likes_given", 0) or 0),
+            "comments_given": int(getattr(user, "comments_given", 0) or 0),
+            "logins_done": int(getattr(user, "logins_done", 0) or 0),
+            "messages_posted": int(getattr(user, "messages_posted", 0) or 0),
+        }
+        normalized_score = sum(
+            (
+                (values[key] / maxima[key]) if maxima[key] else 0
+            ) * weights[key]
+            for key in weights
+        )
+        engagement_score = round(normalized_score * 10, 1) if normalized_score else 0.0
+        results.append(
+            {
+                "id": user.id,
+                "employee_name": user.full_name,
+                "employee_code": user.employee_code,
+                **values,
+                "engagement_score": engagement_score,
+            }
+        )
+
+    results.sort(
+        key=lambda item: (
+            -item["engagement_score"],
+            -item["messages_posted"],
+            -item["comments_given"],
+            -item["likes_given"],
+            item["employee_name"].casefold(),
+        )
+    )
+    return JsonResponse(
+        {
+            "count": len(results),
+            "results": results,
+            "formula": {
+                "scale": "0-10",
+                "weights": weights,
+                "normalization": "relative_to_current_maximums",
+            },
+        }
+    )
 
 
 def analytics_recent(request):

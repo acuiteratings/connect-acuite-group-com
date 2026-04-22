@@ -597,6 +597,49 @@ select {
   max-width: 760px;
 }
 
+.engagement-score-table-wrap {
+  overflow-x: auto;
+}
+
+.engagement-score-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.engagement-score-table th,
+.engagement-score-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.engagement-score-table th {
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.engagement-score-table tbody tr:hover {
+  background: rgba(247, 148, 29, 0.06);
+}
+
+.engagement-score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(247, 148, 29, 0.12);
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .sidebar-holiday-list {
   display: grid;
   gap: 10px;

@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from directory.models import DirectoryProfile
-from feed.models import Comment, Post
+from feed.models import Comment, Post, PostReaction
 
 from .builds import get_current_build_number
 from .celebrations import publish_daily_celebration_posts
@@ -27,7 +27,18 @@ class OperationsApiTests(TestCase):
             last_name="Erator",
             title="Internal Comms",
             department="HR",
+            employee_code="MOD001",
             access_level=User.AccessLevel.MODERATOR,
+        )
+        self.admin = User.objects.create_user(
+            email="admin@acuite.in",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            title="Operations",
+            department="HR",
+            employee_code="ADM001",
+            access_level=User.AccessLevel.ADMIN,
         )
         self.employee = User.objects.create_user(
             email="employee@acuite.in",
@@ -36,6 +47,7 @@ class OperationsApiTests(TestCase):
             last_name="Employee",
             title="Analyst",
             department="Ratings",
+            employee_code="EMP001",
         )
         self.pending_post = Post.objects.create(
             author=self.employee,
@@ -123,6 +135,13 @@ class OperationsApiTests(TestCase):
         self.assertEqual(reported_error.reporter, self.employee)
         self.assertEqual(reported_error.source_tab, "bulletin")
 
+    def test_engagement_score_overview_requires_admin_access(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get("/api/ops/engagement-score/")
+
+        self.assertEqual(response.status_code, 403)
+
     def test_only_admin_can_list_and_delete_reported_errors(self):
         ReportedError.objects.create(
             reporter=self.employee,
@@ -139,16 +158,7 @@ class OperationsApiTests(TestCase):
         list_response = self.client.get("/api/ops/reported-errors/")
         self.assertEqual(list_response.status_code, 403)
 
-        admin = User.objects.create_user(
-            email="admin@acuite.in",
-            password="testpass123",
-            first_name="Admin",
-            last_name="User",
-            title="Operations",
-            department="HR",
-            access_level=User.AccessLevel.ADMIN,
-        )
-        self.client.force_login(admin)
+        self.client.force_login(self.admin)
         admin_list_response = self.client.get("/api/ops/reported-errors/")
         self.assertEqual(admin_list_response.status_code, 200)
         payload = admin_list_response.json()
@@ -158,6 +168,83 @@ class OperationsApiTests(TestCase):
         delete_response = self.client.delete(f"/api/ops/reported-errors/{reported_error_id}/")
         self.assertEqual(delete_response.status_code, 200)
         self.assertEqual(ReportedError.objects.count(), 0)
+
+    def test_engagement_score_overview_returns_counts_and_scores_for_admin(self):
+        quiet_user = User.objects.create_user(
+            email="quiet@acuite.in",
+            password="testpass123",
+            first_name="Quiet",
+            last_name="User",
+            title="Associate",
+            department="Ratings",
+            employee_code="EMP002",
+        )
+        liked_post_one = Post.objects.create(
+            author=self.staff,
+            title="Liked once",
+            body="Published content",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        liked_post_two = Post.objects.create(
+            author=self.admin,
+            title="Liked twice",
+            body="Published content",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        Post.objects.create(
+            author=self.employee,
+            title="My first live post",
+            body="Published employee message",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        Post.objects.create(
+            author=self.employee,
+            title="My second live post",
+            body="Another published employee message",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        PostReaction.objects.create(post=liked_post_one, user=self.employee)
+        PostReaction.objects.create(post=liked_post_two, user=self.employee)
+        Comment.objects.create(
+            post=liked_post_one,
+            author=self.employee,
+            body="Thoughtful comment",
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="login_completed")
+        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="employee_sso_login_completed")
+        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="password_changed_during_login")
+        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="logout_completed")
+        AnalyticsEvent.objects.create(actor=quiet_user, category="auth", event_name="login_completed")
+
+        self.client.force_login(self.admin)
+
+        response = self.client.get("/api/ops/engagement-score/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        rows = {row["employee_name"]: row for row in payload["results"]}
+        employee_row = rows[self.employee.full_name]
+        quiet_row = rows[quiet_user.full_name]
+
+        self.assertEqual(employee_row["employee_code"], "EMP001")
+        self.assertEqual(employee_row["likes_given"], 2)
+        self.assertEqual(employee_row["comments_given"], 1)
+        self.assertEqual(employee_row["logins_done"], 3)
+        self.assertEqual(employee_row["messages_posted"], 2)
+        self.assertEqual(employee_row["engagement_score"], 10.0)
+        self.assertEqual(quiet_row["employee_code"], "EMP002")
+        self.assertEqual(quiet_row["likes_given"], 0)
+        self.assertEqual(quiet_row["comments_given"], 0)
+        self.assertEqual(quiet_row["logins_done"], 1)
+        self.assertEqual(quiet_row["messages_posted"], 0)
+        self.assertLess(quiet_row["engagement_score"], employee_row["engagement_score"])
+        self.assertEqual(payload["results"][0]["employee_name"], self.employee.full_name)
+        self.assertEqual(payload["formula"]["scale"], "0-10")
 
 
 class SecurityHeadersMiddlewareTests(TestCase):
