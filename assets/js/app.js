@@ -1311,7 +1311,7 @@ async function handleDocumentClick(event) {
     }
 
     if (actionName === "clear-profile-photo") {
-      clearProfilePhoto(Number(action.dataset.index));
+      await clearProfilePhoto(Number(action.dataset.index));
       return;
     }
 
@@ -3496,7 +3496,6 @@ function renderProfileCoinBank() {
       <span class="coin-bank-separator">|</span>
       <span><strong>Closing Balance</strong>: ${escapeHtml(String(closingBalance))}</span>
     </div>
-    <div class="mini-item-meta">Opening Balance + Earned this month - Spent this month - Expired this month = Closing Balance</div>
     <div class="mini-item-meta">Unused balance expires on 31 March or on the employee’s day of exit.</div>
   `;
 }
@@ -5641,12 +5640,20 @@ function toggleProfileHobby(hobby) {
   renderProfileBuilder();
 }
 
-function clearProfilePhoto(index) {
+async function clearProfilePhoto(index) {
   if (Number.isNaN(index) || index < 0 || index > 1) {
+    return;
+  }
+  if (!profileBuilderDraft.photos[index]) {
+    return;
+  }
+  const confirmed = window.confirm("Delete this photo?");
+  if (!confirmed) {
     return;
   }
   profileBuilderDraft.photos[index] = "";
   renderProfileBuilder();
+  await saveProfileBuilder();
 }
 
 async function handleProfilePhotoSelection(event, index) {
