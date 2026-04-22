@@ -78,6 +78,13 @@ class BrandStoreApiTests(TestCase):
         self.assertIn("monthly_summary", payload["balance"])
         self.assertTrue(any(item["name"] == "Acuite Coffee Mug" for item in payload["items"]))
         self.assertEqual(payload["balance"]["locked_points"], 0)
+        seeded_prices = {
+            item["name"]: item["coin_cost"]
+            for item in payload["items"]
+            if item["name"] in {"Acuite Coffee Mug", "Acuite T Shirt"}
+        }
+        self.assertEqual(seeded_prices["Acuite Coffee Mug"], 5000)
+        self.assertEqual(seeded_prices["Acuite T Shirt"], 10000)
 
     def test_store_overview_returns_monthly_coin_summary(self):
         CoinLedgerEntry.objects.all().delete()
