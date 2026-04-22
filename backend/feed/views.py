@@ -8,6 +8,8 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
+from directory.community_utils import get_community_club_definition
+from directory.models import CommunityMembership
 from operations.services import record_analytics_event, record_audit_event
 
 from .models import Comment, Post, PostReaction
@@ -77,6 +79,65 @@ def _can_comment(user):
 
 def _can_react(user):
     return user.is_authenticated and getattr(user, "can_react_in_connect", False)
+
+
+def _is_community_member(user, club_key):
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "can_administer_connect", False):
+        return True
+    return CommunityMembership.objects.filter(
+        user=user,
+        club_key=str(club_key or "").strip().lower(),
+    ).exists()
+
+
+def _community_access_error():
+    return JsonResponse(
+        {"detail": "Join this club before viewing or participating in its posts."},
+        status=403,
+    )
+
+
+def _validate_community_post_payload(topic, metadata):
+    club = get_community_club_definition(topic)
+    if not club:
+        return None, JsonResponse({"detail": "Invalid community club selected."}, status=400)
+    if not isinstance(metadata, dict):
+        return None, JsonResponse({"detail": "Metadata must be a JSON object."}, status=400)
+
+    primary_value = str(metadata.get("community_primary_value", "")).strip()
+    extra_value = str(metadata.get("community_extra_value", "")).strip()
+    if not primary_value:
+        return None, JsonResponse(
+            {"detail": f"{club['form']['primary_field_label']} is required."},
+            status=400,
+        )
+    if not extra_value:
+        return None, JsonResponse(
+            {"detail": f"{club['form']['extra_field_label']} is required."},
+            status=400,
+        )
+
+    normalized_metadata = {
+        **metadata,
+        "community_club_key": club["key"],
+        "community_club_label": club["label"],
+        "community_primary_label": club["form"]["primary_field_label"],
+        "community_primary_value": primary_value,
+        "community_extra_label": club["form"]["extra_field_label"],
+        "community_extra_value": extra_value,
+        "community_extra_type": club["form"]["extra_field_type"],
+        "community_post": True,
+    }
+    return normalized_metadata, None
+
+
+def _community_post_access_denied(user, post):
+    return (
+        post.module == Post.Module.COMMUNITY
+        and not _is_community_member(user, post.topic)
+    )
 
 
 def _build_ceo_request_approval_email(post):
@@ -151,10 +212,30 @@ def posts_collection(request):
         module = request.GET.get("module")
         if module:
             queryset = queryset.filter(module=module)
+        else:
+            queryset = queryset.exclude(module=Post.Module.COMMUNITY)
 
         topic = request.GET.get("topic")
         if topic:
             queryset = queryset.filter(topic=topic)
+
+        if module == Post.Module.COMMUNITY:
+            if not request.user.is_authenticated or not getattr(request.user, "has_employee_access", False):
+                return JsonResponse({"detail": "Authentication required."}, status=403)
+            if topic:
+                if not get_community_club_definition(topic):
+                    return JsonResponse({"detail": "Invalid community club selected."}, status=400)
+                if not _is_community_member(request.user, topic):
+                    return _community_access_error()
+            else:
+                allowed_clubs = list(
+                    CommunityMembership.objects.filter(user=request.user)
+                    .values_list("club_key", flat=True)
+                )
+                if not allowed_clubs and not getattr(request.user, "can_administer_connect", False):
+                    return _community_access_error()
+                if allowed_clubs:
+                    queryset = queryset.filter(topic__in=allowed_clubs)
 
         moderation_status = str(request.GET.get("moderation_status", "")).strip().lower()
         if moderation_status:
@@ -224,6 +305,15 @@ def posts_collection(request):
     if not isinstance(metadata, dict):
         return JsonResponse({"detail": "Metadata must be a JSON object."}, status=400)
 
+    if module == Post.Module.COMMUNITY:
+        if not get_community_club_definition(topic):
+            return JsonResponse({"detail": "Invalid community club selected."}, status=400)
+        if not _is_community_member(request.user, topic):
+            return _community_access_error()
+        metadata, community_error = _validate_community_post_payload(topic, metadata)
+        if community_error:
+            return community_error
+
     post_as_company = bool(payload.get("post_as_company"))
     if post_as_company and not _can_post_as_company(request.user):
         return JsonResponse(
@@ -256,7 +346,7 @@ def posts_collection(request):
             status=403,
         )
 
-    auto_publish = can_publish
+    auto_publish = can_publish or module == Post.Module.COMMUNITY
     post = Post.objects.create(
         author=request.user,
         title=title,
@@ -310,6 +400,8 @@ def post_comments(request, post_id):
         and not _can_moderate(request.user)
     ):
         return JsonResponse({"detail": "Post not available."}, status=404)
+    if _community_post_access_denied(request.user, post):
+        return _community_access_error()
 
     if request.method == "GET":
         queryset = post.comments.select_related("author")
@@ -371,6 +463,8 @@ def toggle_post_reaction(request, post_id):
         and not _can_moderate(request.user)
     ):
         return JsonResponse({"detail": "Post not available."}, status=404)
+    if _community_post_access_denied(request.user, post):
+        return _community_access_error()
 
     reaction, created = PostReaction.objects.get_or_create(
         post=post,

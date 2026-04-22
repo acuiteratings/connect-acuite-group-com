@@ -42,6 +42,7 @@ const IAM_ACUITE_COLUMNS = 25;
 const IAM_ACUITE_ROWS = 16;
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
+const FEED_MODULE_COMMUNITY = "community";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
 const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
@@ -509,6 +510,7 @@ Object.assign(appData, {
   ceoDeskPosts: [],
   myPosts: [],
   communityClubs: [],
+  communityPostsByClub: {},
   directory: [],
   birthdays: [],
   anniversaries: [],
@@ -525,6 +527,7 @@ const defaultState = {
   learningBookFilter: "all",
   learningBookQuery: "",
   bulletinFilter: "all",
+  communityClubKey: "",
   directoryFilters: createDirectoryFiltersState(),
   directoryQuery: "",
   likedPostIds: [],
@@ -560,6 +563,9 @@ let adminUsersLoadError = "";
 let communityLoadError = "";
 let communityLoading = false;
 let communitySavingKey = "";
+let communityPostsLoadingKey = "";
+let communityPostsSubmittingKey = "";
+let communityPostsErrorByClub = {};
 let profileBuilderLoadError = "";
 let profileBuilderDraft = createProfileBuilderDraft();
 let profileMenuOpen = false;
@@ -696,6 +702,8 @@ async function init() {
     myPostsResultsMeta: document.getElementById("my-posts-results-meta"),
     communityGrid: document.getElementById("community-grid"),
     communityResultsMeta: document.getElementById("community-results-meta"),
+    communityWorkspace: document.getElementById("community-workspace"),
+    communityWorkspaceBody: document.getElementById("community-workspace-body"),
     brochureBuilderMeta: document.getElementById("brochure-builder-meta"),
     brochurePickerList: document.getElementById("brochure-picker-list"),
     brochureSelectionMeta: document.getElementById("brochure-selection-meta"),
@@ -1062,6 +1070,7 @@ async function loadCommunityData() {
   try {
     const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/communities/");
     appData.communityClubs = Array.isArray(payload.results) ? payload.results : [];
+    syncActiveCommunityClub();
     if (appData.currentProfile) {
       appData.currentProfile.clubs = Array.isArray(payload.my_clubs) ? payload.my_clubs : [];
     }
@@ -1069,6 +1078,69 @@ async function loadCommunityData() {
     communityLoadError = error.message || "Could not load communities.";
   } finally {
     communityLoading = false;
+    renderCommunityPanel();
+  }
+}
+
+function syncActiveCommunityClub() {
+  const availableKeys = appData.communityClubs.map((club) => club.key);
+  if (state.communityClubKey && availableKeys.includes(state.communityClubKey)) {
+    return;
+  }
+  const preferredClub = appData.communityClubs.find((club) => club.joined) || appData.communityClubs[0];
+  state.communityClubKey = preferredClub?.key || "";
+  saveState();
+}
+
+function getActiveCommunityClub() {
+  syncActiveCommunityClub();
+  return appData.communityClubs.find((club) => club.key === state.communityClubKey) || null;
+}
+
+function setActiveCommunityClub(clubKey) {
+  const nextKey = String(clubKey || "").trim();
+  if (!nextKey) {
+    return;
+  }
+  state.communityClubKey = nextKey;
+  saveState();
+  renderCommunityPanel();
+  const club = getActiveCommunityClub();
+  if (club?.joined) {
+    void loadCommunityPosts(club.key);
+  }
+}
+
+async function loadCommunityPosts(clubKey, { force = false } = {}) {
+  const normalizedClubKey = String(clubKey || "").trim();
+  if (!normalizedClubKey || communityPostsLoadingKey === normalizedClubKey) {
+    return;
+  }
+  if (!force && Array.isArray(appData.communityPostsByClub[normalizedClubKey])) {
+    return;
+  }
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    communityPostsErrorByClub[normalizedClubKey] = "Community feed is unavailable in this build.";
+    renderCommunityPanel();
+    return;
+  }
+
+  communityPostsLoadingKey = normalizedClubKey;
+  delete communityPostsErrorByClub[normalizedClubKey];
+  renderCommunityPanel();
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(
+      `/api/feed/posts/?module=${FEED_MODULE_COMMUNITY}&topic=${encodeURIComponent(normalizedClubKey)}&limit=100`,
+    );
+    appData.communityPostsByClub[normalizedClubKey] = Array.isArray(payload.results)
+      ? payload.results.map(mapCommunityPost)
+      : [];
+  } catch (error) {
+    communityPostsErrorByClub[normalizedClubKey] = error.message || "Could not load club posts.";
+  } finally {
+    if (communityPostsLoadingKey === normalizedClubKey) {
+      communityPostsLoadingKey = "";
+    }
     renderCommunityPanel();
   }
 }
@@ -1263,6 +1335,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "select-my-posts-person") {
       selectMyPostsPerson(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "select-community-club") {
+      setActiveCommunityClub(action.dataset.clubKey);
       return;
     }
 
@@ -1566,6 +1643,12 @@ function handleSubmit(event) {
   if (event.target === elements.myPostsForm) {
     event.preventDefault();
     void submitMyPost();
+    return;
+  }
+
+  if (event.target.id === "community-post-form") {
+    event.preventDefault();
+    void submitCommunityPost(event.target);
     return;
   }
 
@@ -2515,6 +2598,7 @@ function findLivePostById(postId) {
   const allPosts = [
     ...appData.bulletinPosts,
     ...appData.myPosts,
+    ...Object.values(appData.communityPostsByClub).flat(),
   ];
   return allPosts.find((post) => Number(post.sourceId) === targetId) || null;
 }
@@ -3385,7 +3469,7 @@ function renderMyPostsPanel() {
 }
 
 function renderCommunityPanel() {
-  if (!elements.communityGrid || !elements.communityResultsMeta) {
+  if (!elements.communityGrid || !elements.communityResultsMeta || !elements.communityWorkspaceBody) {
     return;
   }
 
@@ -3396,47 +3480,74 @@ function renderCommunityPanel() {
   if (communityLoadError) {
     elements.communityResultsMeta.textContent = "Community issue";
     elements.communityGrid.innerHTML = `<div class="empty-state">${escapeHtml(communityLoadError)}</div>`;
+    elements.communityWorkspaceBody.innerHTML = `<div class="empty-state">${escapeHtml(communityLoadError)}</div>`;
     return;
   }
 
   if (communityLoading && !appData.communityClubs.length) {
     elements.communityResultsMeta.textContent = "Loading communities...";
     elements.communityGrid.innerHTML = '<div class="empty-state">Loading communities...</div>';
+    elements.communityWorkspaceBody.innerHTML = '<div class="empty-state">Loading communities...</div>';
     return;
   }
 
   if (!appData.communityClubs.length) {
     elements.communityResultsMeta.textContent = "No communities available";
     elements.communityGrid.innerHTML = '<div class="empty-state">No communities have been published yet.</div>';
+    elements.communityWorkspaceBody.innerHTML = '<div class="empty-state">No community clubs are available yet.</div>';
     return;
   }
 
+  syncActiveCommunityClub();
   const joinedCount = appData.communityClubs.filter((club) => club.joined).length;
   elements.communityResultsMeta.textContent = `${appData.communityClubs.length} communities | ${joinedCount} joined`;
   elements.communityGrid.innerHTML = appData.communityClubs.map((club) => `
-    <article class="section-card club-card">
+    <article class="section-card club-card ${state.communityClubKey === club.key ? "active" : ""}">
       <div class="club-banner ${communityGradientClass(club.key)}">
         <div class="club-emoji">${escapeHtml(COMMUNITY_CLUB_EMOJIS[club.key] || "✨")}</div>
       </div>
       <div class="club-card-body">
         <h3>${escapeHtml(club.label)}</h3>
         <p>${escapeHtml(club.description || "Join this community voluntarily and participate with colleagues.")}</p>
+        <div class="mini-item-meta">
+          ${
+            club.club_admin?.name
+              ? `Club Admin: ${escapeHtml([club.club_admin.name, club.club_admin.title].filter(Boolean).join(" | "))}`
+              : "Club Admin will be assigned to the first employee who joins."
+          }
+        </div>
         <div class="club-members">
           <span class="count">${escapeHtml(String(club.member_count || 0))} member${Number(club.member_count || 0) === 1 ? "" : "s"}</span>
-          <button
-            type="button"
-            class="btn-ghost club-join ${club.joined ? "joined" : ""}"
-            data-action="toggle-community-membership"
-            data-club-key="${escapeHtml(club.key)}"
-            data-joined="${club.joined ? "true" : "false"}"
-            ${communitySavingKey === club.key ? "disabled" : ""}
-          >
-            ${communitySavingKey === club.key ? "Saving..." : (club.joined ? "Joined" : "Join")}
-          </button>
+          <div class="community-club-actions">
+            <button
+              type="button"
+              class="btn-link"
+              data-action="select-community-club"
+              data-club-key="${escapeHtml(club.key)}"
+            >
+              Open club
+            </button>
+            <button
+              type="button"
+              class="btn-ghost club-join ${club.joined ? "joined" : ""}"
+              data-action="toggle-community-membership"
+              data-club-key="${escapeHtml(club.key)}"
+              data-joined="${club.joined ? "true" : "false"}"
+              ${communitySavingKey === club.key ? "disabled" : ""}
+            >
+              ${communitySavingKey === club.key ? "Saving..." : (club.joined ? "Joined" : "Join")}
+            </button>
+          </div>
         </div>
       </div>
     </article>
   `).join("");
+
+  const activeClub = getActiveCommunityClub();
+  if (activeClub?.joined && !Array.isArray(appData.communityPostsByClub[activeClub.key]) && !communityPostsErrorByClub[activeClub.key]) {
+    void loadCommunityPosts(activeClub.key);
+  }
+  elements.communityWorkspaceBody.innerHTML = renderCommunityWorkspace(activeClub);
 }
 
 function communityGradientClass(clubKey) {
@@ -3477,12 +3588,236 @@ async function toggleCommunityMembership(clubKey, isJoined) {
     if (appData.currentProfile) {
       appData.currentProfile.clubs = Array.isArray(payload.my_clubs) ? payload.my_clubs : [];
     }
+    syncActiveCommunityClub();
+    if (!isJoined) {
+      void loadCommunityPosts(clubKey, { force: true });
+    }
     renderCommunityPanel();
     showToast(isJoined ? "You have left the community." : "You have joined the community.");
   } catch (error) {
     showToast(error.message || "Could not update your club membership.");
   } finally {
     communitySavingKey = "";
+    renderCommunityPanel();
+  }
+}
+
+function renderCommunityWorkspace(club) {
+  if (!club) {
+    return '<div class="empty-state">Choose a club to start exploring the community space.</div>';
+  }
+
+  const feedError = communityPostsErrorByClub[club.key] || "";
+  const feedLoading = communityPostsLoadingKey === club.key && !Array.isArray(appData.communityPostsByClub[club.key]);
+  const posts = Array.isArray(appData.communityPostsByClub[club.key]) ? sortBulletinPostsNewestFirst(appData.communityPostsByClub[club.key]) : [];
+  const isSubmitting = communityPostsSubmittingKey === club.key;
+  const form = club.form || {};
+  const clubAdminLine = club.club_admin?.name
+    ? [club.club_admin.name, club.club_admin.title, club.club_admin.location].filter(Boolean).join(" | ")
+    : "Will be assigned automatically when the first employee joins.";
+
+  if (!club.joined) {
+    return `
+      <div class="community-workspace-head">
+        <div>
+          <p class="widget-kicker">Club space</p>
+          <h2>${escapeHtml(club.label)}</h2>
+          <div class="mini-item-meta">Club Admin: ${escapeHtml(clubAdminLine)}</div>
+        </div>
+        <div class="community-workspace-stats">
+          <span class="mini-chip">${escapeHtml(String(club.member_count || 0))} members</span>
+        </div>
+      </div>
+      <div class="empty-state">Join ${escapeHtml(club.label)} to post updates, recommendations, and discussions with other members.</div>
+    `;
+  }
+
+  return `
+    <div class="community-workspace-head">
+      <div>
+        <p class="widget-kicker">Club space</p>
+        <h2>${escapeHtml(club.label)}</h2>
+        <div class="mini-item-meta">
+          Club Admin: ${escapeHtml(clubAdminLine)}
+          ${club.viewer_is_admin ? " | You are the Club Admin." : ""}
+        </div>
+      </div>
+      <div class="community-workspace-stats">
+        <span class="mini-chip">${escapeHtml(String(club.member_count || 0))} members</span>
+      </div>
+    </div>
+    <div class="community-workspace-grid">
+      <section class="section-card community-composer-card">
+        <div class="section-card-head">
+          <div>
+            <p class="widget-kicker">Post an update</p>
+            <h3>${escapeHtml(club.label)} update form</h3>
+            <div class="mini-item-meta">Posts published here are visible only to members of this club.</div>
+          </div>
+        </div>
+        <form id="community-post-form" class="story-form" data-club-key="${escapeHtml(club.key)}">
+          <label class="field">
+            <span>${escapeHtml(form.primary_field_label || "Title")}</span>
+            <input type="${escapeHtml(form.primary_field_type || "text")}" name="primary_value" placeholder="${escapeHtml(form.primary_field_label || "Enter the main detail")}" required>
+          </label>
+          <label class="field">
+            <span>${escapeHtml(form.headline_label || "Headline")}</span>
+            <input type="text" name="headline" placeholder="Write a short headline" required>
+          </label>
+          <label class="field">
+            <span>${escapeHtml(form.body_label || "Body")}</span>
+            <textarea name="body" rows="4" placeholder="Write the main update clearly." required></textarea>
+          </label>
+          <label class="field">
+            <span>${escapeHtml(form.extra_field_label || "Additional detail")}</span>
+            ${
+              form.extra_field_type === "textarea"
+                ? `<textarea name="extra_value" rows="4" placeholder="${escapeHtml(form.extra_field_label || "Add one more detail")}" required></textarea>`
+                : `<input type="${escapeHtml(form.extra_field_type === "datetime" ? "datetime-local" : (form.extra_field_type || "text"))}" name="extra_value" placeholder="${escapeHtml(form.extra_field_label || "Add one more detail")}" required>`
+            }
+          </label>
+          <div class="form-actions">
+            <p class="mini-item-meta">Members can like and comment on club posts after they are published.</p>
+            <button type="submit" class="btn-warm" ${isSubmitting ? "disabled" : ""}>${isSubmitting ? "Posting..." : "Post update"}</button>
+          </div>
+        </form>
+      </section>
+      <section class="section-card community-feed-shell">
+        <div class="section-card-head">
+          <div>
+            <p class="widget-kicker">Club feed</p>
+            <h3>${escapeHtml(club.label)} posts</h3>
+            <div class="mini-item-meta">Only club members can view, like, and comment here.</div>
+          </div>
+        </div>
+        <div class="community-feed">
+          ${
+            feedError
+              ? `<div class="empty-state">${escapeHtml(feedError)}</div>`
+              : feedLoading
+                ? '<div class="empty-state">Loading club posts...</div>'
+                : posts.length
+                  ? posts.map(renderCommunityPostCard).join("")
+                  : '<div class="empty-state">No club posts yet. Use the form to publish the first one.</div>'
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderCommunityPostCard(post) {
+  return `
+    <article class="card community-post-card" id="${post.id}">
+      <div class="card-header">
+        <div class="card-avatar" style="background:${gradientValue(post.avatar)}">${escapeHtml(post.initials)}</div>
+        <div class="card-meta">
+          <div class="card-name">${escapeHtml(post.authorName)}</div>
+          <div class="mini-item-meta">${escapeHtml(formatRelativeTime(post.publishedAt || post.createdAt))}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="community-card-tags">
+          <span class="mini-chip">${escapeHtml(post.clubLabel)}</span>
+          <span class="mini-chip">${escapeHtml(`${post.primaryLabel}: ${post.primaryValue}`)}</span>
+        </div>
+        <div class="card-title">${escapeHtml(post.title)}</div>
+        ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+        <div class="community-detail-row">
+          <span class="community-detail-label">${escapeHtml(post.extraLabel)}</span>
+          <strong>${escapeHtml(formatCommunityPostExtraValue(post))}</strong>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn ${post.currentUserHasReacted ? "liked" : ""}"
+          data-action="toggle-live-reaction"
+          data-id="${post.sourceId}"
+        >
+          ${likeIcon()}${escapeHtml(String(post.reactionCount))}
+        </button>
+        <button type="button" class="action-btn" data-action="open-live-comments" data-id="${post.sourceId}">
+          ${commentIcon()}${escapeHtml(String(post.commentCount))}
+        </button>
+        <div class="spacer"></div>
+        ${renderDeleteLivePostButton(post, FEED_MODULE_COMMUNITY)}
+      </div>
+    </article>
+  `;
+}
+
+function formatCommunityPostExtraValue(post) {
+  const value = String(post.extraValue || "").trim();
+  if (!value) {
+    return "";
+  }
+  if (post.extraType === "datetime") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+  }
+  return value;
+}
+
+async function submitCommunityPost(form) {
+  const clubKey = String(form?.dataset?.clubKey || state.communityClubKey || "").trim();
+  const club = appData.communityClubs.find((item) => item.key === clubKey);
+  if (!club || !club.joined) {
+    showToast("Join the club before posting there.");
+    return;
+  }
+
+  const formData = new FormData(form);
+  const primaryValue = String(formData.get("primary_value") || "").trim();
+  const headline = String(formData.get("headline") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+  const extraValue = String(formData.get("extra_value") || "").trim();
+  if (!primaryValue || !headline || !body || !extraValue) {
+    showToast("Please complete all club post fields.");
+    return;
+  }
+
+  communityPostsSubmittingKey = clubKey;
+  renderCommunityPanel();
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/posts/", {
+      method: "POST",
+      body: {
+        title: headline,
+        body,
+        module: FEED_MODULE_COMMUNITY,
+        kind: "update",
+        topic: clubKey,
+        metadata: {
+          community_primary_value: primaryValue,
+          community_extra_value: extraValue,
+        },
+      },
+    });
+
+    if (payload.post) {
+      const nextPost = mapCommunityPost(payload.post);
+      const currentPosts = Array.isArray(appData.communityPostsByClub[clubKey]) ? appData.communityPostsByClub[clubKey] : [];
+      appData.communityPostsByClub[clubKey] = sortBulletinPostsNewestFirst([nextPost, ...currentPosts]);
+      form.reset();
+      renderCommunityPanel();
+      showToast("Club post published.");
+      return;
+    }
+
+    showToast("Club post published.");
+  } catch (error) {
+    showToast(error.message || "Could not publish the club post.");
+  } finally {
+    communityPostsSubmittingKey = "";
     renderCommunityPanel();
   }
 }
@@ -4013,6 +4348,7 @@ async function deleteLivePost(postId, moduleName) {
   if (!postId) {
     return;
   }
+  const livePost = findLivePostById(postId);
   const confirmed = window.confirm("Delete this post?");
   if (!confirmed) {
     return;
@@ -4021,12 +4357,22 @@ async function deleteLivePost(postId, moduleName) {
     await window.AcuiteConnectAuth.apiRequest(`/api/feed/posts/${postId}/`, {
       method: "DELETE",
     });
-    await Promise.all([
+    const reloadTasks = [
       loadBulletinPosts(),
       loadMyPosts(),
-    ]);
+    ];
+    if (moduleName === FEED_MODULE_COMMUNITY && livePost?.clubKey) {
+      reloadTasks.push(loadCommunityPosts(livePost.clubKey, { force: true }));
+    }
+    await Promise.all(reloadTasks);
     renderAll();
-    showToast(moduleName === FEED_MODULE_BULLETIN ? "Bulletin post deleted." : "Post deleted.");
+    showToast(
+      moduleName === FEED_MODULE_BULLETIN
+        ? "Bulletin post deleted."
+        : moduleName === FEED_MODULE_COMMUNITY
+          ? "Club post deleted."
+          : "Post deleted.",
+    );
   } catch (error) {
     showToast(error.message || "Could not delete the post.");
   }
@@ -4465,6 +4811,41 @@ function mapMyPostSubmission(post) {
   };
 }
 
+function mapCommunityPost(post) {
+  const metadata = post.metadata || {};
+  const author = post.author || {};
+  const authorName = author.name || author.email || "Employee";
+  const bodyParagraphs = String(post.body || "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  return {
+    id: `community-post-${post.id}`,
+    sourceId: post.id,
+    module: post.module || FEED_MODULE_COMMUNITY,
+    title: post.title || "Club update",
+    body: bodyParagraphs.length ? bodyParagraphs : [String(post.body || "").trim()].filter(Boolean),
+    authorName,
+    initials: author.initials || initialsFromName(authorName),
+    avatar: gradientKeyFromText(`${metadata.community_club_key || post.topic}-${authorName}`),
+    commentCount: Number(post.comment_count || 0),
+    reactionCount: Number(post.reaction_count || 0),
+    currentUserHasReacted: Boolean(post.current_user_has_reacted),
+    createdAt: post.created_at || "",
+    publishedAt: post.published_at || "",
+    allowComments: post.allow_comments !== false,
+    canDelete: Boolean(post.viewer_can_delete),
+    clubKey: String(metadata.community_club_key || post.topic || "").trim(),
+    clubLabel: String(metadata.community_club_label || "Community").trim(),
+    primaryLabel: String(metadata.community_primary_label || "Title").trim(),
+    primaryValue: String(metadata.community_primary_value || "").trim(),
+    extraLabel: String(metadata.community_extra_label || "Additional detail").trim(),
+    extraValue: String(metadata.community_extra_value || "").trim(),
+    extraType: String(metadata.community_extra_type || "text").trim(),
+  };
+}
+
 function getSelectedMyPostType() {
   if (!elements.myPostsTypeSelect) {
     return null;
@@ -4794,6 +5175,7 @@ async function toggleLiveReaction(postId) {
       await loadStoreData();
       renderHomeAnnouncement();
       renderBulletinPanel();
+      renderCommunityPanel();
       renderCeoDeskLikeButton();
       renderProfileCoinBank();
       renderProfile();
@@ -4843,6 +5225,9 @@ function hydrateState() {
     learningBookQuery: typeof saved.learningBookQuery === "string"
       ? saved.learningBookQuery
       : defaultState.learningBookQuery,
+    communityClubKey: typeof saved.communityClubKey === "string"
+      ? saved.communityClubKey
+      : defaultState.communityClubKey,
     directoryFilters: {
       ...createDirectoryFiltersState(),
       ...(saved.directoryFilters && typeof saved.directoryFilters === "object"
@@ -6295,6 +6680,19 @@ function updateLivePostFromPayload(postPayload) {
       }
       appData.bulletinPosts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
     }
+    return;
+  }
+
+  if (postPayload.module === FEED_MODULE_COMMUNITY) {
+    const mapped = mapCommunityPost(postPayload);
+    const existingItems = Array.isArray(appData.communityPostsByClub[mapped.clubKey])
+      ? appData.communityPostsByClub[mapped.clubKey]
+      : [];
+    const existingIndex = existingItems.findIndex((item) => item.sourceId === mapped.sourceId);
+    const nextItems = existingIndex >= 0
+      ? existingItems.map((item) => (item.sourceId === mapped.sourceId ? mapped : item))
+      : [mapped, ...existingItems];
+    appData.communityPostsByClub[mapped.clubKey] = sortBulletinPostsNewestFirst(nextItems);
   }
 }
 

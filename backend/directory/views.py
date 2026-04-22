@@ -3,10 +3,11 @@ import json
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 
+from accounts.serializers import serialize_user
 from store.services import build_coin_balance_map
 
 from .community_utils import COMMUNITY_CLUB_LIBRARY, normalize_community_clubs
-from .models import DirectoryProfile
+from .models import CommunityMembership, DirectoryProfile
 from .serializers import serialize_directory_profile
 from .utils import (
     CONNECT_DEPARTMENT_LABELS,
@@ -67,25 +68,80 @@ def _get_or_create_profile_for_user(user):
     return profile
 
 
+def _sync_profile_clubs_for_user(user):
+    if not user or not getattr(user, "pk", None):
+        return []
+
+    clubs = list(
+        CommunityMembership.objects.filter(user=user)
+        .order_by("joined_at", "id")
+        .values_list("club_key", flat=True)
+    )
+    normalized_clubs = normalize_community_clubs(clubs)
+    profile = _get_or_create_profile_for_user(user)
+    if normalize_community_clubs(profile.clubs) != normalized_clubs:
+        profile.clubs = normalized_clubs
+        profile.save(update_fields=["clubs", "updated_at"])
+    return normalized_clubs
+
+
+def _ensure_club_admin(club_key):
+    memberships = list(
+        CommunityMembership.objects.filter(club_key=club_key)
+        .order_by("joined_at", "id")
+    )
+    for index, membership in enumerate(memberships):
+        should_be_admin = index == 0
+        if membership.is_admin != should_be_admin:
+            membership.is_admin = should_be_admin
+            membership.save(update_fields=["is_admin", "updated_at"])
+
+
+def _serialize_club_admin(user):
+    if not user:
+        return None
+    payload = serialize_user(user)
+    return {
+        "id": payload["id"],
+        "name": payload["name"],
+        "title": payload["title"],
+        "location": payload["location"],
+        "initials": payload["initials"],
+    }
+
+
 def _build_communities_payload(current_user=None):
-    profiles = list(
-        DirectoryProfile.objects.select_related("user").filter(user__is_active=True)
+    memberships = list(
+        CommunityMembership.objects.select_related("user")
+        .filter(user__is_active=True)
+        .order_by("club_key", "joined_at", "id")
     )
     member_counts = {item["key"]: 0 for item in COMMUNITY_CLUB_LIBRARY}
-    for profile in profiles:
-        for club_key in normalize_community_clubs(profile.clubs):
-            member_counts[club_key] += 1
+    club_admins = {}
+    for membership in memberships:
+        member_counts[membership.club_key] = member_counts.get(membership.club_key, 0) + 1
+        if membership.club_key not in club_admins or membership.is_admin:
+            club_admins[membership.club_key] = membership.user
 
+    current_user_memberships = {}
     current_user_clubs = []
     if current_user and getattr(current_user, "is_authenticated", False):
-        profile = _get_or_create_profile_for_user(current_user)
-        current_user_clubs = normalize_community_clubs(profile.clubs)
+        memberships = list(
+            CommunityMembership.objects.filter(user=current_user)
+            .order_by("joined_at", "id")
+            .values("club_key", "is_admin")
+        )
+        current_user_memberships = {item["club_key"]: item for item in memberships}
+        current_user_clubs = [item["club_key"] for item in memberships]
+        _sync_profile_clubs_for_user(current_user)
 
     results = [
         {
             **club,
             "member_count": member_counts.get(club["key"], 0),
             "joined": club["key"] in current_user_clubs,
+            "viewer_is_admin": bool(current_user_memberships.get(club["key"], {}).get("is_admin")),
+            "club_admin": _serialize_club_admin(club_admins.get(club["key"])),
         }
         for club in COMMUNITY_CLUB_LIBRARY
     ]
@@ -180,14 +236,18 @@ def communities_overview(request):
     if action not in {"join", "leave"}:
         return JsonResponse({"detail": "Invalid membership action."}, status=400)
 
-    profile = _get_or_create_profile_for_user(request.user)
-    clubs = normalize_community_clubs(profile.clubs)
-    if action == "join" and club_key not in clubs:
-        clubs.append(club_key)
-    if action == "leave":
-        clubs = [item for item in clubs if item != club_key]
-    profile.clubs = clubs
-    profile.save(update_fields=["clubs", "updated_at"])
+    _get_or_create_profile_for_user(request.user)
+    if action == "join":
+        CommunityMembership.objects.get_or_create(
+            user=request.user,
+            club_key=club_key,
+            defaults={"is_admin": False},
+        )
+    else:
+        CommunityMembership.objects.filter(user=request.user, club_key=club_key).delete()
+
+    _ensure_club_admin(club_key)
+    _sync_profile_clubs_for_user(request.user)
 
     return JsonResponse(_build_communities_payload(request.user))
 

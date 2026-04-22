@@ -3065,6 +3065,11 @@ select {
   transition: all 0.3s;
 }
 
+.club-card.active {
+  border-color: rgba(255, 140, 26, 0.55);
+  box-shadow: 0 16px 40px rgba(255, 140, 26, 0.14);
+}
+
 .club-card:hover,
 .person-card:hover,
 .alumni-card:hover,
@@ -3128,6 +3133,51 @@ select {
   display: flex;
   align-items: center;
   gap: 10px;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.community-club-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.community-workspace {
+  margin-top: 18px;
+}
+
+.community-workspace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.community-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.community-composer-card,
+.community-feed-shell {
+  margin: 0;
+}
+
+.community-post-card .card-body {
+  display: grid;
+  gap: 12px;
+}
+
+.community-post-card .card-title {
+  margin-bottom: 0;
+}
+
+.community-post-card .community-card-tags {
+  margin-bottom: 0;
 }
 
 .avatars {
@@ -5276,12 +5326,14 @@ select {
   .section-card-head,
   .card-actions,
   .club-members,
+  .community-workspace-head,
   .person-footer {
     width: 100%;
   }
 
   .tool-grid,
   .clubs-grid,
+  .community-workspace-grid,
   .directory-grid,
   .alumni-grid,
   .moments-grid,

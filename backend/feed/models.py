@@ -14,6 +14,7 @@ class Post(models.Model):
     class Module(models.TextChoices):
         BULLETIN = "bulletin", "Bulletin Board"
         EMPLOYEE_POSTS = "employee_posts", "Employee Posts"
+        COMMUNITY = "community", "Community"
 
     class Visibility(models.TextChoices):
         COMPANY = "company", "Company-wide"

@@ -2,7 +2,7 @@ from django.test import TestCase
 
 from accounts.models import User
 
-from .models import DirectoryProfile
+from .models import CommunityMembership, DirectoryProfile
 
 
 class CommunityApiTests(TestCase):
@@ -29,13 +29,24 @@ class CommunityApiTests(TestCase):
             user=self.user,
             office_location="Mumbai",
             city="Mumbai",
-            clubs=["reading_club", "travel_club"],
         )
         DirectoryProfile.objects.create(
             user=self.other_user,
             office_location="Mumbai",
             city="Mumbai",
-            clubs=["reading_club"],
+        )
+        CommunityMembership.objects.create(
+            user=self.user,
+            club_key="reading_club",
+            is_admin=True,
+        )
+        CommunityMembership.objects.create(
+            user=self.user,
+            club_key="travel_club",
+        )
+        CommunityMembership.objects.create(
+            user=self.other_user,
+            club_key="reading_club",
         )
         self.client.force_login(self.user)
 
@@ -48,8 +59,10 @@ class CommunityApiTests(TestCase):
         reading_club = next(item for item in payload["results"] if item["key"] == "reading_club")
         self.assertEqual(reading_club["member_count"], 2)
         self.assertTrue(reading_club["joined"])
+        self.assertTrue(reading_club["viewer_is_admin"])
+        self.assertEqual(reading_club["club_admin"]["name"], self.user.full_name)
 
-    def test_employee_can_join_and_leave_a_community(self):
+    def test_first_member_to_join_becomes_club_admin(self):
         self.client.force_login(self.user)
 
         join_response = self.client.post(
@@ -64,6 +77,35 @@ class CommunityApiTests(TestCase):
         technology_club = next(item for item in payload["results"] if item["key"] == "technology_club")
         self.assertTrue(technology_club["joined"])
         self.assertEqual(technology_club["member_count"], 1)
+        self.assertTrue(technology_club["viewer_is_admin"])
+        self.assertEqual(technology_club["club_admin"]["name"], self.user.full_name)
+
+    def test_next_member_becomes_admin_when_previous_admin_leaves(self):
+        first_profile = DirectoryProfile.objects.create(
+            user=self.user,
+            office_location="Mumbai",
+            city="Mumbai",
+        )
+        second_profile = DirectoryProfile.objects.create(
+            user=self.other_user,
+            office_location="Mumbai",
+            city="Mumbai",
+        )
+        CommunityMembership.objects.create(
+            user=self.user,
+            club_key="technology_club",
+            is_admin=True,
+        )
+        CommunityMembership.objects.create(
+            user=self.other_user,
+            club_key="technology_club",
+            is_admin=False,
+        )
+        first_profile.clubs = ["technology_club"]
+        first_profile.save(update_fields=["clubs", "updated_at"])
+        second_profile.clubs = ["technology_club"]
+        second_profile.save(update_fields=["clubs", "updated_at"])
+        self.client.force_login(self.user)
 
         leave_response = self.client.post(
             "/api/directory/communities/",
@@ -76,4 +118,11 @@ class CommunityApiTests(TestCase):
         self.assertEqual(payload["joined_count"], 0)
         technology_club = next(item for item in payload["results"] if item["key"] == "technology_club")
         self.assertFalse(technology_club["joined"])
-        self.assertEqual(technology_club["member_count"], 0)
+        self.assertEqual(technology_club["member_count"], 1)
+        self.assertEqual(technology_club["club_admin"]["name"], self.other_user.full_name)
+        self.assertTrue(
+            CommunityMembership.objects.get(
+                user=self.other_user,
+                club_key="technology_club",
+            ).is_admin
+        )

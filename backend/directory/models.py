@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from .utils import map_department_for_connect
 
@@ -64,3 +65,27 @@ class DirectoryProfile(models.Model):
                 getattr(self.user, "department", "")
             )
         super().save(*args, **kwargs)
+
+
+class CommunityMembership(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="community_memberships",
+    )
+    club_key = models.CharField(max_length=64)
+    is_admin = models.BooleanField(default=False)
+    joined_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("club_key", "joined_at", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "club_key"),
+                name="directory_unique_membership_per_user_club",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.full_name} in {self.club_key}"

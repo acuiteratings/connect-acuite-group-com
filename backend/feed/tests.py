@@ -5,6 +5,7 @@ from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
 from accounts.models import User
+from directory.models import CommunityMembership
 from operations.models import AnalyticsEvent, AuditLog
 
 from .models import Comment, Post, PostReaction
@@ -404,6 +405,107 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["comment_count"], 1)
         self.assertEqual(payload["results"][0]["reaction_count"], 3)
+
+    def test_club_member_can_publish_community_post_immediately(self):
+        CommunityMembership.objects.create(
+            user=self.user,
+            club_key="reading_club",
+            is_admin=True,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps(
+                {
+                    "title": "The Black Swan",
+                    "body": "Worth reading for uncertainty and risk.",
+                    "module": Post.Module.COMMUNITY,
+                    "topic": "reading_club",
+                    "metadata": {
+                        "community_primary_value": "The Black Swan",
+                        "community_extra_value": "A sharp writeup on how randomness shapes outcomes.",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()["post"]
+        self.assertEqual(payload["module"], Post.Module.COMMUNITY)
+        self.assertEqual(payload["moderation_status"], Post.ModerationStatus.PUBLISHED)
+        self.assertEqual(payload["metadata"]["community_club_label"], "Reading Club")
+        self.assertEqual(payload["metadata"]["community_primary_label"], "Book Title")
+
+    def test_non_member_cannot_view_community_feed(self):
+        CommunityMembership.objects.create(
+            user=self.admin_user,
+            club_key="reading_club",
+            is_admin=True,
+        )
+        Post.objects.create(
+            author=self.admin_user,
+            title="Reading recommendation",
+            body="Shared inside the club.",
+            module=Post.Module.COMMUNITY,
+            topic="reading_club",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={
+                "community_post": True,
+                "community_club_label": "Reading Club",
+                "community_primary_label": "Book Title",
+                "community_primary_value": "The Black Swan",
+                "community_extra_label": "Writeup about the book",
+                "community_extra_value": "A very practical read.",
+            },
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get("/api/feed/posts/?module=community&topic=reading_club")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_club_member_can_comment_and_like_community_post(self):
+        CommunityMembership.objects.create(
+            user=self.user,
+            club_key="movie_club",
+            is_admin=True,
+        )
+        CommunityMembership.objects.create(
+            user=self.moderator_user,
+            club_key="movie_club",
+            is_admin=False,
+        )
+        post = Post.objects.create(
+            author=self.user,
+            title="Interstellar weekend screening",
+            body="Let us do a movie night.",
+            module=Post.Module.COMMUNITY,
+            topic="movie_club",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={
+                "community_post": True,
+                "community_club_label": "Movie Club",
+                "community_primary_label": "Movie Name",
+                "community_primary_value": "Interstellar",
+                "community_extra_label": "Proposed Date & Time",
+                "community_extra_value": "2026-04-25T18:30",
+            },
+        )
+        self.client.force_login(self.moderator_user)
+
+        comment_response = self.client.post(
+            f"/api/feed/posts/{post.id}/comments/",
+            data=json.dumps({"body": "Count me in."}),
+            content_type="application/json",
+        )
+        like_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(comment_response.status_code, 201)
+        self.assertEqual(like_response.status_code, 200)
+        self.assertEqual(Comment.objects.filter(post=post).count(), 1)
+        self.assertEqual(PostReaction.objects.filter(post=post).count(), 1)
 
     def test_author_can_delete_own_post(self):
         post = Post.objects.create(
