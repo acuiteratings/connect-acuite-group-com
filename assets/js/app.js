@@ -3680,12 +3680,13 @@ function renderLearningBookCard(book) {
   const statusText = book.available_copies > 0
     ? `${book.available_copies} of ${book.total_copies} available`
     : "Currently unavailable";
+  const coverHeading = book.author || book.title;
 
   const coverMarkup = book.cover_url
     ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} cover" class="learning-book-cover-image" loading="lazy">`
     : `<div class="learning-book-cover-fallback" style="background:${gradientValue(gradientKeyFromText(`${book.title}-${book.author}`))}">
         <span class="learning-book-cover-category">${escapeHtml(book.category || "Library")}</span>
-        <strong>${escapeHtml(book.title)}</strong>
+        <strong>${escapeHtml(coverHeading)}</strong>
       </div>`;
   const note = book.review_quote || book.summary || "Available in the internal library catalog.";
   const locationLine = [book.office_location, book.shelf_area, book.shelf_label].filter(Boolean).join(" | ");
@@ -3701,7 +3702,6 @@ function renderLearningBookCard(book) {
           ${book.catalog_number ? `<span class="mini-item-meta">Book ${escapeHtml(book.catalog_number)}</span>` : ""}
         </div>
         <h3>${escapeHtml(book.title)}</h3>
-        <p class="learning-book-author">${escapeHtml(book.author)}</p>
         <p class="learning-book-note">${escapeHtml(note)}</p>
         <div class="learning-book-meta">
           <span class="mini-item-meta">${escapeHtml(locationLine || "Library catalog")}</span>
