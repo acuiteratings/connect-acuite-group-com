@@ -86,6 +86,28 @@ class ErrorEvent(models.Model):
         return f"{self.exception_type} at {self.occurred_at:%Y-%m-%d %H:%M:%S}"
 
 
+class ReportedError(models.Model):
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="reported_errors",
+        blank=True,
+        null=True,
+    )
+    title = models.CharField(max_length=180)
+    details = models.TextField()
+    source_tab = models.CharField(max_length=64, blank=True)
+    page_path = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.title} at {self.created_at:%Y-%m-%d %H:%M:%S}"
+
+
 class BuildState(models.Model):
     singleton_key = models.CharField(max_length=32, unique=True, default="primary")
     counter = models.PositiveIntegerField(default=1)

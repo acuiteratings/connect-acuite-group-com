@@ -149,6 +149,14 @@
         <p class="widget-kicker">Upcoming Events</p>
         <div id="sidebar-events-list"></div>
       </section>
+      <div class="sidebar-bottom-link">
+        <button type="button" class="tab" data-switch-tab="report-error">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-7.5 13A1 1 0 003.66 18h16.68a1 1 0 00.87-1.14l-7.5-13a1 1 0 00-1.74 0z"></path>
+          </svg>
+          Report an Error
+        </button>
+      </div>
     </aside>
 
     <main class="main">
@@ -976,6 +984,39 @@
             <div class="form-actions profile-builder-actions">
               <p id="profile-builder-status">Add up to 2 photos, choose a few skills, and tell colleagues what you enjoy.</p>
               <button type="submit" class="btn-warm">Save profile</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-report-error">
+        <div class="section-head">
+          <div>
+            <h2>Report an Error</h2>
+            <p>Tell us what went wrong. Admin will see your report and follow up from the operational console.</p>
+          </div>
+        </div>
+
+        <section class="section-card report-error-card">
+          <div class="section-card-head">
+            <div>
+              <p class="widget-kicker">Support Inbox</p>
+              <h2>Send an issue report</h2>
+              <div class="mini-item-meta" id="report-error-source-meta">This report will include the page you were on.</div>
+            </div>
+          </div>
+          <form id="report-error-form" class="story-form">
+            <label class="field">
+              <span>Short title</span>
+              <input type="text" id="report-error-title" name="title" maxlength="180" placeholder="What is the issue?" required>
+            </label>
+            <label class="field">
+              <span>What happened?</span>
+              <textarea id="report-error-details" name="details" rows="6" maxlength="3000" placeholder="Describe what you were doing, what you expected, and what happened instead." required></textarea>
+            </label>
+            <div class="form-actions">
+              <p>Only admins can see the submitted error reports.</p>
+              <button type="submit" class="btn-warm">Send report</button>
             </div>
           </form>
         </section>

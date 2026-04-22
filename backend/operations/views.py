@@ -12,7 +12,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post
 from feed.serializers import serialize_comment, serialize_post
 
-from .models import AnalyticsEvent, AuditLog, ErrorEvent
+from .models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
 from .celebrations import (
     build_celebration_preview,
     get_today_celebration_candidates,
@@ -23,6 +23,7 @@ from .serializers import (
     serialize_analytics_event,
     serialize_audit_log,
     serialize_error_event,
+    serialize_reported_error,
 )
 from .services import record_analytics_event, record_audit_event
 
@@ -277,6 +278,82 @@ def recent_errors(request):
         queryset = queryset.filter(is_resolved=False)
     results = [serialize_error_event(event) for event in queryset[:50]]
     return JsonResponse({"count": len(results), "results": results})
+
+
+def reported_errors_collection(request):
+    if request.method == "GET":
+        if not _is_admin_user(request.user):
+            return _forbidden("Admin access required.")
+        queryset = ReportedError.objects.select_related("reporter")
+        results = [serialize_reported_error(event) for event in queryset[:100]]
+        return JsonResponse({"count": len(results), "results": results})
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    if not getattr(request.user, "is_authenticated", False):
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    try:
+        payload = _parse_json_body(request)
+    except ValueError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+
+    title = str(payload.get("title", "")).strip()
+    details = str(payload.get("details", "")).strip()
+    source_tab = str(payload.get("source_tab", "")).strip().lower()
+    page_path = str(payload.get("page_path", "")).strip()
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+
+    if not title:
+        return JsonResponse({"detail": "A short error title is required."}, status=400)
+    if not details:
+        return JsonResponse({"detail": "Please describe what went wrong."}, status=400)
+
+    event = ReportedError.objects.create(
+        reporter=request.user,
+        title=title,
+        details=details,
+        source_tab=source_tab,
+        page_path=page_path[:255],
+        metadata=metadata,
+    )
+    record_audit_event(
+        action="error.reported",
+        actor=request.user,
+        target=event,
+        summary=f"Reported error: {event.title}",
+        metadata={"source_tab": source_tab, "page_path": page_path},
+        request=request,
+    )
+    record_analytics_event(
+        "support",
+        "error_reported",
+        actor=request.user,
+        metadata={"reported_error_id": event.id, "source_tab": source_tab},
+        request=request,
+    )
+    return JsonResponse({"reported_error": serialize_reported_error(event)}, status=201)
+
+
+def reported_error_detail(request, reported_error_id):
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+    if not _is_admin_user(request.user):
+        return _forbidden("Admin access required.")
+
+    event = get_object_or_404(ReportedError.objects.select_related("reporter"), pk=reported_error_id)
+    serialized = serialize_reported_error(event)
+    record_audit_event(
+        action="error.report.deleted",
+        actor=request.user,
+        target=event,
+        summary=f"Deleted reported error: {event.title}",
+        metadata={"reporter_email": event.reporter.email if event.reporter else ""},
+        request=request,
+    )
+    event.delete()
+    return JsonResponse({"reported_error": serialized, "deleted": True})
 
 
 def analytics_recent(request):

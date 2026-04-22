@@ -1,4 +1,4 @@
-from .models import AnalyticsEvent, ErrorEvent
+from .models import AnalyticsEvent, ErrorEvent, ReportedError
 
 
 def serialize_audit_log(log):
@@ -47,6 +47,20 @@ def serialize_error_event(event):
         "actor": event.actor.full_name if event.actor else None,
         "actor_email": event.actor.email if event.actor else None,
         "occurred_at": event.occurred_at.isoformat(),
+    }
+
+
+def serialize_reported_error(event):
+    return {
+        "id": event.id,
+        "title": event.title,
+        "details": event.details,
+        "source_tab": event.source_tab,
+        "page_path": event.page_path,
+        "metadata": event.metadata,
+        "reporter": event.reporter.full_name if event.reporter else None,
+        "reporter_email": event.reporter.email if event.reporter else None,
+        "created_at": event.created_at.isoformat(),
     }
 
 

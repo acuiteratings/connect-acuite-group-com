@@ -45,7 +45,7 @@ const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
-const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
+const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "report-error", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
   employee_posts: "Employee posts",
@@ -522,6 +522,7 @@ let directoryFilterOptions = createDirectoryFilterOptions();
 const defaultState = {
   theme: "",
   activeTab: "home",
+  reportErrorSourceTab: "",
   homeAnnouncementFilter: "leadership",
   brochureBuilderSelectedIds: [],
   storeFilter: "all",
@@ -733,6 +734,10 @@ async function init() {
     adminEditSubmit: document.getElementById("admin-edit-submit"),
     adminBulletinTemplates: document.getElementById("admin-bulletin-templates"),
     profileBuilderForm: document.getElementById("profile-builder-form"),
+    reportErrorForm: document.getElementById("report-error-form"),
+    reportErrorSourceMeta: document.getElementById("report-error-source-meta"),
+    reportErrorTitleInput: document.getElementById("report-error-title"),
+    reportErrorDetailsInput: document.getElementById("report-error-details"),
     profileMenu: document.getElementById("profile-menu"),
     profileModalBackdrop: document.getElementById("profile-modal-backdrop"),
     commentsModalBackdrop: document.getElementById("comments-modal-backdrop"),
@@ -1494,6 +1499,10 @@ async function handleDocumentClick(event) {
   const switcher = event.target.closest("[data-switch-tab]");
   if (switcher) {
     closeProfileMenu();
+    if (switcher.dataset.switchTab === "report-error" && state.activeTab !== "report-error") {
+      state.reportErrorSourceTab = state.activeTab;
+      saveState();
+    }
     switchTab(switcher.dataset.switchTab);
     return;
   }
@@ -1699,6 +1708,12 @@ function handleSubmit(event) {
     return;
   }
 
+  if (event.target === elements.reportErrorForm) {
+    event.preventDefault();
+    void submitReportedError();
+    return;
+  }
+
   if (event.target === elements.commentsModalForm) {
     event.preventDefault();
     void submitLiveComment();
@@ -1735,6 +1750,7 @@ function renderAll() {
   safeRender("bulletin panel", renderBulletinPanel);
   safeRender("my posts panel", renderMyPostsPanel);
   safeRender("community panel", renderCommunityPanel);
+  safeRender("report error panel", renderReportErrorPanel);
   safeRender("admin panel", renderAdminPanel);
   if (state.activeTab === "directory") {
     safeRender("directory filters", renderDirectoryChips);
@@ -3537,6 +3553,80 @@ function renderCommunityPanel() {
   const activeClub = getActiveCommunityClub();
   if (activeClub?.joined && !Array.isArray(appData.communityPostsByClub[activeClub.key]) && !communityPostsErrorByClub[activeClub.key]) {
     void loadCommunityPosts(activeClub.key);
+  }
+}
+
+function reportErrorSourceLabel(tabId) {
+  const labels = {
+    "iam-acuite": "I am Acuite",
+    home: "Announcements",
+    holidays: "Holiday Calendar",
+    resources: "Resources",
+    "brochure-builder": "Brochure Builder",
+    applications: "Applications",
+    knowledge: "Knowledge",
+    "ceo-desk": "MD & CEO's Desk",
+    bulletin: "Bulletin Board",
+    "my-posts": "My Posts",
+    community: "Community",
+    playtime: "Playtime",
+    battleship: "Battleship",
+    quiz: "Quiz",
+    library: "Library",
+    store: "Brand Store",
+    directory: "People Directory",
+    profile: "My Profile",
+    "report-error": "Report an Error",
+    help: "Help",
+  };
+  return labels[String(tabId || "").trim()] || "Unknown page";
+}
+
+function renderReportErrorPanel() {
+  if (!elements.reportErrorSourceMeta) {
+    return;
+  }
+  const sourceTab = state.reportErrorSourceTab || state.activeTab;
+  elements.reportErrorSourceMeta.textContent = `This report will include the page: ${reportErrorSourceLabel(sourceTab)}.`;
+}
+
+async function submitReportedError() {
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest || !elements.reportErrorForm) {
+    showToast("Error reporting is unavailable right now.");
+    return;
+  }
+
+  const title = String(elements.reportErrorTitleInput?.value || "").trim();
+  const details = String(elements.reportErrorDetailsInput?.value || "").trim();
+  const sourceTab = state.reportErrorSourceTab || state.activeTab;
+
+  if (!title) {
+    showToast("Please add a short error title.");
+    return;
+  }
+  if (!details) {
+    showToast("Please describe what happened.");
+    return;
+  }
+
+  try {
+    await window.AcuiteConnectAuth.apiRequest("/api/ops/reported-errors/", {
+      method: "POST",
+      body: {
+        title,
+        details,
+        source_tab: sourceTab,
+        page_path: window.location.pathname,
+        metadata: {
+          build: getCurrentBuildNumber(),
+          source_label: reportErrorSourceLabel(sourceTab),
+        },
+      },
+    });
+    elements.reportErrorForm.reset();
+    showToast("Your error report has been sent to the admin inbox.");
+  } catch (error) {
+    showToast(error.message || "Could not send the error report.");
   }
 }
 

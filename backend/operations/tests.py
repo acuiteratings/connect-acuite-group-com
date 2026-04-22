@@ -15,7 +15,7 @@ from feed.models import Comment, Post
 
 from .builds import get_current_build_number
 from .celebrations import publish_daily_celebration_posts
-from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent
+from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent, ReportedError
 
 
 class OperationsApiTests(TestCase):
@@ -100,6 +100,64 @@ class OperationsApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue(response["X-Request-ID"])
         self.assertEqual(AnalyticsEvent.objects.filter(event_name="directory_opened").count(), 1)
+
+    def test_authenticated_employee_can_report_an_error(self):
+        self.client.force_login(self.employee)
+
+        response = self.client.post(
+            "/api/ops/reported-errors/",
+            data=json.dumps(
+                {
+                    "title": "Bulletin Board is blank",
+                    "details": "The Bulletin Board stayed empty after refresh.",
+                    "source_tab": "bulletin",
+                    "page_path": "/index.html",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(ReportedError.objects.count(), 1)
+        reported_error = ReportedError.objects.get()
+        self.assertEqual(reported_error.reporter, self.employee)
+        self.assertEqual(reported_error.source_tab, "bulletin")
+
+    def test_only_admin_can_list_and_delete_reported_errors(self):
+        ReportedError.objects.create(
+            reporter=self.employee,
+            title="Directory filter issue",
+            details="Location chips are wrong.",
+            source_tab="directory",
+        )
+        self.client.force_login(self.employee)
+
+        employee_response = self.client.get("/api/ops/reported-errors/")
+        self.assertEqual(employee_response.status_code, 403)
+
+        self.client.force_login(self.staff)
+        list_response = self.client.get("/api/ops/reported-errors/")
+        self.assertEqual(list_response.status_code, 403)
+
+        admin = User.objects.create_user(
+            email="admin@acuite.in",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            title="Operations",
+            department="HR",
+            access_level=User.AccessLevel.ADMIN,
+        )
+        self.client.force_login(admin)
+        admin_list_response = self.client.get("/api/ops/reported-errors/")
+        self.assertEqual(admin_list_response.status_code, 200)
+        payload = admin_list_response.json()
+        self.assertEqual(payload["count"], 1)
+
+        reported_error_id = payload["results"][0]["id"]
+        delete_response = self.client.delete(f"/api/ops/reported-errors/{reported_error_id}/")
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertEqual(ReportedError.objects.count(), 0)
 
 
 class SecurityHeadersMiddlewareTests(TestCase):
