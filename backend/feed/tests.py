@@ -566,6 +566,41 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["results"][0]["moderation_status"], Post.ModerationStatus.PENDING_REVIEW)
         self.assertTrue(payload["results"][0]["metadata"]["ceo_desk_request"])
 
+    def test_admin_can_filter_employee_submissions_to_published_only(self):
+        published_post = Post.objects.create(
+            author=self.user,
+            title="Approved bulletin idea",
+            body="Already live",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+            metadata={"user_submission": True},
+        )
+        Post.objects.create(
+            author=self.user,
+            title="Pending bulletin idea",
+            body="Still waiting",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PENDING_REVIEW,
+            metadata={"user_submission": True},
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            "/api/feed/posts/?module=employee_posts&topic=employee_submission&moderation_status=published"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["id"], published_post.id)
+        self.assertEqual(
+            payload["results"][0]["moderation_status"],
+            Post.ModerationStatus.PUBLISHED,
+        )
+
     def test_admin_pending_filter_is_not_crowded_out_by_published_posts(self):
         for index in range(60):
             Post.objects.create(

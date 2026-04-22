@@ -980,10 +980,10 @@ async function loadBulletinPosts() {
   try {
     const [employeePostsPayload, celebrationPostsPayload] = await Promise.all([
       window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
+        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission&moderation_status=published`,
       ),
       window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&topic=hr`,
+        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&topic=hr&moderation_status=published`,
       ),
     ]);
     const employeeResults = Array.isArray(employeePostsPayload.results)
@@ -5333,10 +5333,16 @@ async function submitMyPost() {
 
     if (payload.post) {
       appData.myPosts.unshift(mapMyPostSubmission(payload.post));
+      updateLivePostFromPayload(payload.post);
       elements.myPostsForm.reset();
       syncMyPostsComposer();
       renderMyPostsPanel();
-      showToast("Your post is now waiting for admin approval.");
+      renderBulletinPanel();
+      showToast(
+        String(payload.post.moderation_status || "").trim() === "published"
+          ? "Your post is live on the Bulletin Board."
+          : "Your post is now waiting for admin approval.",
+      );
       return;
     }
 
