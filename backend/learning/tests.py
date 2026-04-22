@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from accounts.models import User
 
-from .models import Book, BookRequisition
+from .models import Book, BookLike, BookRequisition
 
 
 class LearningApiTests(TestCase):
@@ -39,6 +39,9 @@ class LearningApiTests(TestCase):
             any(item["title"] == "The Intelligent Investor" for item in payload["results"])
         )
         self.assertGreaterEqual(payload["summary"]["catalog_count"], 1)
+        title = next(item for item in payload["results"] if item["title"] == "The Intelligent Investor")
+        self.assertEqual(title["like_count"], 0)
+        self.assertFalse(title["current_user_has_liked"])
 
     def test_authenticated_employee_can_requisition_book(self):
         self.client.force_login(self.user)
@@ -102,3 +105,22 @@ class LearningApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         requisition.refresh_from_db()
         self.assertEqual(requisition.status, BookRequisition.Status.APPROVED)
+
+    def test_authenticated_employee_can_toggle_book_like(self):
+        self.client.force_login(self.user)
+
+        first_response = self.client.post(f"/api/learning/books/{self.book.id}/likes/toggle/")
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertTrue(first_response.json()["liked"])
+        self.assertEqual(first_response.json()["book"]["like_count"], 1)
+        self.assertTrue(first_response.json()["book"]["current_user_has_liked"])
+        self.assertEqual(BookLike.objects.count(), 1)
+
+        second_response = self.client.post(f"/api/learning/books/{self.book.id}/likes/toggle/")
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertFalse(second_response.json()["liked"])
+        self.assertEqual(second_response.json()["book"]["like_count"], 0)
+        self.assertFalse(second_response.json()["book"]["current_user_has_liked"])
+        self.assertEqual(BookLike.objects.count(), 0)

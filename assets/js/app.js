@@ -1428,6 +1428,11 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "toggle-book-like") {
+      await toggleBookLike(action.dataset.id);
+      return;
+    }
+
     if (actionName === "delete-live-post") {
       await deleteLivePost(action.dataset.id, action.dataset.module);
       return;
@@ -4144,10 +4149,28 @@ function renderLearningBookCard(book) {
     ? `${book.available_copies} of ${book.total_copies} available`
     : "Currently unavailable";
   const coverHeading = book.author || book.title;
+  const likeCount = Number(book.like_count || 0);
+  const likedClass = book.current_user_has_liked ? "liked" : "";
+  const likeLabel = `${likeCount} like${likeCount === 1 ? "" : "s"}`;
+  const likeBadgeMarkup = `
+    <button
+      type="button"
+      class="learning-book-like ${likedClass}"
+      data-action="toggle-book-like"
+      data-id="${escapeHtml(String(book.id))}"
+      aria-label="${escapeHtml(book.current_user_has_liked ? `Unlike ${book.title}` : `Like ${book.title}`)}"
+      title="${escapeHtml(book.current_user_has_liked ? "Unlike" : "Like")}"
+    >
+      <span class="learning-book-like-heart" aria-hidden="true">${heartIcon()}</span>
+      <span class="learning-book-like-count">${escapeHtml(String(likeCount))}</span>
+      <span class="sr-only">${escapeHtml(likeLabel)}</span>
+    </button>
+  `;
 
   const coverMarkup = book.cover_url
-    ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} cover" class="learning-book-cover-image" loading="lazy">`
+    ? `${likeBadgeMarkup}<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} cover" class="learning-book-cover-image" loading="lazy">`
     : `<div class="learning-book-cover-fallback" style="background:${gradientValue(gradientKeyFromText(`${book.title}-${book.author}`))}">
+        ${likeBadgeMarkup}
         <span class="learning-book-cover-category">${escapeHtml(book.category || "Library")}</span>
         <strong>${escapeHtml(coverHeading)}</strong>
       </div>`;
@@ -5186,6 +5209,34 @@ async function toggleLiveReaction(postId) {
     showToast("Reaction updated.");
   } catch (error) {
     showToast(error.message || "Could not update appreciation.");
+  }
+}
+
+async function toggleBookLike(bookId) {
+  if (!window.AcuiteConnectAuth?.apiRequest) {
+    showToast("Sign in again to like this book.");
+    return;
+  }
+
+  const targetId = Number(bookId);
+  if (!targetId) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/learning/books/${targetId}/likes/toggle/`, {
+      method: "POST",
+    });
+    if (!payload?.book) {
+      throw new Error("Missing updated book payload.");
+    }
+    appData.learningBooks = appData.learningBooks.map((book) => (
+      Number(book.id) === targetId ? { ...book, ...payload.book } : book
+    ));
+    persistLearningCache();
+    renderAll();
+  } catch (error) {
+    showToast(error.message || "Could not update the book like right now.");
   }
 }
 
@@ -6703,6 +6754,14 @@ function likeIcon() {
   return `
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017a2 2 0 01-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095a.905.905 0 00-.905.905c0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
+    </svg>
+  `;
+}
+
+function heartIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
     </svg>
   `;
 }

@@ -16,6 +16,16 @@ def serialize_book(book, *, requester=None):
     if open_requisition_count is None:
         open_requisition_count = book.open_requisition_count
 
+    like_count = getattr(book, "like_count_annotated", None)
+    if like_count is None:
+        like_count = book.likes.count()
+
+    current_user_has_liked = getattr(book, "current_user_has_liked_annotated", None)
+    if current_user_has_liked is None:
+        current_user_has_liked = False
+    if requester and getattr(requester, "is_authenticated", False) and current_user_has_liked is False:
+        current_user_has_liked = book.likes.filter(user=requester).exists()
+
     current_holder = None
     current_requisition = getattr(book, "current_holder_requisition", None)
     if current_requisition is None:
@@ -46,6 +56,8 @@ def serialize_book(book, *, requester=None):
         "total_copies": book.total_copies,
         "open_requisition_count": open_requisition_count,
         "available_copies": available_copies,
+        "like_count": like_count,
+        "current_user_has_liked": current_user_has_liked,
         "current_holder": current_holder,
         "is_active": book.is_active,
         "can_request": available_copies > 0 and not requester_open,

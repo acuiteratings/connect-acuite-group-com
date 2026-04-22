@@ -2462,6 +2462,51 @@ select {
   background: var(--bg);
 }
 
+.learning-book-like {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: #fff;
+}
+
+.learning-book-like-heart {
+  width: 54px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: #ff2f1f;
+  filter: drop-shadow(0 4px 10px rgba(20, 10, 10, 0.18));
+}
+
+.learning-book-like-heart svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  display: block;
+}
+
+.learning-book-like-count {
+  min-width: 28px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(12, 12, 14, 0.42);
+}
+
+.learning-book-like.liked .learning-book-like-heart {
+  color: #d81912;
+}
+
+.learning-book-like:hover .learning-book-like-heart {
+  transform: scale(1.04);
+}
+
 .learning-book-cover-image,
 .learning-book-cover-fallback {
   width: 100%;
@@ -2549,6 +2594,18 @@ select {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-end;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .learning-issued-section {

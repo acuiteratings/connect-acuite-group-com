@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from operations.services import record_analytics_event, record_audit_event
 
-from .models import Book, BookRequisition
+from .models import Book, BookLike, BookRequisition
 from .serializers import serialize_book, serialize_requisition
 
 
@@ -84,6 +84,7 @@ def books_collection(request):
             ),
             output_field=IntegerField(),
         ),
+        like_count_annotated=Count("likes", distinct=True),
     )
 
     if not _can_manage_learning(request.user):
@@ -101,7 +102,14 @@ def books_collection(request):
             requester=request.user,
             status__in=open_statuses,
         )
-        queryset = queryset.annotate(requester_has_open=Exists(requester_open_subquery))
+        requester_like_subquery = BookLike.objects.filter(
+            book_id=OuterRef("pk"),
+            user=request.user,
+        )
+        queryset = queryset.annotate(
+            requester_has_open=Exists(requester_open_subquery),
+            current_user_has_liked_annotated=Exists(requester_like_subquery),
+        )
 
     books = [serialize_book(book, requester=request.user) for book in queryset]
     requisitions_qs = BookRequisition.objects.all()
@@ -255,3 +263,75 @@ def requisition_detail(request, requisition_id):
     )
     requisition = BookRequisition.objects.select_related("book", "requester").get(pk=requisition.pk)
     return JsonResponse({"requisition": serialize_requisition(requisition)})
+
+
+def toggle_book_like(request, book_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required."}, status=403)
+
+    book = get_object_or_404(Book, pk=book_id, is_active=True)
+    like, created = BookLike.objects.get_or_create(book=book, user=request.user)
+    if created:
+        liked = True
+        record_analytics_event(
+            "learning",
+            "book_liked",
+            actor=request.user,
+            metadata={"book_id": book.id},
+            request=request,
+        )
+        record_audit_event(
+            action="learning.book_liked",
+            actor=request.user,
+            target=book,
+            summary=f"Liked library book '{book.title}'",
+            metadata={"book_id": book.id},
+            request=request,
+        )
+    else:
+        like.delete()
+        liked = False
+        record_analytics_event(
+            "learning",
+            "book_unliked",
+            actor=request.user,
+            metadata={"book_id": book.id},
+            request=request,
+        )
+        record_audit_event(
+            action="learning.book_unliked",
+            actor=request.user,
+            target=book,
+            summary=f"Removed like from library book '{book.title}'",
+            metadata={"book_id": book.id},
+            request=request,
+        )
+
+    book = Book.objects.annotate(
+        open_requisition_count_annotated=Count(
+            "requisitions",
+            filter=Q(requisitions__status__in=BookRequisition.open_statuses()),
+        ),
+        available_copies_annotated=Greatest(
+            Value(0),
+            F("total_copies") - Count(
+                "requisitions",
+                filter=Q(requisitions__status__in=BookRequisition.open_statuses()),
+            ),
+            output_field=IntegerField(),
+        ),
+        like_count_annotated=Count("likes", distinct=True),
+        current_user_has_liked_annotated=Exists(
+            BookLike.objects.filter(book_id=OuterRef("pk"), user=request.user)
+        ),
+    ).get(pk=book.pk)
+
+    return JsonResponse(
+        {
+            "book": serialize_book(book, requester=request.user),
+            "liked": liked,
+        }
+    )

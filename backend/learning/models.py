@@ -89,3 +89,25 @@ class BookRequisition(models.Model):
         self.admin_note = admin_note
         self.reviewed_at = timezone.now()
         self.save(update_fields=["status", "admin_note", "reviewed_at", "updated_at"])
+
+
+class BookLike(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="liked_books",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("book", "user"),
+                name="learning_unique_book_like",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} likes {self.book}"
