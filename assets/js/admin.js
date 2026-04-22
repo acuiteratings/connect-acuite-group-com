@@ -527,9 +527,17 @@
       return;
     }
     try {
+      const currentPreview = state.previews[kind];
+      const previousTemplateFile = currentPreview && Number(currentPreview.user_id) === Number(userId)
+        ? String(currentPreview.template_file || "").trim()
+        : "";
       const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/celebrations/preview/", {
         method: "POST",
-        body: { kind, user_id: userId },
+        body: {
+          kind,
+          user_id: userId,
+          template_file: previousTemplateFile,
+        },
       });
       state.previews[kind] = payload.preview || null;
       renderCelebrationPreview(kind);

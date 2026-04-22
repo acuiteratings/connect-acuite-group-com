@@ -70,6 +70,24 @@ def _select_template(kind: str, *, user_id: int, reference_date: date) -> Path:
     return templates[index]
 
 
+def _rotate_template(kind: str, *, current_template_name: str, user_id: int, reference_date: date) -> Path:
+    templates = _template_paths(kind)
+    if not templates:
+        raise RuntimeError(f"No {kind} templates are available.")
+    if len(templates) == 1:
+        return templates[0]
+
+    current_name = str(current_template_name or "").strip()
+    if not current_name:
+        return _select_template(kind, user_id=user_id, reference_date=reference_date)
+
+    for index, template in enumerate(templates):
+        if template.name == current_name:
+            return templates[(index + 1) % len(templates)]
+
+    raise RuntimeError("Selected template file was not found.")
+
+
 def _active_profiles_for_date(reference_date: date, *, kind: str):
     queryset = DirectoryProfile.objects.select_related("user").filter(
         user__is_active=True,
@@ -249,9 +267,12 @@ def build_celebration_preview(*, kind: str, user_id: int, reference_date: date |
     profile = DirectoryProfile.objects.select_related("user").get(user_id=user_id)
     candidate = _build_candidate(kind, profile=profile, reference_date=reference_date)
     if template_name:
-        template_path = TEMPLATE_ROOT / ("birthday" if kind == "birthday" else "anniversary") / template_name
-        if not template_path.exists():
-            raise RuntimeError("Selected template file was not found.")
+        template_path = _rotate_template(
+            kind,
+            current_template_name=template_name,
+            user_id=user_id,
+            reference_date=reference_date,
+        )
     else:
         template_path = _select_template(kind, user_id=user_id, reference_date=reference_date)
     card = _build_celebration_card(candidate, template_path=template_path)

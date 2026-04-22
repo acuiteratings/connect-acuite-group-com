@@ -38,6 +38,7 @@ const STORE_CATEGORY_LABELS = {
 const BROCHURE_RESOURCE_PATH = "/static/resources/acuite/acuite-brochure.html";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
+const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
 const ENABLED_TABS = new Set(["home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
@@ -941,15 +942,25 @@ async function loadBulletinPosts() {
   }
 
   try {
-    const employeePostsPayload = await window.AcuiteConnectAuth.apiRequest(
-      `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
-    );
+    const [employeePostsPayload, celebrationPostsPayload] = await Promise.all([
+      window.AcuiteConnectAuth.apiRequest(
+        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission`,
+      ),
+      window.AcuiteConnectAuth.apiRequest(
+        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&topic=hr`,
+      ),
+    ]);
     const employeeResults = Array.isArray(employeePostsPayload.results)
       ? employeePostsPayload.results
         .map(mapBulletinPost)
         .filter((post) => post.userSubmission)
       : [];
-    appData.bulletinPosts = sortBulletinPostsNewestFirst(employeeResults);
+    const celebrationResults = Array.isArray(celebrationPostsPayload.results)
+      ? celebrationPostsPayload.results
+        .map(mapBulletinPost)
+        .filter((post) => isCelebrationBulletinPost(post))
+      : [];
+    appData.bulletinPosts = sortBulletinPostsNewestFirst([...employeeResults, ...celebrationResults]);
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
   }
@@ -5761,6 +5772,16 @@ function updateLivePostFromPayload(postPayload) {
       );
       return;
     }
+    if (isCelebrationBulletinPost(mapped)) {
+      const existingIndex = appData.bulletinPosts.findIndex((item) => item.sourceId === mapped.sourceId);
+      if (existingIndex >= 0) {
+        appData.bulletinPosts.splice(existingIndex, 1, mapped);
+      } else {
+        appData.bulletinPosts.unshift(mapped);
+      }
+      appData.bulletinPosts = sortBulletinPostsNewestFirst(appData.bulletinPosts);
+      return;
+    }
     return;
   }
 
@@ -5790,6 +5811,10 @@ function likeIcon() {
       <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017a2 2 0 01-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095a.905.905 0 00-.905.905c0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
     </svg>
   `;
+}
+
+function isCelebrationBulletinPost(post) {
+  return CELEBRATION_TEMPLATE_KEYS.has(String(post?.templateKey || "").trim());
 }
 
 function commentIcon() {

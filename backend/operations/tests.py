@@ -329,6 +329,31 @@ class CelebrationAdminApiTests(TestCase):
         self.assertEqual(payload["card"]["occasion_label"], "Happy Birthday")
         self.assertTrue(payload["template_file"].endswith(".html"))
 
+    def test_celebration_preview_regenerate_rotates_template(self):
+        self.client.force_login(self.admin)
+
+        first_response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps({"kind": "birthday", "user_id": self.birthday_user.id}),
+            content_type="application/json",
+        )
+        first_template = first_response.json()["preview"]["template_file"]
+
+        second_response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps(
+                {
+                    "kind": "birthday",
+                    "user_id": self.birthday_user.id,
+                    "template_file": first_template,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertNotEqual(second_response.json()["preview"]["template_file"], first_template)
+
     def test_celebration_publish_creates_post(self):
         self.client.force_login(self.admin)
         preview_response = self.client.post(
