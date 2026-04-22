@@ -5145,12 +5145,27 @@ function renderDirectory() {
             <div class="person-location">${escapeHtml(person.officeLine)}</div>
           </div>
         </div>
+        <div class="person-attributes">
+          ${renderDirectoryAttributeBlock("Skills", person.skills)}
+          ${renderDirectoryAttributeBlock("Hobbies", person.hobbies)}
+        </div>
         <div class="person-footer">
           <span class="availability">${escapeHtml(person.contactLine)}</span>
         </div>
       </article>
     `).join("")
     : `<div class="empty-state">No people matched that filter. Try a broader company, location, or department selection.</div>`;
+}
+
+function renderDirectoryAttributeBlock(label, values) {
+  const items = Array.isArray(values) ? values.filter(Boolean) : [];
+  const displayValue = items.length ? items.join(" · ") : "Not added yet";
+  return `
+    <div class="person-attribute">
+      <div class="person-attribute-label">${escapeHtml(label)}</div>
+      <div class="person-attribute-value ${items.length ? "" : "empty"}">${escapeHtml(displayValue)}</div>
+    </div>
+  `;
 }
 
 function gradientValue(key) {
