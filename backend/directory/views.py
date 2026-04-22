@@ -6,7 +6,13 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 from accounts.serializers import serialize_user
 from store.services import build_coin_balance_map
 
-from .community_utils import COMMUNITY_CLUB_LIBRARY, normalize_community_clubs
+from .community_utils import (
+    COMMUNITY_CLUB_KEYS,
+    COMMUNITY_CLUB_LIBRARY,
+    community_hobby_labels_to_keys,
+    normalize_community_clubs,
+    normalize_community_hobby_labels,
+)
 from .models import CommunityMembership, DirectoryProfile
 from .serializers import serialize_directory_profile
 from .utils import (
@@ -72,13 +78,33 @@ def _sync_profile_clubs_for_user(user):
     if not user or not getattr(user, "pk", None):
         return []
 
-    clubs = list(
-        CommunityMembership.objects.filter(user=user)
-        .order_by("joined_at", "id")
-        .values_list("club_key", flat=True)
-    )
-    normalized_clubs = normalize_community_clubs(clubs)
     profile = _get_or_create_profile_for_user(user)
+    desired_clubs = community_hobby_labels_to_keys(profile.hobbies)
+    existing_memberships = {
+        membership.club_key: membership
+        for membership in CommunityMembership.objects.filter(user=user)
+    }
+    existing_clubs = set(existing_memberships.keys())
+    desired_club_set = set(desired_clubs)
+    affected_clubs = existing_clubs | desired_club_set
+
+    for club_key in existing_clubs - desired_club_set:
+        existing_memberships[club_key].delete()
+
+    for club_key in desired_clubs:
+        if club_key in existing_memberships:
+            continue
+        CommunityMembership.objects.create(
+            user=user,
+            club_key=club_key,
+            is_admin=False,
+        )
+
+    for club_key in affected_clubs:
+        if club_key in COMMUNITY_CLUB_KEYS:
+            _ensure_club_admin(club_key)
+
+    normalized_clubs = normalize_community_clubs(desired_clubs)
     if normalize_community_clubs(profile.clubs) != normalized_clubs:
         profile.clubs = normalized_clubs
         profile.save(update_fields=["clubs", "updated_at"])
@@ -111,6 +137,9 @@ def _serialize_club_admin(user):
 
 
 def _build_communities_payload(current_user=None):
+    if current_user and getattr(current_user, "is_authenticated", False):
+        _sync_profile_clubs_for_user(current_user)
+
     memberships = list(
         CommunityMembership.objects.select_related("user")
         .filter(user__is_active=True)
@@ -133,7 +162,6 @@ def _build_communities_payload(current_user=None):
         )
         current_user_memberships = {item["club_key"]: item for item in memberships}
         current_user_clubs = [item["club_key"] for item in memberships]
-        _sync_profile_clubs_for_user(current_user)
 
     results = [
         {
@@ -227,29 +255,10 @@ def communities_overview(request):
 
     if request.method != "POST":
         return HttpResponseNotAllowed(["GET", "POST"])
-
-    payload = _parse_json_body(request)
-    club_key = str(payload.get("club_key", "")).strip().lower()
-    action = str(payload.get("action", "")).strip().lower()
-    if club_key not in {item["key"] for item in COMMUNITY_CLUB_LIBRARY}:
-        return JsonResponse({"detail": "Invalid community selected."}, status=400)
-    if action not in {"join", "leave"}:
-        return JsonResponse({"detail": "Invalid membership action."}, status=400)
-
-    _get_or_create_profile_for_user(request.user)
-    if action == "join":
-        CommunityMembership.objects.get_or_create(
-            user=request.user,
-            club_key=club_key,
-            defaults={"is_admin": False},
-        )
-    else:
-        CommunityMembership.objects.filter(user=request.user, club_key=club_key).delete()
-
-    _ensure_club_admin(club_key)
-    _sync_profile_clubs_for_user(request.user)
-
-    return JsonResponse(_build_communities_payload(request.user))
+    return JsonResponse(
+        {"detail": "Community membership is managed from My Profile hobbies."},
+        status=400,
+    )
 
 
 def my_profile(request):
@@ -276,16 +285,13 @@ def my_profile(request):
         for skill in normalize_string_list(payload.get("skills"), max_items=3)
         if skill in PROFILE_SKILL_LIBRARY
     ]
-    allowed_hobby_labels = {item["label"] for item in COMMUNITY_CLUB_LIBRARY}
     profile.skills = selected_skills
-    profile.hobbies = [
-        hobby
-        for hobby in normalize_string_list(payload.get("hobbies"), max_items=3)
-        if hobby in allowed_hobby_labels
-    ]
+    profile.hobbies = normalize_community_hobby_labels(payload.get("hobbies"), max_items=3)
     profile.interests = normalize_string_list(payload.get("interests"), max_items=12)
     profile.profile_photos = normalize_profile_photos(payload.get("profile_photos"), max_items=2)
     profile.save(update_fields=["skills", "hobbies", "interests", "profile_photos", "department_for_connect", "updated_at"])
+    _sync_profile_clubs_for_user(request.user)
+    profile.refresh_from_db()
 
     return JsonResponse(
         {

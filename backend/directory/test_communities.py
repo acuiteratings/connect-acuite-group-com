@@ -29,11 +29,15 @@ class CommunityApiTests(TestCase):
             user=self.user,
             office_location="Mumbai",
             city="Mumbai",
+            hobbies=["Reading Club", "Travel Club"],
+            clubs=["reading_club", "travel_club"],
         )
         DirectoryProfile.objects.create(
             user=self.other_user,
             office_location="Mumbai",
             city="Mumbai",
+            hobbies=["Reading Club"],
+            clubs=["reading_club"],
         )
         CommunityMembership.objects.create(
             user=self.user,
@@ -62,17 +66,25 @@ class CommunityApiTests(TestCase):
         self.assertTrue(reading_club["viewer_is_admin"])
         self.assertEqual(reading_club["club_admin"]["name"], self.user.full_name)
 
-    def test_first_member_to_join_becomes_club_admin(self):
+    def test_selecting_hobby_in_profile_marks_club_joined_and_assigns_admin(self):
         self.client.force_login(self.user)
 
-        join_response = self.client.post(
-            "/api/directory/communities/",
-            data='{"club_key":"technology_club","action":"join"}',
+        save_response = self.client.post(
+            "/api/directory/me/",
+            data='{"skills":[],"hobbies":["Technology Club"],"interests":[],"profile_photos":[]}',
             content_type="application/json",
         )
 
-        self.assertEqual(join_response.status_code, 200)
-        payload = join_response.json()
+        self.assertEqual(save_response.status_code, 200)
+        profile = DirectoryProfile.objects.get(user=self.user)
+        self.assertEqual(profile.hobbies, ["Technology Club"])
+        self.assertEqual(profile.clubs, ["technology_club"])
+        membership = CommunityMembership.objects.get(user=self.user, club_key="technology_club")
+        self.assertTrue(membership.is_admin)
+
+        response = self.client.get("/api/directory/communities/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
         self.assertEqual(payload["joined_count"], 1)
         technology_club = next(item for item in payload["results"] if item["key"] == "technology_club")
         self.assertTrue(technology_club["joined"])
@@ -80,7 +92,7 @@ class CommunityApiTests(TestCase):
         self.assertTrue(technology_club["viewer_is_admin"])
         self.assertEqual(technology_club["club_admin"]["name"], self.user.full_name)
 
-    def test_next_member_becomes_admin_when_previous_admin_leaves(self):
+    def test_next_member_becomes_admin_when_previous_member_removes_hobby(self):
         first_profile = DirectoryProfile.objects.create(
             user=self.user,
             office_location="Mumbai",
@@ -101,20 +113,22 @@ class CommunityApiTests(TestCase):
             club_key="technology_club",
             is_admin=False,
         )
+        first_profile.hobbies = ["Technology Club"]
         first_profile.clubs = ["technology_club"]
-        first_profile.save(update_fields=["clubs", "updated_at"])
+        first_profile.save(update_fields=["hobbies", "clubs", "updated_at"])
+        second_profile.hobbies = ["Technology Club"]
         second_profile.clubs = ["technology_club"]
-        second_profile.save(update_fields=["clubs", "updated_at"])
+        second_profile.save(update_fields=["hobbies", "clubs", "updated_at"])
         self.client.force_login(self.user)
 
-        leave_response = self.client.post(
-            "/api/directory/communities/",
-            data='{"club_key":"technology_club","action":"leave"}',
+        save_response = self.client.post(
+            "/api/directory/me/",
+            data='{"skills":[],"hobbies":[],"interests":[],"profile_photos":[]}',
             content_type="application/json",
         )
 
-        self.assertEqual(leave_response.status_code, 200)
-        payload = leave_response.json()
+        self.assertEqual(save_response.status_code, 200)
+        payload = self.client.get("/api/directory/communities/").json()
         self.assertEqual(payload["joined_count"], 0)
         technology_club = next(item for item in payload["results"] if item["key"] == "technology_club")
         self.assertFalse(technology_club["joined"])

@@ -562,7 +562,6 @@ let myPostsLoadError = "";
 let adminUsersLoadError = "";
 let communityLoadError = "";
 let communityLoading = false;
-let communitySavingKey = "";
 let communityPostsLoadingKey = "";
 let communityPostsSubmittingKey = "";
 let communityPostsErrorByClub = {};
@@ -1340,11 +1339,6 @@ async function handleDocumentClick(event) {
 
     if (actionName === "select-community-club") {
       setActiveCommunityClub(action.dataset.clubKey);
-      return;
-    }
-
-    if (actionName === "toggle-community-membership") {
-      await toggleCommunityMembership(action.dataset.clubKey, action.dataset.joined === "true");
       return;
     }
 
@@ -3506,6 +3500,7 @@ function renderCommunityPanel() {
   syncActiveCommunityClub();
   const joinedCount = appData.communityClubs.filter((club) => club.joined).length;
   elements.communityResultsMeta.textContent = `${appData.communityClubs.length} communities | ${joinedCount} joined`;
+  elements.communityWorkspaceBody.innerHTML = renderCommunityWorkspace(getActiveCommunityClub());
   elements.communityGrid.innerHTML = appData.communityClubs.map((club) => `
     <article class="section-card club-card ${state.communityClubKey === club.key ? "active" : ""}">
       <div class="club-banner ${communityGradientClass(club.key)}">
@@ -3513,12 +3508,12 @@ function renderCommunityPanel() {
       </div>
       <div class="club-card-body">
         <h3>${escapeHtml(club.label)}</h3>
-        <p>${escapeHtml(club.description || "Join this community voluntarily and participate with colleagues.")}</p>
+        <p>${escapeHtml(club.description || "Select this club in My Profile hobbies to participate with colleagues.")}</p>
         <div class="mini-item-meta">
           ${
             club.club_admin?.name
               ? `Club Admin: ${escapeHtml([club.club_admin.name, club.club_admin.title].filter(Boolean).join(" | "))}`
-              : "Club Admin will be assigned to the first employee who joins."
+              : "Club Admin will be assigned to the first employee who selects this club in My Profile."
           }
         </div>
         <div class="club-members">
@@ -3532,16 +3527,7 @@ function renderCommunityPanel() {
             >
               Open club
             </button>
-            <button
-              type="button"
-              class="btn-ghost club-join ${club.joined ? "joined" : ""}"
-              data-action="toggle-community-membership"
-              data-club-key="${escapeHtml(club.key)}"
-              data-joined="${club.joined ? "true" : "false"}"
-              ${communitySavingKey === club.key ? "disabled" : ""}
-            >
-              ${communitySavingKey === club.key ? "Saving..." : (club.joined ? "Joined" : "Join")}
-            </button>
+            ${club.joined ? '<span class="mini-chip success">Joined</span>' : ""}
           </div>
         </div>
       </div>
@@ -3552,7 +3538,6 @@ function renderCommunityPanel() {
   if (activeClub?.joined && !Array.isArray(appData.communityPostsByClub[activeClub.key]) && !communityPostsErrorByClub[activeClub.key]) {
     void loadCommunityPosts(activeClub.key);
   }
-  elements.communityWorkspaceBody.innerHTML = renderCommunityWorkspace(activeClub);
 }
 
 function communityGradientClass(clubKey) {
@@ -3573,40 +3558,6 @@ function communityGradientClass(clubKey) {
   return groups[clubKey] || "club-banner-sun";
 }
 
-async function toggleCommunityMembership(clubKey, isJoined) {
-  if (!clubKey || !window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
-    showToast("Communities are unavailable right now.");
-    return;
-  }
-
-  communitySavingKey = clubKey;
-  renderCommunityPanel();
-  try {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/communities/", {
-      method: "POST",
-      body: {
-        club_key: clubKey,
-        action: isJoined ? "leave" : "join",
-      },
-    });
-    appData.communityClubs = Array.isArray(payload.results) ? payload.results : appData.communityClubs;
-    if (appData.currentProfile) {
-      appData.currentProfile.clubs = Array.isArray(payload.my_clubs) ? payload.my_clubs : [];
-    }
-    syncActiveCommunityClub();
-    if (!isJoined) {
-      void loadCommunityPosts(clubKey, { force: true });
-    }
-    renderCommunityPanel();
-    showToast(isJoined ? "You have left the community." : "You have joined the community.");
-  } catch (error) {
-    showToast(error.message || "Could not update your club membership.");
-  } finally {
-    communitySavingKey = "";
-    renderCommunityPanel();
-  }
-}
-
 function renderCommunityWorkspace(club) {
   if (!club) {
     return '<div class="empty-state">Choose a club to start exploring the community space.</div>';
@@ -3619,7 +3570,7 @@ function renderCommunityWorkspace(club) {
   const form = club.form || {};
   const clubAdminLine = club.club_admin?.name
     ? [club.club_admin.name, club.club_admin.title, club.club_admin.location].filter(Boolean).join(" | ")
-    : "Will be assigned automatically when the first employee joins.";
+    : "Will be assigned automatically when the first employee selects this club in My Profile.";
 
   if (!club.joined) {
     return `
@@ -3633,7 +3584,7 @@ function renderCommunityWorkspace(club) {
           <span class="mini-chip">${escapeHtml(String(club.member_count || 0))} members</span>
         </div>
       </div>
-      <div class="empty-state">Join ${escapeHtml(club.label)} to post updates, recommendations, and discussions with other members.</div>
+      <div class="empty-state">To join ${escapeHtml(club.label)}, open My Profile and select it under Hobbies. Once selected there, this club will show as Joined here.</div>
     `;
   }
 
@@ -6710,6 +6661,9 @@ async function saveProfileBuilder() {
       if (index >= 0) {
         appData.directory.splice(index, 1, updatedCard);
       }
+    }
+    if (appData.communityClubs.length || state.activeTab === "community") {
+      await loadCommunityData();
     }
     renderProfile();
     renderProfileBuilder();

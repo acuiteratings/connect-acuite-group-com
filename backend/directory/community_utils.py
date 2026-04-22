@@ -159,6 +159,9 @@ COMMUNITY_CLUB_LIBRARY = [
 
 COMMUNITY_CLUB_KEYS = {item["key"] for item in COMMUNITY_CLUB_LIBRARY}
 COMMUNITY_CLUB_LOOKUP = {item["key"]: item for item in COMMUNITY_CLUB_LIBRARY}
+COMMUNITY_CLUB_LABEL_LOOKUP = {
+    item["label"].strip().casefold(): item["key"] for item in COMMUNITY_CLUB_LIBRARY
+}
 
 
 def normalize_community_clubs(value, *, max_items=12):
@@ -167,6 +170,37 @@ def normalize_community_clubs(value, *, max_items=12):
     for item in value if isinstance(value, (list, tuple)) else []:
         key = str(item or "").strip().lower()
         if not key or key in seen or key not in COMMUNITY_CLUB_KEYS:
+            continue
+        cleaned.append(key)
+        seen.add(key)
+        if len(cleaned) >= max_items:
+            break
+    return cleaned
+
+
+def normalize_community_hobby_labels(value, *, max_items=12):
+    cleaned = []
+    seen = set()
+    for item in value if isinstance(value, (list, tuple)) else []:
+        label = str(item or "").strip()
+        if not label:
+            continue
+        normalized = label.casefold()
+        if normalized in seen or normalized not in COMMUNITY_CLUB_LABEL_LOOKUP:
+            continue
+        cleaned.append(label)
+        seen.add(normalized)
+        if len(cleaned) >= max_items:
+            break
+    return cleaned
+
+
+def community_hobby_labels_to_keys(value, *, max_items=12):
+    cleaned = []
+    seen = set()
+    for item in normalize_community_hobby_labels(value, max_items=max_items):
+        key = COMMUNITY_CLUB_LABEL_LOOKUP.get(str(item).strip().casefold())
+        if not key or key in seen:
             continue
         cleaned.append(key)
         seen.add(key)

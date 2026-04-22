@@ -1559,7 +1559,6 @@ select {
 .btn-link,
 .btn-outline,
 .btn-inv,
-.club-join,
 .tool-open,
 .resource-bookmark,
 .connect-btn,
@@ -3195,7 +3194,7 @@ select {
 }
 
 .community-workspace {
-  margin-top: 18px;
+  margin: 0 0 18px;
 }
 
 .community-workspace-head {
@@ -3256,19 +3255,6 @@ select {
   font-size: 12px;
   color: var(--text3);
   font-weight: 600;
-}
-
-.club-join {
-  margin-left: auto;
-  background: var(--grad-cool);
-  border-color: transparent;
-  color: #fff;
-}
-
-.club-join.joined {
-  background: var(--bg3);
-  border-color: var(--border);
-  color: var(--text2);
 }
 
 .spotlight-feature {
