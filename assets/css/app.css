@@ -2230,36 +2230,27 @@ select {
 
 .iam-acuite-shell {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 1fr;
+  gap: 18px;
   align-items: start;
 }
 
 .iam-acuite-copy {
-  position: sticky;
-  top: calc(var(--nav-h) + 24px);
+  max-width: none;
 }
 
 .iam-acuite-copy h1 {
   font-size: clamp(38px, 4.8vw, 68px);
   line-height: 0.95;
   letter-spacing: -0.04em;
-  margin: 0 0 18px;
-}
-
-.iam-acuite-lead {
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--text2);
-  max-width: 28ch;
-  margin: 0 0 18px;
+  margin: 0 0 14px;
 }
 
 .iam-acuite-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .iam-acuite-stage-wrap {
@@ -2268,7 +2259,7 @@ select {
 
 .iam-acuite-stage {
   position: relative;
-  min-height: 560px;
+  min-height: 720px;
   border-radius: 32px;
   overflow: hidden;
   border: 1px solid var(--border);
