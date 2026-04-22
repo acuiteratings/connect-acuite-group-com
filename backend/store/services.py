@@ -26,10 +26,11 @@ SPENT_REDEMPTION_STATUSES = {
 }
 
 COIN_RULES = {
-    "reaction_given": {"label": "Like a post", "coins": 1},
-    "published_comment": {"label": "Post a comment", "coins": 10},
-    "book_returned": {"label": "Read and return a library book", "coins": 100},
+    "reaction_given": {"label": "Like a post", "coins": 100},
+    "published_comment": {"label": "Post a comment", "coins": 500},
+    "book_returned": {"label": "Read and return a library book", "coins": 0},
     "idea_shared": {"label": "Share an idea", "coins": 500},
+    "published_post": {"label": "Any post on Bulletin Board", "coins": 500},
     "question_asked": {"label": "Ask a question", "coins": 1000},
     "ceo_request": {"label": "Connect with MD & CEO", "coins": 1000},
     "coin_expiry": {"label": "Coin balance expiry", "coins": 0},
@@ -363,6 +364,8 @@ def _ensure_reward_entry(
 
     earn_count, reversal_count = _reward_cycle_counts(source_type, source_id, event_key)
     amount = COIN_RULES[event_key]["coins"]
+    if amount <= 0:
+        return None, False
 
     if qualifies:
         if earn_count > reversal_count:
@@ -473,7 +476,7 @@ def _post_reward_key(post):
         return "ceo_request"
     if metadata.get("submission_key") == "share_idea":
         return "idea_shared"
-    return ""
+    return "published_post"
 
 
 def sync_coin_ledger_for_post(post):

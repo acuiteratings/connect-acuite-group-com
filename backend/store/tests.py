@@ -172,7 +172,7 @@ class BrandStoreApiTests(TestCase):
             name="Acuite Pen",
             category=BrandStoreItem.Category.DESK,
             description="Premium pen",
-            point_cost=10,
+            point_cost=1000,
             stock_units=5,
             is_active=True,
         )
@@ -449,7 +449,7 @@ class BrandStoreApiTests(TestCase):
             ).count(),
             1,
         )
-        self.assertEqual(earned_after_like - earned_after_unlike, 1)
+        self.assertEqual(earned_after_like - earned_after_unlike, 100)
 
     def test_redemption_creates_hold_then_release_and_spend_entries(self):
         redemption = BrandStoreRedemption.objects.create(
@@ -516,6 +516,29 @@ class BrandStoreApiTests(TestCase):
         first_count = CoinLedgerEntry.objects.count()
         backfill_coin_ledger()
         self.assertEqual(CoinLedgerEntry.objects.count(), first_count)
+
+    def test_published_employee_post_earns_bulletin_board_reward(self):
+        CoinLedgerEntry.objects.all().delete()
+        employee_post = Post.objects.create(
+            author=self.user,
+            title="Giving away a chair",
+            body="Pickup from Mumbai office.",
+            module=Post.Module.EMPLOYEE_POSTS,
+            topic="employee_submission",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+            metadata={"submission_key": "give_away", "user_submission": True},
+        )
+
+        backfill_coin_ledger()
+
+        earn_entry = CoinLedgerEntry.objects.get(
+            user=self.user,
+            event_key="published_post",
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            reference_key__startswith=f"post:{employee_post.id}:published_post:earn:",
+        )
+        self.assertEqual(earn_entry.amount, 500)
 
     def test_financial_year_end_expires_unused_available_points(self):
         CoinLedgerEntry.objects.all().delete()
