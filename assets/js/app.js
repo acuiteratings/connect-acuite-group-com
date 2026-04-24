@@ -190,7 +190,7 @@ const COMPANY_HOLIDAY_CALENDAR = [
 ];
 const COMPANY_EVENT_CALENDAR = [
   {
-    date: "2026-04-23",
+    date: "2026-05-05",
     label: "Town hall and leadership briefing",
   },
 ];
@@ -230,12 +230,12 @@ const HOME_ANNOUNCEMENTS = [
     format: "Hybrid",
     title: "Town hall and leadership briefing.",
     summary: "How did we do last year? What is our plan going forward? If you want to know about these, do attend the session. Before the session you may post a question to our MD & CEO, give a suggestion or share an idea.",
-    dateLabel: "Wednesday, 6th May 2026",
-    timeLabel: "4:00 PM - 5:30 PM IST",
-    venueLabel: "Venue: TBD",
+    dateLabel: "Tuesday, 5th May 2026",
+    timeLabel: "6:00 PM onwards",
+    venueLabel: "Venue: The Rooftop & Malabar, Trident, Nariman Point.",
     hostLabel: "Hosted by the MD & CEO with the leadership team",
     audienceLabel: "Open to all employees",
-    countdownLabel: getTownHallCountdownLabel("2026-05-06"),
+    countdownLabel: getTownHallCountdownLabel("2026-05-05"),
     baseMetrics: {
       likes: 96,
     },
