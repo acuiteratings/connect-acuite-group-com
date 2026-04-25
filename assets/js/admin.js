@@ -14,7 +14,6 @@
       anniversary: null,
     },
     employeePosts: [],
-    reportedErrors: [],
     toastTimer: null,
   };
 
@@ -44,7 +43,6 @@
       loadCelebrations(),
       loadStoreAdminData(),
       loadEmployeePosts(),
-      loadReportedErrors(),
     ]);
     renderAll();
   }
@@ -66,8 +64,6 @@
       employeePostMeta: document.getElementById("admin-employee-post-meta"),
       ceoRequestList: document.getElementById("admin-ceo-request-list"),
       ceoRequestMeta: document.getElementById("admin-ceo-request-meta"),
-      reportedErrorList: document.getElementById("admin-reported-error-list"),
-      reportedErrorMeta: document.getElementById("admin-reported-error-meta"),
       libraryBookForm: document.getElementById("admin-library-book-form"),
       storeItemForm: document.getElementById("admin-store-item-form"),
       storeRequestList: document.getElementById("admin-store-request-list"),
@@ -103,16 +99,10 @@
       : [];
   }
 
-  async function loadReportedErrors() {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/reported-errors/");
-    state.reportedErrors = Array.isArray(payload.results) ? payload.results : [];
-  }
-
   function renderAll() {
     renderCelebrationSections();
     renderEmployeePosts();
     renderCeoRequests();
-    renderReportedErrors();
     renderStoreAdmin();
   }
 
@@ -169,10 +159,6 @@
       return;
     }
 
-    if (action.dataset.action === "delete-reported-error") {
-      void deleteReportedError(Number(action.dataset.id || 0));
-      return;
-    }
   }
 
   function handleSubmit(event) {
@@ -277,41 +263,6 @@
         <div class="celebration-preview-actions">
           <button type="button" class="admin-btn admin-btn-primary" data-action="approve-employee-post" data-id="${post.id}">Approve</button>
           <button type="button" class="admin-btn admin-btn-danger" data-action="reject-employee-post" data-id="${post.id}">Reject</button>
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function renderReportedErrors() {
-    if (!elements.reportedErrorList || !elements.reportedErrorMeta) {
-      return;
-    }
-
-    elements.reportedErrorMeta.textContent = state.reportedErrors.length
-      ? `${state.reportedErrors.length} reported issue${state.reportedErrors.length === 1 ? "" : "s"}`
-      : "No employee-reported errors";
-
-    if (!state.reportedErrors.length) {
-      elements.reportedErrorList.innerHTML = '<div class="celebration-empty">Employee-reported errors will appear here.</div>';
-      return;
-    }
-
-    elements.reportedErrorList.innerHTML = state.reportedErrors.map((item) => `
-      <article class="admin-library-requisition-card">
-        <div class="admin-library-requisition-head">
-          <div>
-            <h4>${escapeHtml(item.title || "Reported error")}</h4>
-            <p>${escapeHtml([item.reporter, item.reporter_email].filter(Boolean).join(" | "))}</p>
-          </div>
-          <span class="admin-process-stage">${escapeHtml(formatDateLabel(item.created_at))}</span>
-        </div>
-        <div class="celebration-row-meta">
-          ${item.source_tab ? `<span class="admin-flag">${escapeHtml(item.source_tab)}</span>` : ""}
-          ${item.page_path ? `<span class="admin-flag">${escapeHtml(item.page_path)}</span>` : ""}
-        </div>
-        <p class="admin-library-note">${escapeHtml(item.details || "")}</p>
-        <div class="celebration-preview-actions">
-          <button type="button" class="admin-btn admin-btn-danger" data-action="delete-reported-error" data-id="${item.id}">Delete</button>
         </div>
       </article>
     `).join("");
@@ -563,23 +514,6 @@
       showToast(moderationStatus === "published" ? "Employee post approved and published." : "Employee post rejected.");
     } catch (error) {
       showToast(error.message || "Could not review the employee post.");
-    }
-  }
-
-  async function deleteReportedError(errorId) {
-    if (!errorId) {
-      return;
-    }
-
-    try {
-      await window.AcuiteConnectAuth.apiRequest(`/api/ops/reported-errors/${errorId}/`, {
-        method: "DELETE",
-      });
-      state.reportedErrors = state.reportedErrors.filter((item) => Number(item.id) !== Number(errorId));
-      renderReportedErrors();
-      showToast("Reported error deleted.");
-    } catch (error) {
-      showToast(error.message || "Could not delete the reported error.");
     }
   }
 
