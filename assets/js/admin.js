@@ -5,9 +5,6 @@
       birthdays: [],
       anniversaries: [],
     },
-    library: {
-      requisitions: [],
-    },
     store: {
       requests: [],
       handedOver: [],
@@ -45,7 +42,6 @@
     renderCurrentUser();
     await Promise.all([
       loadCelebrations(),
-      loadLibraryAdminData(),
       loadStoreAdminData(),
       loadEmployeePosts(),
       loadReportedErrors(),
@@ -73,10 +69,6 @@
       reportedErrorList: document.getElementById("admin-reported-error-list"),
       reportedErrorMeta: document.getElementById("admin-reported-error-meta"),
       libraryBookForm: document.getElementById("admin-library-book-form"),
-      libraryRequisitionList: document.getElementById("admin-library-requisition-list"),
-      libraryRequisitionMeta: document.getElementById("admin-library-requisition-meta"),
-      libraryReturnList: document.getElementById("admin-library-return-list"),
-      libraryReturnMeta: document.getElementById("admin-library-return-meta"),
       storeItemForm: document.getElementById("admin-store-item-form"),
       storeRequestList: document.getElementById("admin-store-request-list"),
       storeRequestMeta: document.getElementById("admin-store-request-meta"),
@@ -94,11 +86,6 @@
     const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/celebrations/today/");
     state.celebrations.birthdays = Array.isArray(payload.birthdays) ? payload.birthdays : [];
     state.celebrations.anniversaries = Array.isArray(payload.anniversaries) ? payload.anniversaries : [];
-  }
-
-  async function loadLibraryAdminData() {
-    const payload = await window.AcuiteConnectAuth.apiRequest("/api/learning/requisitions/");
-    state.library.requisitions = Array.isArray(payload.results) ? payload.results : [];
   }
 
   async function loadStoreAdminData() {
@@ -126,7 +113,6 @@
     renderEmployeePosts();
     renderCeoRequests();
     renderReportedErrors();
-    renderLibraryAdmin();
     renderStoreAdmin();
   }
 
@@ -160,21 +146,6 @@
 
     if (action.dataset.action === "post-celebration-card") {
       void publishCelebrationPreview(action.dataset.kind);
-      return;
-    }
-
-    if (action.dataset.action === "approve-library-requisition") {
-      void updateLibraryRequisition(Number(action.dataset.id || 0), "approved");
-      return;
-    }
-
-    if (action.dataset.action === "reject-library-requisition") {
-      void updateLibraryRequisition(Number(action.dataset.id || 0), "declined");
-      return;
-    }
-
-    if (action.dataset.action === "return-library-book") {
-      void updateLibraryRequisition(Number(action.dataset.id || 0), "returned");
       return;
     }
 
@@ -341,80 +312,6 @@
         <p class="admin-library-note">${escapeHtml(item.details || "")}</p>
         <div class="celebration-preview-actions">
           <button type="button" class="admin-btn admin-btn-danger" data-action="delete-reported-error" data-id="${item.id}">Delete</button>
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function renderLibraryAdmin() {
-    if (!elements.libraryRequisitionList || !elements.libraryRequisitionMeta || !elements.libraryReturnList || !elements.libraryReturnMeta) {
-      return;
-    }
-
-    const requestedItems = state.library.requisitions
-      .filter((item) => item.status === "requested")
-      .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime());
-
-    const handedOverItems = state.library.requisitions
-      .filter((item) => item.status === "approved")
-      .sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime());
-
-    elements.libraryRequisitionMeta.textContent = requestedItems.length
-      ? `${requestedItems.length} open requisition${requestedItems.length === 1 ? "" : "s"}`
-      : "No open requisitions";
-
-    if (!requestedItems.length) {
-      elements.libraryRequisitionList.innerHTML = '<div class="celebration-empty">No book requisitions are open right now.</div>';
-    } else {
-      elements.libraryRequisitionList.innerHTML = requestedItems.map((item) => `
-        <article class="admin-library-requisition-card">
-          <div class="admin-library-requisition-head">
-            <div>
-              <h4>${escapeHtml(item.book.title)}</h4>
-              <p>${escapeHtml([item.book.author, item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
-            </div>
-            <span class="admin-process-stage">${escapeHtml(formatLibraryStatus(item.status))}</span>
-          </div>
-          <div class="celebration-row-meta">
-            ${item.book_location.office_location ? `<span class="admin-flag">${escapeHtml(item.book_location.office_location)}</span>` : ""}
-            ${item.book_location.shelf_area ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_area)}</span>` : ""}
-            ${item.book_location.shelf_label ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_label)}</span>` : ""}
-          </div>
-          ${item.note ? `<p class="admin-library-note">${escapeHtml(item.note)}</p>` : ""}
-          <div class="celebration-preview-actions">
-            <button type="button" class="admin-btn admin-btn-primary" data-action="approve-library-requisition" data-id="${item.id}">Approve and hand over</button>
-            <button type="button" class="admin-btn admin-btn-danger" data-action="reject-library-requisition" data-id="${item.id}">Reject</button>
-          </div>
-        </article>
-      `).join("");
-    }
-
-    elements.libraryReturnMeta.textContent = handedOverItems.length
-      ? `${handedOverItems.length} handed-over book${handedOverItems.length === 1 ? "" : "s"}`
-      : "No handed-over books";
-
-    if (!handedOverItems.length) {
-      elements.libraryReturnList.innerHTML = '<div class="celebration-empty">No handed-over books are waiting to be marked returned.</div>';
-      return;
-    }
-
-    elements.libraryReturnList.innerHTML = handedOverItems.map((item) => `
-      <article class="admin-library-requisition-card">
-        <div class="admin-library-requisition-head">
-          <div>
-            <h4>${escapeHtml(item.book.title)}</h4>
-            <p>${escapeHtml([item.book.author, item.requester.name, item.requester.email].filter(Boolean).join(" | "))}</p>
-          </div>
-          <span class="admin-process-stage">${escapeHtml(formatLibraryStatus(item.status))}</span>
-        </div>
-        <div class="celebration-row-meta">
-          ${item.book_location.office_location ? `<span class="admin-flag">${escapeHtml(item.book_location.office_location)}</span>` : ""}
-          ${item.book_location.shelf_area ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_area)}</span>` : ""}
-          ${item.book_location.shelf_label ? `<span class="admin-flag">${escapeHtml(item.book_location.shelf_label)}</span>` : ""}
-        </div>
-        ${item.note ? `<p class="admin-library-note">${escapeHtml(item.note)}</p>` : ""}
-        <div class="celebration-preview-actions">
-          <button type="button" class="admin-btn admin-btn-secondary" data-action="return-library-book" data-id="${item.id}">Release requisitioned tag</button>
         </div>
       </article>
     `).join("");
@@ -683,30 +580,6 @@
       showToast("Reported error deleted.");
     } catch (error) {
       showToast(error.message || "Could not delete the reported error.");
-    }
-  }
-
-  async function updateLibraryRequisition(requisitionId, status) {
-    if (!requisitionId) {
-      return;
-    }
-
-    try {
-      await window.AcuiteConnectAuth.apiRequest(`/api/learning/requisitions/${requisitionId}/`, {
-        method: "PATCH",
-        body: { status },
-      });
-      await loadLibraryAdminData();
-      renderLibraryAdmin();
-      showToast(
-        status === "approved"
-          ? "Book handed over and requisition approved."
-          : status === "declined"
-            ? "Book requisition rejected."
-            : "Book marked as returned."
-      );
-    } catch (error) {
-      showToast(error.message || "Could not update the requisition.");
     }
   }
 
