@@ -35,6 +35,7 @@
         <nav class="admin-console-topnav" aria-label="Admin section shortcuts">
           <a class="admin-console-pill" href="#admin-section-ceo-desk">MD &amp; CEO's Desk</a>
           <a class="admin-console-pill" href="#admin-section-bulletin">Bulletin Board</a>
+          <a class="admin-console-pill" href="#admin-section-welcome">Welcome message</a>
           <a class="admin-console-pill" href="#admin-section-library">Library</a>
           <a class="admin-console-pill" href="#admin-section-store">Brand Store</a>
           <a class="admin-console-pill" href="#admin-section-approvals">Approvals</a>
@@ -184,10 +185,62 @@
       </div>
     </section>
 
-    <section class="admin-console-card" id="admin-section-library">
+    <section class="admin-console-card" id="admin-section-welcome">
       <div class="admin-console-card-head">
         <div>
           <span class="admin-console-index">06</span>
+          <h2>Welcome a new employee</h2>
+          <p>Select a colleague from the live directory and publish a welcome note straight to the Bulletin Board.</p>
+        </div>
+      </div>
+      <form id="admin-welcome-post-form" class="admin-form">
+        <div class="admin-form-grid two">
+          <label class="admin-field">
+            <span>Select employee</span>
+            <input
+              type="text"
+              name="employee_lookup"
+              id="admin-welcome-employee-input"
+              list="admin-welcome-employee-options"
+              autocomplete="off"
+              placeholder="Type a few letters to find the employee"
+              required
+            >
+            <datalist id="admin-welcome-employee-options"></datalist>
+          </label>
+          <label class="admin-field">
+            <span>Headline</span>
+            <input
+              type="text"
+              name="headline"
+              id="admin-welcome-headline"
+              maxlength="160"
+              placeholder="Welcome aboard, new colleague"
+              required
+            >
+          </label>
+        </div>
+        <label class="admin-field">
+          <span>Message</span>
+          <textarea
+            name="note"
+            id="admin-welcome-message"
+            rows="4"
+            placeholder="Write the welcome note for the employee."
+            required
+          ></textarea>
+        </label>
+        <div class="admin-form-actions">
+          <p id="admin-welcome-selected-meta">Choose an employee first. The role and location line will be added automatically in the post.</p>
+          <button type="submit" class="admin-btn admin-btn-primary">Publish welcome message</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-console-card" id="admin-section-library">
+      <div class="admin-console-card-head">
+        <div>
+          <span class="admin-console-index">07</span>
           <h2>Add a new book to library</h2>
           <p>Add a new title so it appears in the live Library catalog inside Connect.</p>
         </div>

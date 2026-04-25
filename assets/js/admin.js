@@ -1,6 +1,7 @@
 (function attachAdminConsole() {
   const state = {
     currentUser: null,
+    directoryEmployees: [],
     celebrations: {
       birthdays: [],
       anniversaries: [],
@@ -43,6 +44,7 @@
       loadCelebrations(),
       loadStoreAdminData(),
       loadEmployeePosts(),
+      loadDirectoryEmployees(),
     ]);
     renderAll();
   }
@@ -52,6 +54,12 @@
       userName: document.getElementById("admin-console-user-name"),
       toast: document.getElementById("admin-toast"),
       bulletinPostForm: document.getElementById("admin-bulletin-post-form"),
+      welcomePostForm: document.getElementById("admin-welcome-post-form"),
+      welcomeEmployeeInput: document.getElementById("admin-welcome-employee-input"),
+      welcomeEmployeeOptions: document.getElementById("admin-welcome-employee-options"),
+      welcomeHeadline: document.getElementById("admin-welcome-headline"),
+      welcomeMessage: document.getElementById("admin-welcome-message"),
+      welcomeSelectedMeta: document.getElementById("admin-welcome-selected-meta"),
       birthdayList: document.getElementById("admin-birthday-list"),
       birthdayResultsMeta: document.getElementById("admin-birthday-results-meta"),
       birthdayPreviewShell: document.getElementById("admin-birthday-preview-shell"),
@@ -76,6 +84,7 @@
   function bindEvents() {
     document.addEventListener("click", handleDocumentClick);
     document.addEventListener("submit", handleSubmit);
+    document.addEventListener("change", handleDocumentChange);
   }
 
   async function loadCelebrations() {
@@ -90,6 +99,11 @@
     state.store.handedOver = Array.isArray(payload.handed_over) ? payload.handed_over : [];
   }
 
+  async function loadDirectoryEmployees() {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/directory/");
+    state.directoryEmployees = Array.isArray(payload.results) ? payload.results : [];
+  }
+
   async function loadEmployeePosts() {
     const payload = await window.AcuiteConnectAuth.apiRequest(
       "/api/feed/posts/?module=employee_posts&topic=employee_submission&moderation_status=pending_review&limit=200",
@@ -100,6 +114,7 @@
   }
 
   function renderAll() {
+    renderWelcomeEmployeeOptions();
     renderCelebrationSections();
     renderEmployeePosts();
     renderCeoRequests();
@@ -168,6 +183,12 @@
       return;
     }
 
+    if (event.target === elements.welcomePostForm) {
+      event.preventDefault();
+      void submitWelcomePost();
+      return;
+    }
+
     if (event.target === elements.libraryBookForm) {
       event.preventDefault();
       void submitLibraryBook();
@@ -180,11 +201,85 @@
     }
   }
 
+  function handleDocumentChange(event) {
+    if (event.target === elements.welcomeEmployeeInput) {
+      syncWelcomeEmployeeSelection();
+    }
+  }
+
   function renderCelebrationSections() {
     renderCelebrationList("birthday");
     renderCelebrationList("anniversary");
     renderCelebrationPreview("birthday");
     renderCelebrationPreview("anniversary");
+  }
+
+  function renderWelcomeEmployeeOptions() {
+    if (!elements.welcomeEmployeeOptions) {
+      return;
+    }
+    elements.welcomeEmployeeOptions.innerHTML = state.directoryEmployees.map((person) => {
+      const optionLabel = buildWelcomeEmployeeOptionLabel(person);
+      return `<option value="${escapeHtml(optionLabel)}"></option>`;
+    }).join("");
+  }
+
+  function buildWelcomeEmployeeOptionLabel(person) {
+    return [
+      person.name,
+      person.title,
+      person.branch_location || person.location || person.city,
+      person.employee_code || person.email,
+    ].filter(Boolean).join(" | ");
+  }
+
+  function findWelcomeEmployeeByInputValue(value) {
+    const needle = String(value || "").trim();
+    if (!needle) {
+      return null;
+    }
+    return state.directoryEmployees.find((person) => buildWelcomeEmployeeOptionLabel(person) === needle) || null;
+  }
+
+  function syncWelcomeEmployeeSelection() {
+    const person = findWelcomeEmployeeByInputValue(elements.welcomeEmployeeInput?.value);
+    if (!person) {
+      if (elements.welcomePostForm) {
+        delete elements.welcomePostForm.dataset.selectedEmployeeId;
+      }
+      if (elements.welcomeSelectedMeta) {
+        elements.welcomeSelectedMeta.textContent = "Choose an employee first. The role and location line will be added automatically in the post.";
+      }
+      return;
+    }
+
+    if (elements.welcomePostForm) {
+      elements.welcomePostForm.dataset.selectedEmployeeId = String(person.id);
+    }
+    if (elements.welcomeHeadline) {
+      elements.welcomeHeadline.value = `Welcome aboard, ${person.name}`;
+    }
+    if (elements.welcomeMessage) {
+      const firstName = String(person.name || "").trim().split(/\s+/)[0] || "our new colleague";
+      const roleSummary = [person.title, person.department_for_connect || person.department].filter(Boolean).join(" | ");
+      const locationSummary = person.branch_location || person.location || person.city || "";
+      elements.welcomeMessage.value = [
+        `Please join us in welcoming ${person.name} to Acuité.`,
+        "",
+        roleSummary
+          ? `${firstName} joins us as ${roleSummary}${locationSummary ? ` based in ${locationSummary}.` : "."}`
+          : `${firstName} is joining the Acuité team${locationSummary ? ` based in ${locationSummary}.` : "."}`,
+        "",
+        `We wish ${firstName} a meaningful and successful journey ahead with us.`,
+      ].join("\n");
+    }
+    if (elements.welcomeSelectedMeta) {
+      elements.welcomeSelectedMeta.textContent = [
+        person.title,
+        person.department_for_connect || person.department,
+        person.branch_location || person.location || person.city,
+      ].filter(Boolean).join(" | ") || "Employee selected";
+    }
   }
 
   function renderEmployeePosts() {
@@ -591,6 +686,51 @@
     });
   }
 
+  async function submitWelcomePost() {
+    const person = findWelcomeEmployeeByInputValue(elements.welcomeEmployeeInput?.value);
+    if (!person) {
+      showToast("Select the employee from the list first.");
+      return;
+    }
+
+    const headline = String(elements.welcomeHeadline?.value || "").trim();
+    const note = String(elements.welcomeMessage?.value || "").trim();
+    if (!headline || !note) {
+      showToast("Add the welcome headline and message.");
+      return;
+    }
+
+    const metaLines = [
+      [person.title, person.department_for_connect || person.department].filter(Boolean).join(" | "),
+      person.branch_location || person.location || person.city || "",
+    ].filter(Boolean);
+
+    const published = await publishBulletinPost({
+      form: elements.welcomePostForm,
+      title: headline,
+      body: note,
+      category: "hr",
+      templateKey: "welcome_employee",
+      metadata: {
+        bulletin_meta_lines: metaLines,
+        welcome_employee: true,
+        welcome_employee_user_id: person.id,
+        welcome_employee_code: person.employee_code || "",
+      },
+      successMessage: "Welcome message published.",
+    });
+    if (!published) {
+      return;
+    }
+
+    if (elements.welcomePostForm) {
+      delete elements.welcomePostForm.dataset.selectedEmployeeId;
+    }
+    if (elements.welcomeSelectedMeta) {
+      elements.welcomeSelectedMeta.textContent = "Choose an employee first. The role and location line will be added automatically in the post.";
+    }
+  }
+
 
   async function publishBulletinPost({ form, title, body, category, templateKey, metadata, successMessage }) {
     try {
@@ -613,8 +753,10 @@
       });
       form.reset();
       showToast(successMessage);
+      return true;
     } catch (error) {
       showToast(error.message || "Could not publish the bulletin post.");
+      return false;
     }
   }
 
