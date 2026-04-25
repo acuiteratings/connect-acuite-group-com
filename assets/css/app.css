@@ -1209,6 +1209,75 @@ select {
   background: var(--amber);
 }
 
+.announcement-poll-list {
+  display: grid;
+  gap: 12px;
+}
+
+.announcement-poll-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+}
+
+.announcement-poll-option:hover {
+  border-color: rgba(247, 148, 29, 0.5);
+  transform: translateY(-1px);
+}
+
+.announcement-poll-option.selected {
+  border-color: rgba(247, 148, 29, 0.72);
+  background: rgba(247, 148, 29, 0.08);
+}
+
+.announcement-poll-option:disabled {
+  opacity: 0.72;
+  cursor: default;
+  transform: none;
+}
+
+.announcement-poll-option-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.announcement-poll-option-copy strong {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.announcement-poll-option-copy span {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.announcement-poll-option-stats {
+  display: grid;
+  justify-items: end;
+  min-width: 60px;
+}
+
+.announcement-poll-votes {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--orange);
+  line-height: 1;
+}
+
+.announcement-poll-percent {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
 .ceo-desk-copy {
   display: grid;
   gap: 16px;

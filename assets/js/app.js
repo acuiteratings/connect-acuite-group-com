@@ -309,6 +309,7 @@ const appData = {
   learningBooks: [],
   learningRequisitions: [],
   homeAnnouncementPosts: [],
+  activeOpinionPoll: null,
   bulletinPosts: [
     {
       id: "bulletin-connect-beta",
@@ -823,6 +824,7 @@ async function init() {
       loadCurrentProfile(),
       loadCommunityData(),
       loadHomeAnnouncementPosts(),
+      loadOpinionPoll(),
       loadBulletinPosts(),
       loadCeoDeskPosts(),
       loadMyPosts(),
@@ -1036,6 +1038,21 @@ async function loadHomeAnnouncementPosts() {
       : [];
   } catch (error) {
     appData.homeAnnouncementPosts = [];
+  }
+}
+
+async function loadOpinionPoll() {
+  appData.activeOpinionPoll = null;
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/voice/polls/active/");
+    appData.activeOpinionPoll = payload?.poll || null;
+  } catch (error) {
+    appData.activeOpinionPoll = null;
   }
 }
 
@@ -1339,6 +1356,11 @@ async function handleDocumentClick(event) {
     if (actionName === "set-home-announcement-filter") {
       state.homeAnnouncementFilter = action.dataset.filter || "leadership";
       saveState();
+      if (state.homeAnnouncementFilter === "opinion_poll" && !appData.activeOpinionPoll) {
+        void loadOpinionPoll().then(() => {
+          renderHomeAnnouncement();
+        });
+      }
       renderHomeAnnouncement();
       renderHomeAnnouncementFilters();
       return;
@@ -1490,6 +1512,11 @@ async function handleDocumentClick(event) {
 
     if (actionName === "toggle-live-reaction") {
       await toggleLiveReaction(action.dataset.id);
+      return;
+    }
+
+    if (actionName === "vote-opinion-poll") {
+      await voteOnOpinionPoll(action.dataset.optionId);
       return;
     }
 
@@ -2882,6 +2909,13 @@ function renderHomeAnnouncement() {
     return;
   }
 
+  if (state.homeAnnouncementFilter === "opinion_poll" && appData.activeOpinionPoll) {
+    renderHomeAnnouncementFilters();
+    renderHomeAnnouncementAdminForm();
+    renderOpinionPollAnnouncement(container, appData.activeOpinionPoll);
+    return;
+  }
+
   const publishedPost = getHomeAnnouncementPostForTag(state.homeAnnouncementFilter);
   const announcement = publishedPost
     ? mapHomeAnnouncementPost(publishedPost)
@@ -2961,6 +2995,89 @@ function renderHomeAnnouncement() {
       </div>
     </div>
   `;
+}
+
+function renderOpinionPollAnnouncement(container, poll) {
+  const options = Array.isArray(poll.options) ? poll.options : [];
+  const selectedOptionId = Number(poll.user_vote_option_id || 0);
+  const isOpen = Boolean(poll.is_open);
+  const totalVotes = Number(poll.total_votes || 0);
+  container.innerHTML = `
+    <div class="announcement-main">
+      <div class="announcement-topline">
+        <p class="eyebrow">Opinion Poll</p>
+        <div class="announcement-badges">
+          <span class="announcement-badge strong">Employee Poll</span>
+          <span class="announcement-badge">${isOpen ? "Open" : "Closed"}</span>
+          <span class="announcement-badge">${escapeHtml(String(totalVotes))} vote${totalVotes === 1 ? "" : "s"}</span>
+        </div>
+      </div>
+
+      <h1 class="announcement-title">${escapeHtml(poll.question || "Opinion Poll")}</h1>
+      <p class="announcement-summary">${escapeHtml(poll.description || "Select one training. The vote count is shown next to each option.")}</p>
+
+      <div class="announcement-poll-list">
+        ${options.map((option) => {
+          const isSelected = Number(option.id) === selectedOptionId;
+          return `
+            <button
+              type="button"
+              class="announcement-poll-option ${isSelected ? "selected" : ""}"
+              data-action="vote-opinion-poll"
+              data-option-id="${escapeHtml(String(option.id))}"
+              ${isOpen ? "" : "disabled"}
+            >
+              <span class="announcement-poll-option-copy">
+                <strong>${escapeHtml(option.label || "")}</strong>
+                <span>${isSelected ? "Your current choice" : "Click to choose this training"}</span>
+              </span>
+              <span class="announcement-poll-option-stats">
+                <span class="announcement-poll-votes">${escapeHtml(String(option.vote_count || 0))}</span>
+                <span class="announcement-poll-percent">${escapeHtml(String(option.percent || 0))}%</span>
+              </span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </div>
+    <div class="announcement-side announcement-side-actions">
+      <div class="announcement-panel">
+        <div class="announcement-panel-head">
+          <strong>Voting details</strong>
+        </div>
+        <p>${isOpen ? "Choose one training. You can update your selection later if needed." : "This poll is closed."}</p>
+        <ul class="announcement-list">
+          <li>Total votes recorded: ${escapeHtml(String(totalVotes))}</li>
+          <li>Vote count is shown next to each training.</li>
+          <li>Your latest selection stays saved in Connect.</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+async function voteOnOpinionPoll(optionId) {
+  const poll = appData.activeOpinionPoll;
+  if (!poll || !optionId) {
+    return;
+  }
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    showToast("Polling is unavailable in this build.");
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest(`/api/voice/polls/${poll.id}/vote/`, {
+      method: "POST",
+      body: {
+        option_id: Number(optionId),
+      },
+    });
+    appData.activeOpinionPoll = payload?.poll || poll;
+    renderHomeAnnouncement();
+  } catch (error) {
+    showToast(error.message || "Could not record your vote.");
+  }
 }
 
 function renderHomeAnnouncementFilters() {
