@@ -240,6 +240,24 @@ const HOME_ANNOUNCEMENTS = [
       likes: 96,
     },
   },
+  {
+    id: "announcement-compliance-holdings-affirmation",
+    tag: "compliance",
+    eyebrow: "Compliance Update",
+    type: "Compliance",
+    format: "Online",
+    title: "It's time to submit your holding statements and annual policy affirmations.",
+    summary: "Please take some time out to read and affirm all the policies uploaded on the STAMP Portal and upload your annual holding statements. This affirmation has to be completed within the stipulated timeline. In case of any doubts, please feel free to reach out to Enaakshi Majumdar from the Compliance Team.",
+    dateLabel: "Last Date of Submission: May 12, 2026",
+    timeLabel: "Within the stipulated timeline",
+    venueLabel: "STAMP Portal",
+    hostLabel: "Compliance Team",
+    audienceLabel: "Mode: Online",
+    countdownLabel: "Reach out to Enaakshi Majumdar for help",
+    baseMetrics: {
+      likes: 0,
+    },
+  },
 ];
 const TOWN_HALL_GENERIC_CONTENT = {
   title: "Town hall and leadership briefing.",
