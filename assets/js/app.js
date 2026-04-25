@@ -4724,6 +4724,9 @@ function mapBulletinPost(post) {
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
     homeAnnouncementTag: String(metadata.home_announcement_tag || "").trim(),
     homeAnnouncementType: String(metadata.home_announcement_type || "").trim(),
+    homeAnnouncementDisplay: metadata.home_announcement_display && typeof metadata.home_announcement_display === "object"
+      ? metadata.home_announcement_display
+      : null,
     townHallDetails: metadata.home_announcement_town_hall && typeof metadata.home_announcement_town_hall === "object"
       ? metadata.home_announcement_town_hall
       : null,
@@ -4844,20 +4847,22 @@ function mapHomeAnnouncementPost(post) {
     return buildTownHallAnnouncementFromPost(post);
   }
 
+  const display = post.homeAnnouncementDisplay || {};
+
   return {
     id: post.id,
     sourceId: post.sourceId,
     eyebrow: getSelectedHomeAnnouncementFilterLabel(),
     type: getSelectedHomeAnnouncementFilterLabel(),
-    format: "Connect",
+    format: String(display.formatLabel || "Connect").trim() || "Connect",
     title: post.title,
-    summary: post.body[0] || "",
-    dateLabel: post.metaLines[0] || "Published on Connect",
-    timeLabel: post.postedAtLabel || "Now live",
-    venueLabel: "Connect announcement",
-    hostLabel: post.authorName || "Acuité Ratings & Research",
-    audienceLabel: "Visible to all employees",
-    countdownLabel: post.postedAtLabel || "",
+    summary: String(display.summary || post.body[0] || "").trim(),
+    dateLabel: String(display.dateLabel || post.metaLines[0] || "Published on Connect").trim(),
+    timeLabel: String(display.timeLabel || post.postedAtLabel || "Now live").trim(),
+    venueLabel: String(display.venueLabel || "Connect announcement").trim(),
+    hostLabel: String(display.hostLabel || post.authorName || "Acuité Ratings & Research").trim(),
+    audienceLabel: String(display.audienceLabel || "Visible to all employees").trim(),
+    countdownLabel: String(display.countdownLabel || post.postedAtLabel || "").trim(),
     baseMetrics: {
       likes: Number(post.reactionCount || 0),
     },
