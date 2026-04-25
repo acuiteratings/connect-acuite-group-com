@@ -375,8 +375,6 @@ def sync_employee_sso_user(identity_payload):
         user = User.objects.filter(email=identity["email"]).first()
         created = user is None
         if created:
-            # New SSO identities are authenticated centrally, but Connect
-            # authorization still requires an explicit local grant.
             user = User.objects.create_user(
                 email=identity["email"],
                 password=None,
@@ -384,8 +382,8 @@ def sync_employee_sso_user(identity_payload):
                 last_name=last_name,
                 display_name=display_name,
                 employee_code=identity["employee_id"],
-                employment_status=User.EmploymentStatus.PENDING,
-                can_post_in_connect=False,
+                employment_status=User.EmploymentStatus.ACTIVE,
+                can_post_in_connect=True,
                 is_active=True,
                 must_change_password=False,
                 password_changed_at=timezone.now(),
@@ -404,6 +402,15 @@ def sync_employee_sso_user(identity_payload):
             if identity["employee_id"] and user.employee_code != identity["employee_id"]:
                 user.employee_code = identity["employee_id"]
                 update_fields.append("employee_code")
+            if user.employment_status == User.EmploymentStatus.PENDING:
+                user.employment_status = User.EmploymentStatus.ACTIVE
+                update_fields.append("employment_status")
+            if not user.can_post_in_connect:
+                user.can_post_in_connect = True
+                update_fields.append("can_post_in_connect")
+            if not user.is_active:
+                user.is_active = True
+                update_fields.append("is_active")
             if update_fields:
                 user.save(update_fields=[*update_fields, "updated_at"])
 
