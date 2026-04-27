@@ -6698,21 +6698,20 @@ function renderSidebarEvents() {
   }
 
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const todayStamp = new Date(year, month, now.getDate()).getTime();
+  const todayStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).getTime();
   const upcoming = COMPANY_EVENT_CALENDAR
     .map((item) => ({
       ...item,
       parsedDate: new Date(`${item.date}T00:00:00`),
     }))
     .filter((item) => !Number.isNaN(item.parsedDate.getTime()))
-    .filter((item) => item.parsedDate.getFullYear() === year && item.parsedDate.getMonth() === month)
     .filter((item) => item.parsedDate.getTime() >= todayStamp)
+    .filter((item) => item.parsedDate.getTime() <= endStamp)
     .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
 
   if (!upcoming.length) {
-    container.innerHTML = '<div class="empty-state">No more published events this month.</div>';
+    container.innerHTML = '<div class="empty-state">No published events in the next 30 days.</div>';
     return;
   }
 
