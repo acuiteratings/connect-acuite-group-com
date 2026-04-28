@@ -34,15 +34,19 @@ def get_seed_counter():
 
 
 def get_current_build_number():
-    try:
-        state = BuildState.objects.only("display_number").filter(
-            singleton_key=BUILD_STATE_KEY
-        ).first()
-    except (OperationalError, ProgrammingError):
-        return settings.APP_BUILD_NUMBER
+    state = get_current_build_state()
     if state and state.display_number:
         return state.display_number
     return settings.APP_BUILD_NUMBER
+
+
+def get_current_build_state():
+    try:
+        return BuildState.objects.only("display_number", "commit_sha").filter(
+            singleton_key=BUILD_STATE_KEY
+        ).first()
+    except (OperationalError, ProgrammingError):
+        return None
 
 
 def register_build_deploy(commit_sha=""):

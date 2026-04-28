@@ -67,6 +67,13 @@ cd backend
 ../.venv/bin/python manage.py sync_people_directory --full
 ```
 
+Directory API responses are paginated with a maximum `page_size` of 500 records. The frontend keeps using the local snapshot cache for quick repeat visits.
+
+## Production checks and retention
+
+- GitHub Actions runs a production smoke check after pushes to `main`.
+- Render runs `prune_operational_events` weekly to trim old analytics, audit, error, and reported-error records.
+
 Production callback URL:
 
 - `https://connect.acuite-group.com/api/accounts/auth/employee-sso/callback/`

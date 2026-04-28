@@ -25,7 +25,7 @@ All `/api/` endpoints require an authenticated active employee session except `/
 - `GET /api/accounts/me/`
 - `GET|POST /api/feed/posts/`
 - `GET|POST /api/feed/posts/<post_id>/comments/`
-- `GET /api/directory/`
+- `GET /api/directory/?page=1&page_size=100`
 - `GET /api/ops/health/`
 - `GET /api/ops/summary/`
 - `GET /api/ops/moderation/queue/`
@@ -42,3 +42,7 @@ All `/api/` endpoints require an authenticated active employee session except `/
 - Audit logging for feed creation and moderation actions
 - Analytics ingestion endpoint for product events
 - Database-backed error capture with optional Sentry forwarding when `SENTRY_DSN` is configured
+
+## Retention
+
+Run `../.venv/bin/python manage.py prune_operational_events --dry-run` to preview old operational records that would be removed. Production runs the same command on a weekly Render cron without `--dry-run`.

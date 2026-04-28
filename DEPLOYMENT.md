@@ -27,6 +27,7 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
    - `acuite-connect-static` static site
    - `acuite-connect-people-sync-incremental` cron service
    - `acuite-connect-people-sync-full` cron service
+   - `acuite-connect-operational-retention` cron service
    - `acuite-connect-db` PostgreSQL database
 4. Add `connect.acuite-group.com` as the custom domain in Render.
 5. Point Cloudflare DNS for `connect.acuite-group.com` to the Render hostname.
@@ -87,6 +88,20 @@ Render must define these environment variables on:
 - `PEOPLE_DIRECTORY_API_BASE_URL=https://people.acuite-group.com`
 - `PEOPLE_DIRECTORY_API_TOKEN=...`
 - `PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS=15`
+
+## Operational retention
+
+The retention cron prunes old analytics, audit, error, and reported-error records once a week:
+
+```bash
+cd backend && python manage.py prune_operational_events
+```
+
+The default retention windows are 180 days for analytics, 365 days for audit logs, 90 days for resolved system errors, 180 days for resolved reported errors, and 365 days for unresolved error records.
+
+## Production smoke checks
+
+GitHub Actions runs `scripts/production_smoke_check.py` after each push to `main`. The smoke check waits until `/api/ops/health/` reports the pushed commit SHA, then verifies the login page, public health/session endpoints, and protected internal API endpoints.
 
 ## Local backend preview
 

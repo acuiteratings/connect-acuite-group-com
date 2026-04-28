@@ -24,6 +24,9 @@ from .utils import (
     normalize_string_list,
 )
 
+DIRECTORY_DEFAULT_PAGE_SIZE = 500
+DIRECTORY_MAX_PAGE_SIZE = 500
+
 
 def _parse_json_body(request):
     if not request.body:
@@ -59,6 +62,33 @@ def _collect_branch_locations(profiles):
             if branch_location
         }
     )
+
+
+def _positive_int(value, *, default, minimum=1, maximum=None):
+    try:
+        parsed = int(str(value or "").strip())
+    except (TypeError, ValueError):
+        parsed = default
+    parsed = max(minimum, parsed)
+    if maximum is not None:
+        parsed = min(parsed, maximum)
+    return parsed
+
+
+def _pagination_payload(*, page, page_size, total_count):
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+    has_next = page < total_pages
+    has_previous = page > 1
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_count": total_count,
+        "total_pages": total_pages,
+        "has_next": has_next,
+        "has_previous": has_previous,
+        "next_page": page + 1 if has_next else None,
+        "previous_page": page - 1 if has_previous else None,
+    }
 
 
 def _get_or_create_profile_for_user(user):
@@ -217,13 +247,28 @@ def directory_list(request):
             | Q(bio__icontains=needle)
         )
 
-    profiles = list(queryset.order_by("user__display_name", "user__email"))
+    page = _positive_int(request.GET.get("page"), default=1)
+    page_size = _positive_int(
+        request.GET.get("page_size"),
+        default=DIRECTORY_DEFAULT_PAGE_SIZE,
+        maximum=DIRECTORY_MAX_PAGE_SIZE,
+    )
+    start = (page - 1) * page_size
+    end = start + page_size
+    ordered_queryset = queryset.order_by("user__display_name", "user__email")
+
     if location:
-        profiles = [
+        profiles = list(ordered_queryset)
+        matching_profiles = [
             profile for profile in profiles
             if _profile_branch_location(profile).casefold() == location.casefold()
         ]
-    profiles = profiles[:500]
+        total_count = len(matching_profiles)
+        profiles = matching_profiles[start:end]
+    else:
+        total_count = ordered_queryset.count()
+        profiles = list(ordered_queryset[start:end])
+
     coin_balance_map = build_coin_balance_map(
         [profile.user_id for profile in profiles],
         refresh_expiry=False,
@@ -243,7 +288,19 @@ def directory_list(request):
         "function": _distinct_values(base_queryset, "function_name"),
         "location": _collect_branch_locations(base_profiles),
     }
-    return JsonResponse({"count": len(results), "results": results, "filters": filters})
+    return JsonResponse(
+        {
+            "count": total_count,
+            "page_count": len(results),
+            "results": results,
+            "filters": filters,
+            "pagination": _pagination_payload(
+                page=page,
+                page_size=page_size,
+                total_count=total_count,
+            ),
+        }
+    )
 
 
 def communities_overview(request):
@@ -270,7 +327,11 @@ def my_profile(request):
     if request.method == "GET":
         return JsonResponse(
             {
-                "profile": serialize_directory_profile(profile, include_profile_photos=True),
+                "profile": serialize_directory_profile(
+                    profile,
+                    include_profile_photos=True,
+                    include_private_fields=True,
+                ),
                 "skill_library": PROFILE_SKILL_LIBRARY,
                 "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
             }
@@ -296,7 +357,11 @@ def my_profile(request):
     return JsonResponse(
         {
             "detail": "Profile updated successfully.",
-            "profile": serialize_directory_profile(profile, include_profile_photos=True),
+            "profile": serialize_directory_profile(
+                profile,
+                include_profile_photos=True,
+                include_private_fields=True,
+            ),
             "skill_library": PROFILE_SKILL_LIBRARY,
             "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
         }

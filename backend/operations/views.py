@@ -12,6 +12,7 @@ from directory.models import DirectoryProfile
 from feed.models import Comment, Post, PostReaction
 from feed.serializers import serialize_comment, serialize_post
 
+from .builds import get_current_build_number, get_current_build_state
 from .models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
 from .celebrations import (
     build_celebration_preview,
@@ -107,10 +108,17 @@ def _apply_comment_decision(comment, decision):
 
 
 def healthcheck(request):
+    build_state = get_current_build_state()
     return JsonResponse(
         {
             "status": "ok",
             "service": "acuite-connect-backend",
+            "build_number": (
+                build_state.display_number
+                if build_state and build_state.display_number
+                else get_current_build_number()
+            ),
+            "commit_sha": build_state.commit_sha if build_state else "",
             "time": timezone.now().isoformat(),
             "request_id": getattr(request, "request_id", ""),
             "monitoring": {

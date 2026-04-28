@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -64,6 +65,38 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(payload["results"][0]["email"], "rahul.mehta@acuite.in")
         self.assertNotIn("profile_photos", payload["results"][0])
         self.assertNotIn("access_rights", payload["results"][0])
+
+    def test_directory_response_is_paginated_and_omits_private_fields(self):
+        for index in range(3):
+            user = User.objects.create_user(
+                email=f"page.user{index}@acuite.in",
+                first_name="Page",
+                last_name=f"User{index}",
+                phone_number=f"022400000{index}",
+            )
+            DirectoryProfile.objects.create(
+                user=user,
+                company_name="Acuite",
+                gender="female",
+                city="Mumbai",
+                office_location="Mumbai",
+                mobile_number=f"98199603{index:02d}",
+                joined_on=date(2024, 1, 1),
+            )
+
+        response = self.client.get("/api/directory/", {"page": "1", "page_size": "2"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 3)
+        self.assertEqual(payload["page_count"], 2)
+        self.assertEqual(payload["pagination"]["page_size"], 2)
+        self.assertTrue(payload["pagination"]["has_next"])
+        first_result = payload["results"][0]
+        self.assertNotIn("mobile_number", first_result)
+        self.assertNotIn("phone_number", first_result)
+        self.assertNotIn("gender", first_result)
+        self.assertNotIn("joined_on", first_result)
 
     def test_directory_filters_include_company_department_function_and_location(self):
         user = User.objects.create_user(
@@ -289,6 +322,8 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["profile"]["email"], user.email)
+        self.assertIn("mobile_number", payload["profile"])
+        self.assertIn("joined_on", payload["profile"])
         self.assertIn("Python & SQL", payload["profile"]["skills"])
         self.assertIn("MS Excel", payload["skill_library"])
         self.assertNotIn("Credit Analysis", payload["skill_library"])

@@ -1,5 +1,6 @@
 import json
 import os
+from io import StringIO
 from datetime import date
 from datetime import timedelta
 from unittest.mock import patch
@@ -311,6 +312,20 @@ class BuildNumberTests(TestCase):
         self.assertEqual(state.display_number, "1.0000007")
         self.assertEqual(state.commit_sha, "abc123")
 
+    def test_healthcheck_exposes_build_and_commit_for_smoke_checks(self):
+        BuildState.objects.create(
+            counter=8,
+            display_number="1.0000008",
+            commit_sha="deadbeef123456",
+        )
+
+        response = self.client.get("/api/ops/health/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["build_number"], "1.0000008")
+        self.assertEqual(payload["commit_sha"], "deadbeef123456")
+
 
 class ClearLiveDemoDataCommandTests(TestCase):
     def test_clear_live_demo_data_removes_operational_demo_records(self):
@@ -353,6 +368,88 @@ class ClearLiveDemoDataCommandTests(TestCase):
         self.assertEqual(AuditLog.objects.count(), 0)
         self.assertEqual(AnalyticsEvent.objects.count(), 0)
         self.assertEqual(ErrorEvent.objects.count(), 0)
+
+
+class PruneOperationalEventsCommandTests(TestCase):
+    def test_prune_operational_events_removes_records_past_retention_windows(self):
+        user = User.objects.create_user(
+            email="ops.retention@acuite.in",
+            password="testpass123",
+            first_name="Ops",
+            last_name="Retention",
+        )
+        now = timezone.now()
+        old_analytics = AnalyticsEvent.objects.create(
+            actor=user,
+            category="ui",
+            event_name="old_click",
+        )
+        recent_analytics = AnalyticsEvent.objects.create(
+            actor=user,
+            category="ui",
+            event_name="recent_click",
+        )
+        old_audit = AuditLog.objects.create(actor=user, action="old.audit", summary="Old audit")
+        recent_audit = AuditLog.objects.create(actor=user, action="recent.audit", summary="Recent audit")
+        old_resolved_error = ErrorEvent.objects.create(
+            actor=user,
+            exception_type="RuntimeError",
+            message="Old resolved",
+            is_resolved=True,
+            resolved_at=now - timedelta(days=120),
+        )
+        recent_resolved_error = ErrorEvent.objects.create(
+            actor=user,
+            exception_type="RuntimeError",
+            message="Recent resolved",
+            is_resolved=True,
+            resolved_at=now - timedelta(days=10),
+        )
+        old_report = ReportedError.objects.create(
+            reporter=user,
+            title="Old resolved report",
+            details="Old details",
+            is_resolved=True,
+            resolved_at=now - timedelta(days=220),
+        )
+        recent_report = ReportedError.objects.create(
+            reporter=user,
+            title="Recent report",
+            details="Recent details",
+        )
+        AnalyticsEvent.objects.filter(pk=old_analytics.pk).update(
+            occurred_at=now - timedelta(days=220)
+        )
+        AnalyticsEvent.objects.filter(pk=recent_analytics.pk).update(
+            occurred_at=now - timedelta(days=10)
+        )
+        AuditLog.objects.filter(pk=old_audit.pk).update(created_at=now - timedelta(days=400))
+        AuditLog.objects.filter(pk=recent_audit.pk).update(created_at=now - timedelta(days=10))
+        ErrorEvent.objects.filter(pk=old_resolved_error.pk).update(
+            occurred_at=now - timedelta(days=120)
+        )
+        ErrorEvent.objects.filter(pk=recent_resolved_error.pk).update(
+            occurred_at=now - timedelta(days=10)
+        )
+        ReportedError.objects.filter(pk=old_report.pk).update(
+            created_at=now - timedelta(days=220)
+        )
+        ReportedError.objects.filter(pk=recent_report.pk).update(
+            created_at=now - timedelta(days=10)
+        )
+
+        output = StringIO()
+        call_command("prune_operational_events", stdout=output)
+
+        self.assertFalse(AnalyticsEvent.objects.filter(pk=old_analytics.pk).exists())
+        self.assertTrue(AnalyticsEvent.objects.filter(pk=recent_analytics.pk).exists())
+        self.assertFalse(AuditLog.objects.filter(pk=old_audit.pk).exists())
+        self.assertTrue(AuditLog.objects.filter(pk=recent_audit.pk).exists())
+        self.assertFalse(ErrorEvent.objects.filter(pk=old_resolved_error.pk).exists())
+        self.assertTrue(ErrorEvent.objects.filter(pk=recent_resolved_error.pk).exists())
+        self.assertFalse(ReportedError.objects.filter(pk=old_report.pk).exists())
+        self.assertTrue(ReportedError.objects.filter(pk=recent_report.pk).exists())
+        self.assertIn("Pruned:", output.getvalue())
 
 
 class DailyCelebrationPublishingTests(TestCase):
