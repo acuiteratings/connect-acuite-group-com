@@ -1,6 +1,6 @@
 databases:
   - name: acuite-connect-db
-    plan: basic-256mb
+    plan: basic-1gb
     databaseName: acuite_connect
     user: acuite_connect
 
@@ -8,14 +8,31 @@ services:
   - type: web
     name: acuite-connect
     runtime: python
-    plan: starter
+    plan: standard
     buildCommand: ./build.sh
     preDeployCommand: cd backend && python manage.py migrate && python manage.py register_build_deploy
-    startCommand: cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker
+    startCommand: >
+      cd backend &&
+      python -m gunicorn config.asgi:application
+      -k uvicorn.workers.UvicornWorker
+      --workers ${WEB_CONCURRENCY:-1}
+      --max-requests ${GUNICORN_MAX_REQUESTS:-800}
+      --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-80}
+      --timeout ${GUNICORN_TIMEOUT:-60}
+      --access-logfile -
+      --error-logfile -
     healthCheckPath: /api/ops/health/
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.13
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_MAX_REQUESTS
+        value: "800"
+      - key: GUNICORN_MAX_REQUESTS_JITTER
+        value: "80"
+      - key: GUNICORN_TIMEOUT
+        value: "60"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG

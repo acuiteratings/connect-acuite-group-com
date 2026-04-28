@@ -34,8 +34,21 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 ```bash
 ./build.sh
 cd backend && python manage.py migrate
-cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker
+cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --workers ${WEB_CONCURRENCY:-1} --max-requests ${GUNICORN_MAX_REQUESTS:-800} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-80} --timeout ${GUNICORN_TIMEOUT:-60}
 ```
+
+## Production memory profile
+
+The production web service should run on at least Render `standard` while Connect serves the Django API, authenticated HTML shells, and static assets from one process. Gunicorn is intentionally pinned to one worker by default and recycles workers after a bounded number of requests to avoid gradual memory growth taking the instance down.
+
+Recommended Render values:
+
+- Web service plan: `standard`
+- PostgreSQL plan: `basic-1gb`
+- `WEB_CONCURRENCY=1`
+- `GUNICORN_MAX_REQUESTS=800`
+- `GUNICORN_MAX_REQUESTS_JITTER=80`
+- `GUNICORN_TIMEOUT=60`
 
 ## People directory sync schedule
 
