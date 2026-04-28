@@ -1,10 +1,14 @@
-(function hideNewInitiativesAnnouncementActions() {
+(function keepAnnouncementsReadOnly() {
   const NEW_INITIATIVES_FILTER = "new_initiatives";
-  const STYLE_ID = "new-initiatives-announcement-cleanup-style";
+  const STYLE_ID = "announcements-readonly-cleanup-style";
+
+  function getActiveAnnouncementFilter() {
+    const activeFilter = document.querySelector("[data-action='set-home-announcement-filter'].active");
+    return activeFilter?.dataset.filter || "";
+  }
 
   function activeFilterIsNewInitiatives() {
-    const activeFilter = document.querySelector("[data-action='set-home-announcement-filter'].active");
-    return activeFilter?.dataset.filter === NEW_INITIATIVES_FILTER;
+    return getActiveAnnouncementFilter() === NEW_INITIATIVES_FILTER;
   }
 
   function injectStyle() {
@@ -21,33 +25,34 @@
     document.head.appendChild(style);
   }
 
-  function syncNewInitiativesCleanup() {
-    const shouldHide = activeFilterIsNewInitiatives();
+  function syncAnnouncementsReadOnly() {
+    const isNewInitiatives = activeFilterIsNewInitiatives();
     const announcement = document.getElementById("home-announcement");
     if (announcement) {
-      announcement.classList.toggle("announcement-banner-no-actions", shouldHide);
+      announcement.classList.toggle("announcement-banner-no-actions", isNewInitiatives);
     }
 
     document
-      .querySelectorAll("#home-announcement-feedback-form, #home-announcement .announcement-like-row")
+      .querySelectorAll("#home-announcement-feedback-form")
       .forEach((element) => {
-        if (shouldHide) {
+        element.remove();
+      });
+
+    document
+      .querySelectorAll("#home-announcement .announcement-like-row")
+      .forEach((element) => {
+        if (isNewInitiatives) {
           element.remove();
-        } else {
-          element.hidden = false;
         }
       });
 
     const adminForm = document.getElementById("home-announcement-admin-form");
-    if (adminForm && shouldHide) {
+    if (adminForm) {
       adminForm.hidden = true;
     }
   }
 
-  function preventHiddenFormSubmissions(event) {
-    if (!activeFilterIsNewInitiatives()) {
-      return;
-    }
+  function preventAnnouncementFormSubmissions(event) {
     if (
       event.target?.id === "home-announcement-feedback-form"
       || event.target?.id === "home-announcement-admin-form"
@@ -58,12 +63,12 @@
   }
 
   function scheduleSync() {
-    window.requestAnimationFrame(syncNewInitiativesCleanup);
+    window.requestAnimationFrame(syncAnnouncementsReadOnly);
   }
 
   function startCleanup() {
     injectStyle();
-    syncNewInitiativesCleanup();
+    syncAnnouncementsReadOnly();
 
     const observer = new MutationObserver(scheduleSync);
     observer.observe(document.body, {
@@ -73,7 +78,7 @@
     });
 
     document.addEventListener("click", scheduleSync, true);
-    document.addEventListener("submit", preventHiddenFormSubmissions, true);
+    document.addEventListener("submit", preventAnnouncementFormSubmissions, true);
   }
 
   if (document.readyState === "loading") {
