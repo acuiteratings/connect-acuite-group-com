@@ -8,6 +8,14 @@ from .models import DirectoryProfile
 
 
 class DirectoryApiTests(TestCase):
+    def setUp(self):
+        self.viewer = User.objects.create_user(
+            email="directory.viewer@acuite.in",
+            first_name="Directory",
+            last_name="Viewer",
+        )
+        self.client.force_login(self.viewer)
+
     def test_directory_skips_coin_expiry_refresh_work(self):
         user = User.objects.create_user(
             email="fast.directory@acuite.in",
@@ -54,6 +62,8 @@ class DirectoryApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["email"], "rahul.mehta@acuite.in")
+        self.assertNotIn("profile_photos", payload["results"][0])
+        self.assertNotIn("access_rights", payload["results"][0])
 
     def test_directory_filters_include_company_department_function_and_location(self):
         user = User.objects.create_user(

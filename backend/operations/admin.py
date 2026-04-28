@@ -55,7 +55,7 @@ class AnalyticsEventAdmin(admin.ModelAdmin):
 
 
 @admin.action(description="Mark selected errors as resolved")
-def mark_errors_resolved(modeladmin, request, queryset):
+def mark_errors_resolved(_modeladmin, request, queryset):
     queryset.update(is_resolved=True, resolved_at=timezone.now())
 
 
@@ -93,7 +93,7 @@ class ErrorEventAdmin(admin.ModelAdmin):
 
 
 @admin.action(description="Mark selected reported errors as resolved")
-def mark_reported_errors_resolved(modeladmin, request, queryset):
+def mark_reported_errors_resolved(_modeladmin, request, queryset):
     queryset.filter(is_resolved=False).update(
         is_resolved=True,
         resolved_at=timezone.now(),

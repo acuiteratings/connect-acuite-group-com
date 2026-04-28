@@ -249,7 +249,7 @@ class OperationsApiTests(TestCase):
 
 class SecurityHeadersMiddlewareTests(TestCase):
     def test_html_shells_include_security_headers_and_no_store_cache_policy(self):
-        response = self.client.get("/")
+        response = self.client.get("/login.html")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Security-Policy"], settings.CONTENT_SECURITY_POLICY)

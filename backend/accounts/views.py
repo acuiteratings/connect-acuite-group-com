@@ -357,7 +357,7 @@ def access_user_collection(request):
             email,
         )
         using_employee_sso = employee_sso_enabled()
-        temporary_password = ""
+        temporary_password = ""  # nosec B105
         if not using_employee_sso:
             temporary_password = str(payload.get("temporary_password") or "").strip() or generate_temporary_password()
 
@@ -888,7 +888,7 @@ def login_with_password(request):
             {
                 "detail": "Password change required before login can complete.",
                 "challenge_token": str(challenge.public_id),
-                "requires_password_change": True,
+                "requires_password_change": True,  # nosec B105
                 "reason": _password_change_reason(user),
                 "password_policy": {
                     "max_age_days": settings.AUTH_PASSWORD_MAX_AGE_DAYS,

@@ -1,7 +1,7 @@
 import json
 from datetime import date, datetime, timezone as dt_timezone
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -26,6 +26,19 @@ def _isoformat_utc(value):
         value = timezone.make_aware(value, timezone.get_current_timezone())
     value = value.astimezone(dt_timezone.utc)
     return value.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _ensure_https_people_api_url(url):
+    parsed = urlparse(str(url or "").strip())
+    if parsed.scheme == "https" and parsed.netloc:
+        return
+    if (
+        getattr(settings, "DEBUG", False)
+        and parsed.scheme == "http"
+        and parsed.hostname in {"127.0.0.1", "localhost"}
+    ):
+        return
+    raise PeopleSyncError("People API URL must be HTTPS.")
 
 
 def _parse_iso_datetime(value, field_name):
@@ -255,6 +268,7 @@ def fetch_people_page(*, updated_since=None, cursor=None):
     url = f"{base_url}/api/connect/employees"
     if query:
         url = f"{url}?{urlencode(query)}"
+    _ensure_https_people_api_url(url)
 
     request = Request(
         url,
@@ -265,7 +279,7 @@ def fetch_people_page(*, updated_since=None, cursor=None):
     )
 
     try:
-        with urlopen(request, timeout=timeout_seconds) as response:
+        with urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
             raw_payload = response.read().decode("utf-8")
     except HTTPError as exc:
         raise PeopleSyncError(f"People API returned HTTP {exc.code}.") from exc

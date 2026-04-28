@@ -10,4 +10,5 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   PYTHON_BIN="$(command -v python || command -v python3)"
 fi
 
+"$PYTHON_BIN" -m pip install --upgrade "pip>=26.0"
 "$PYTHON_BIN" -m pip install -r backend/requirements.txt

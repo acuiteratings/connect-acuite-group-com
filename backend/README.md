@@ -20,6 +20,8 @@ This Django service adds the first real backend for Acuite Connect while preserv
 
 ## API surface
 
+All `/api/` endpoints require an authenticated active employee session except `/api/accounts/me/`, `/api/accounts/auth/*`, and `/api/ops/health/`.
+
 - `GET /api/accounts/me/`
 - `GET|POST /api/feed/posts/`
 - `GET|POST /api/feed/posts/<post_id>/comments/`

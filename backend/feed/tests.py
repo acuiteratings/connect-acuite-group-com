@@ -38,6 +38,7 @@ class FeedApiTests(TestCase):
             access_level=User.AccessLevel.MODERATOR,
             must_change_password=False,
         )
+        self.client.force_login(self.user)
 
     def test_feed_lists_published_posts(self):
         Post.objects.create(
@@ -49,7 +50,7 @@ class FeedApiTests(TestCase):
         Post.objects.create(
             author=self.user,
             title="Draft post",
-            body="Hidden from anonymous users",
+            body="Hidden from regular feed readers",
             moderation_status=Post.ModerationStatus.DRAFT,
         )
 

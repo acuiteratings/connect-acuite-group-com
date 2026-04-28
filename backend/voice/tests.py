@@ -18,6 +18,7 @@ class VoicePollApiTests(TestCase):
         self.poll = Poll.objects.create(question="What should Connect prioritize next?")
         self.option_one = PollOption.objects.create(poll=self.poll, label="Ideas board", position=1)
         self.option_two = PollOption.objects.create(poll=self.poll, label="Brand Store", position=2)
+        self.client.force_login(self.user)
 
     def test_active_poll_endpoint_returns_poll(self):
         response = self.client.get("/api/voice/polls/active/")
@@ -54,4 +55,3 @@ class VoicePollApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(PollVote.objects.count(), 1)
         self.assertEqual(PollVote.objects.get().option_id, self.option_two.id)
-

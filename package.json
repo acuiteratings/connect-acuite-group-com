@@ -8,8 +8,6 @@
     "backend:check": "cd backend && ../.venv/bin/python manage.py check",
     "backend:migrate": "cd backend && ../.venv/bin/python manage.py migrate",
     "backend:seed": "cd backend && ../.venv/bin/python manage.py seed_connect_demo",
-    "backend:test": "cd backend && ../.venv/bin/python manage.py test",
-    "dev": "wrangler pages dev .",
-    "deploy": "wrangler pages deploy . --project-name acuite-connect"
+    "backend:test": "cd backend && ../.venv/bin/python manage.py test"
   }
 }

@@ -270,7 +270,7 @@ def my_profile(request):
     if request.method == "GET":
         return JsonResponse(
             {
-                "profile": serialize_directory_profile(profile),
+                "profile": serialize_directory_profile(profile, include_profile_photos=True),
                 "skill_library": PROFILE_SKILL_LIBRARY,
                 "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
             }
@@ -296,7 +296,7 @@ def my_profile(request):
     return JsonResponse(
         {
             "detail": "Profile updated successfully.",
-            "profile": serialize_directory_profile(profile),
+            "profile": serialize_directory_profile(profile, include_profile_photos=True),
             "skill_library": PROFILE_SKILL_LIBRARY,
             "limits": {"max_photos": 2, "max_skills": 3, "max_hobbies": 3},
         }

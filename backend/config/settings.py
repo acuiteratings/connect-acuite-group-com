@@ -181,6 +181,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.EmployeeApiAccessMiddleware",
     "accounts.middleware.SessionDeadlineMiddleware",
     "operations.middleware.ErrorMonitoringMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -337,7 +338,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 CSRF_COOKIE_HTTPONLY = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = "SAMEORIGIN"
+X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY").strip().upper() or "DENY"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = os.getenv(
     "USE_X_FORWARDED_HOST",
@@ -374,7 +375,7 @@ CONTENT_SECURITY_POLICY = os.getenv(
         "default-src 'self'; "
         "base-uri 'self'; "
         "form-action 'self'; "
-        "frame-ancestors 'self'; "
+        "frame-ancestors 'none'; "
         "object-src 'none'; "
         f"script-src 'self'{STATIC_CSP_SOURCE}; "
         f"style-src 'self' 'unsafe-inline'{STATIC_CSP_SOURCE}; "

@@ -28,6 +28,7 @@ class LearningApiTests(TestCase):
             last_name="Library",
             is_staff=True,
         )
+        self.client.force_login(self.user)
 
     def test_books_endpoint_lists_active_titles(self):
         response = self.client.get("/api/learning/books/")

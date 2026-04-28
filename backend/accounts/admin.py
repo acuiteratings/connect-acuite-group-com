@@ -5,17 +5,17 @@ from .models import ExitProcess, LoginChallenge, User
 
 
 @admin.action(description="Require password change on next login")
-def require_password_change(modeladmin, request, queryset):
+def require_password_change(_modeladmin, request, queryset):
     queryset.update(must_change_password=True)
 
 
 @admin.action(description="Disable posting access in Connect")
-def disable_connect_posting(modeladmin, request, queryset):
+def disable_connect_posting(_modeladmin, request, queryset):
     queryset.update(can_post_in_connect=False)
 
 
 @admin.action(description="Restore posting access in Connect")
-def restore_connect_posting(modeladmin, request, queryset):
+def restore_connect_posting(_modeladmin, request, queryset):
     queryset.update(can_post_in_connect=True)
 
 

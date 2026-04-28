@@ -1,10 +1,10 @@
 import csv
-import xml.etree.ElementTree as ET
 import zipfile
 from datetime import date, timedelta
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
+from defusedxml import ElementTree as ET
 
 from accounts.models import User
 from directory.models import DirectoryProfile
@@ -265,7 +265,7 @@ class Command(BaseCommand):
                 "is_staff": parse_bool(row.get("is_staff"), False),
                 "is_active": parse_bool(row.get("is_active"), True),
                 "is_directory_visible": parse_bool(row.get("is_directory_visible"), True),
-                "must_change_password": True,
+                "must_change_password": True,  # nosec B105
             }
             user, created_now = User.objects.update_or_create(
                 email=email,
@@ -283,7 +283,7 @@ class Command(BaseCommand):
                 user.set_password(chosen_password)
             elif not user.password:
                 user.set_unusable_password()
-            user.must_change_password = True
+            user.must_change_password = True  # nosec B105
             user.password_changed_at = None
             user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
             DirectoryProfile.objects.update_or_create(

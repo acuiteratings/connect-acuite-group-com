@@ -7,7 +7,7 @@ from .models import Comment, Post, PostReaction
 
 
 @admin.action(description="Publish selected posts")
-def publish_posts(modeladmin, request, queryset):
+def publish_posts(_modeladmin, request, queryset):
     for post in queryset:
         post.moderation_status = Post.ModerationStatus.PUBLISHED
         post.published_at = post.published_at or timezone.now()
@@ -29,7 +29,7 @@ def publish_posts(modeladmin, request, queryset):
 
 
 @admin.action(description="Reject selected posts")
-def reject_posts(modeladmin, request, queryset):
+def reject_posts(_modeladmin, request, queryset):
     for post in queryset:
         post.moderation_status = Post.ModerationStatus.REJECTED
         post.save(update_fields=["moderation_status", "updated_at"])
@@ -50,7 +50,7 @@ def reject_posts(modeladmin, request, queryset):
 
 
 @admin.action(description="Publish selected comments")
-def publish_comments(modeladmin, request, queryset):
+def publish_comments(_modeladmin, request, queryset):
     for comment in queryset:
         comment.moderation_status = Comment.ModerationStatus.PUBLISHED
         comment.save(update_fields=["moderation_status", "updated_at"])
@@ -71,7 +71,7 @@ def publish_comments(modeladmin, request, queryset):
 
 
 @admin.action(description="Remove selected comments")
-def remove_comments(modeladmin, request, queryset):
+def remove_comments(_modeladmin, request, queryset):
     for comment in queryset:
         comment.moderation_status = Comment.ModerationStatus.REMOVED
         comment.save(update_fields=["moderation_status", "updated_at"])

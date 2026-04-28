@@ -9,6 +9,8 @@ from accounts.services import employee_sso_enabled
 
 @ensure_csrf_cookie
 def home(request):
+    if not request.user.is_authenticated:
+        return redirect("/login.html")
     if request.user.is_authenticated and not getattr(request.user, "has_employee_access", False):
         return redirect("/access-denied.html")
     return render(

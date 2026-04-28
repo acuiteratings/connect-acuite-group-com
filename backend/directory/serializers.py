@@ -1,10 +1,22 @@
-from accounts.serializers import serialize_user
-
 from .utils import resolve_branch_location
 
 
-def serialize_directory_profile(profile, *, coin_balance=None):
-    payload = serialize_user(profile.user)
+def _serialize_directory_user(user):
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.full_name,
+        "initials": user.initials,
+        "title": user.title,
+        "department": user.department,
+        "location": user.location,
+        "employee_code": user.employee_code,
+        "phone_number": user.phone_number,
+    }
+
+
+def serialize_directory_profile(profile, *, coin_balance=None, include_profile_photos=False):
+    payload = _serialize_directory_user(profile.user)
     payload.update(
         {
             "manager": profile.manager.full_name if profile.manager else None,
@@ -28,10 +40,11 @@ def serialize_directory_profile(profile, *, coin_balance=None):
             "clubs": profile.clubs,
             "hobbies": profile.hobbies,
             "interests": profile.interests,
-            "profile_photos": profile.profile_photos,
             "joined_on": profile.joined_on.isoformat() if profile.joined_on else None,
             "profile_visible": profile.is_visible,
             "coin_balance": coin_balance or {},
         }
     )
+    if include_profile_photos:
+        payload["profile_photos"] = profile.profile_photos
     return payload

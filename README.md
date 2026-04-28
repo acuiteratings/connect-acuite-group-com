@@ -11,7 +11,7 @@ Acuité Connect is the employee network for Acuité Ratings & Research. This rep
 - App URL: `connect.acuite-group.com`
 - Runtime: Django + Gunicorn/Uvicorn
 - Database: PostgreSQL
-- Static assets: WhiteNoise
+- Static assets: Render static site (`acuite-connect-static`)
 
 ## Local commands
 
@@ -109,7 +109,7 @@ Run the standard migration flow after pulling changes:
 ```bash
 cd backend
 ../.venv/bin/python manage.py migrate
-../.venv/bin/python manage.py test battleship.tests
+../.venv/bin/python manage.py test battleship
 ```
 
 Optional server-side settings:

@@ -121,4 +121,4 @@ Render must define these environment variables for live Employee SSO login:
 
 ## Important note
 
-The existing Cloudflare Pages deployment can still serve the older static MVP, but it cannot host the Django backend, database, moderation APIs, or real authentication. To make `connect.acuite-group.com` the real source of truth, the domain should move from Pages to the Render web service after that service is live.
+`connect.acuite-group.com` should remain pointed at the Render web service. Cloudflare may be used for DNS, but Cloudflare Pages is no longer part of the Acuité Connect deployment path.

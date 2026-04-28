@@ -1,5 +1,6 @@
 import json
 import logging
+from html import escape
 
 from django.db.models import Count, Q
 from django.conf import settings
@@ -146,6 +147,8 @@ def _build_ceo_request_approval_email(post):
         (post.metadata or {}).get("ceo_desk_request_label") or post.title or "your MD & CEO request"
     ).strip()
     requester_name = requester.full_name or requester.email
+    safe_requester_name = escape(requester_name)
+    safe_request_label = escape(request_label)
     subject = "Your MD & CEO request has been received"
     message = (
         f"Hello {requester_name},\n\n"
@@ -156,8 +159,8 @@ def _build_ceo_request_approval_email(post):
     )
     html_message = f"""
     <div style="font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.6;">
-      <p style="margin: 0 0 16px;">Hello {requester_name},</p>
-      <p style="margin: 0 0 16px;">Your request <strong>{request_label}</strong> has been received and acknowledged.</p>
+      <p style="margin: 0 0 16px;">Hello {safe_requester_name},</p>
+      <p style="margin: 0 0 16px;">Your request <strong>{safe_request_label}</strong> has been received and acknowledged.</p>
       <p style="margin: 0 0 16px;">You will be notified of an available slot in due course.</p>
       <p style="margin: 0;">Regards,<br>Acuité Connect Admin</p>
     </div>

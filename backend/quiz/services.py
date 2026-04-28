@@ -151,7 +151,7 @@ def start_match(match_id, user, *, request=None):
     if len(available_questions) < match.total_questions:
         raise QuizRuleError("Question bank is not ready for this difficulty.", code="question_bank_short")
 
-    chosen = random.sample(available_questions, match.total_questions)
+    chosen = random.sample(available_questions, match.total_questions)  # nosec B311
     now = timezone.now()
     match.status = QuizMatch.Status.ACTIVE
     match.question_order = [item["key"] for item in chosen]

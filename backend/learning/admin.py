@@ -7,7 +7,7 @@ from .models import Book, BookRequisition
 
 
 @admin.action(description="Approve selected requisitions")
-def approve_requisitions(modeladmin, request, queryset):
+def approve_requisitions(_modeladmin, request, queryset):
     for requisition in queryset:
         requisition.mark_reviewed(BookRequisition.Status.APPROVED)
         record_audit_event(
@@ -27,7 +27,7 @@ def approve_requisitions(modeladmin, request, queryset):
 
 
 @admin.action(description="Mark selected requisitions as issued")
-def issue_requisitions(modeladmin, request, queryset):
+def issue_requisitions(_modeladmin, request, queryset):
     for requisition in queryset:
         requisition.status = BookRequisition.Status.ISSUED
         requisition.reviewed_at = requisition.reviewed_at or timezone.now()
@@ -43,7 +43,7 @@ def issue_requisitions(modeladmin, request, queryset):
 
 
 @admin.action(description="Mark selected requisitions as returned")
-def return_requisitions(modeladmin, request, queryset):
+def return_requisitions(_modeladmin, request, queryset):
     for requisition in queryset:
         requisition.status = BookRequisition.Status.RETURNED
         requisition.returned_at = timezone.now()
@@ -58,7 +58,7 @@ def return_requisitions(modeladmin, request, queryset):
 
 
 @admin.action(description="Decline selected requisitions")
-def decline_requisitions(modeladmin, request, queryset):
+def decline_requisitions(_modeladmin, request, queryset):
     for requisition in queryset:
         requisition.mark_reviewed(BookRequisition.Status.DECLINED)
         record_audit_event(
@@ -84,4 +84,3 @@ class BookRequisitionAdmin(admin.ModelAdmin):
     search_fields = ("book__title", "book__author", "requester__email", "requester__first_name", "requester__last_name")
     autocomplete_fields = ("book", "requester")
     actions = (approve_requisitions, issue_requisitions, return_requisitions, decline_requisitions)
-

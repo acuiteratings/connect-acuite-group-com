@@ -1,12 +1,11 @@
 import logging
-import random
 from datetime import timedelta
 from secrets import compare_digest
 import secrets
 from threading import Thread
 from threading import Lock
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 import json
 
@@ -115,7 +114,25 @@ def _parse_json_bytes(raw_bytes):
         ) from exc
 
 
+def _ensure_https_url(url, *, service_name):
+    parsed = urlparse(str(url or "").strip())
+    if parsed.scheme == "https" and parsed.netloc:
+        return
+    if (
+        getattr(settings, "DEBUG", False)
+        and parsed.scheme == "http"
+        and parsed.hostname in {"127.0.0.1", "localhost"}
+    ):
+        return
+    raise AuthFlowError(
+        f"{service_name} URL must be HTTPS.",
+        status=503,
+        code="external_service_url_invalid",
+    )
+
+
 def _employee_sso_request(url, *, method="GET", data=None, headers=None):
+    _ensure_https_url(url, service_name="Employee SSO")
     encoded_data = None
     request_headers = {"Accept": "application/json"}
     if headers:
@@ -126,7 +143,7 @@ def _employee_sso_request(url, *, method="GET", data=None, headers=None):
 
     request = Request(url, data=encoded_data, method=method.upper(), headers=request_headers)
     try:
-        with urlopen(request, timeout=15) as response:
+        with urlopen(request, timeout=15) as response:  # nosec B310
             return _parse_json_bytes(response.read())
     except HTTPError as exc:
         payload = _parse_json_bytes(exc.read())
@@ -456,7 +473,7 @@ def employee_sso_logout_redirect():
 
 def generate_otp_code():
     length = max(4, int(getattr(settings, "AUTH_OTP_CODE_LENGTH", 6)))
-    return "".join(str(random.randint(0, 9)) for _ in range(length))
+    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 
 def generate_temporary_password(length=14):
