@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from django.contrib import admin
 
-from .models import AnalyticsEvent, AuditLog, ErrorEvent
+from .models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
 
 
 @admin.register(AuditLog)
@@ -87,6 +87,45 @@ class ErrorEventAdmin(admin.ModelAdmin):
         "resolved_at",
     )
     actions = (mark_errors_resolved,)
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.action(description="Mark selected reported errors as resolved")
+def mark_reported_errors_resolved(modeladmin, request, queryset):
+    queryset.filter(is_resolved=False).update(
+        is_resolved=True,
+        resolved_at=timezone.now(),
+        resolved_by=request.user,
+    )
+
+
+@admin.register(ReportedError)
+class ReportedErrorAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at",
+        "title",
+        "reporter",
+        "source_tab",
+        "page_path",
+        "is_resolved",
+        "resolved_at",
+    )
+    list_filter = ("is_resolved", "source_tab", "created_at")
+    search_fields = ("title", "details", "reporter__email", "reporter__first_name", "reporter__last_name")
+    readonly_fields = (
+        "reporter",
+        "title",
+        "details",
+        "source_tab",
+        "page_path",
+        "metadata",
+        "created_at",
+        "resolved_at",
+        "resolved_by",
+    )
+    actions = (mark_reported_errors_resolved,)
 
     def has_add_permission(self, request):
         return False

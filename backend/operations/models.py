@@ -99,6 +99,15 @@ class ReportedError(models.Model):
     source_tab = models.CharField(max_length=64, blank=True)
     page_path = models.CharField(max_length=255, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
+    is_resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(blank=True, null=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="resolved_reported_errors",
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

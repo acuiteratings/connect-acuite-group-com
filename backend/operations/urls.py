@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .reported_errors import reported_error_admin_resolve, reported_errors_admin_collection
 from .views import (
     analytics_ingest,
     analytics_recent,
@@ -33,6 +34,12 @@ urlpatterns = [
     path("analytics/ingest/", analytics_ingest, name="analytics-ingest"),
     path("errors/", recent_errors, name="recent-errors"),
     path("reported-errors/", reported_errors_collection, name="reported-errors-collection"),
+    path("reported-errors/admin/", reported_errors_admin_collection, name="reported-errors-admin-collection"),
+    path(
+        "reported-errors/admin/<int:reported_error_id>/resolve/",
+        reported_error_admin_resolve,
+        name="reported-error-admin-resolve",
+    ),
     path("reported-errors/<int:reported_error_id>/", reported_error_detail, name="reported-error-detail"),
     path("engagement-score/", engagement_score_overview, name="engagement-score-overview"),
     path("celebrations/today/", celebration_candidates_today, name="celebration-candidates-today"),

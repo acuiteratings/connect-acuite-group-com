@@ -237,4 +237,32 @@
     redirectIfAuthenticated,
     requireAuth,
   };
+
+  loadReportedErrorsAssets();
+
+  function loadReportedErrorsAssets() {
+    const currentScript = document.currentScript;
+    if (!currentScript?.src || document.querySelector('script[data-reported-errors-inbox="true"]')) {
+      return;
+    }
+
+    const scriptUrl = new URL(currentScript.src);
+    const version = scriptUrl.search || "";
+    const cssUrl = new URL(`../css/reported-errors.css${version}`, scriptUrl).toString();
+    const jsUrl = new URL(`reported-errors.js${version}`, scriptUrl).toString();
+
+    if (!document.querySelector('link[data-reported-errors-inbox="true"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssUrl;
+      link.dataset.reportedErrorsInbox = "true";
+      document.head.append(link);
+    }
+
+    const script = document.createElement("script");
+    script.src = jsUrl;
+    script.defer = true;
+    script.dataset.reportedErrorsInbox = "true";
+    document.head.append(script);
+  }
 })();
