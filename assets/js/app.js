@@ -45,6 +45,10 @@ const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
 const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
+const BULLETIN_BOARD_ADMIN_TEMPLATE_KEYS = new Set([
+  ...CELEBRATION_TEMPLATE_KEYS,
+  "welcome_employee",
+]);
 const ENABLED_TABS = new Set(["iam-acuite", "home", "holidays", "resources", "brochure-builder", "applications", "knowledge", "ceo-desk", "bulletin", "my-posts", "community", "playtime", "battleship", "quiz", "library", "store", "directory", "profile", "report-error", "engagement-score", "help"]);
 const BULLETIN_CATEGORY_LABELS = {
   announcements: "Announcements",
@@ -1014,7 +1018,7 @@ async function loadBulletinPosts() {
     const celebrationResults = Array.isArray(celebrationPostsPayload.results)
       ? celebrationPostsPayload.results
         .map(mapBulletinPost)
-        .filter((post) => isCelebrationBulletinPost(post))
+        .filter((post) => isBulletinBoardAdminPost(post))
       : [];
     appData.bulletinPosts = sortBulletinPostsNewestFirst([...employeeResults, ...celebrationResults]);
   } catch (error) {
@@ -7200,7 +7204,7 @@ function updateLivePostFromPayload(postPayload) {
       );
       return;
     }
-    if (isCelebrationBulletinPost(mapped)) {
+    if (isBulletinBoardAdminPost(mapped)) {
       const existingIndex = appData.bulletinPosts.findIndex((item) => item.sourceId === mapped.sourceId);
       if (existingIndex >= 0) {
         appData.bulletinPosts.splice(existingIndex, 1, mapped);
@@ -7264,6 +7268,10 @@ function heartIcon() {
 
 function isCelebrationBulletinPost(post) {
   return CELEBRATION_TEMPLATE_KEYS.has(String(post?.templateKey || "").trim());
+}
+
+function isBulletinBoardAdminPost(post) {
+  return BULLETIN_BOARD_ADMIN_TEMPLATE_KEYS.has(String(post?.templateKey || "").trim());
 }
 
 function commentIcon() {
