@@ -25,6 +25,7 @@ from .services import (
     resign_match,
     respond_to_invitation,
     submit_fleet_layout,
+    sync_match_state,
     sync_relevant_matches_for_user,
 )
 
@@ -63,6 +64,12 @@ def _employee_required(request):
     return None
 
 
+def _sync_global_slot_match(request):
+    match = get_active_slot_match()
+    if match:
+        sync_match_state(match, request=request)
+
+
 def lobby(request):
     forbidden = _employee_required(request)
     if forbidden:
@@ -72,6 +79,7 @@ def lobby(request):
 
     expire_stale_invitations(request=request)
     sync_relevant_matches_for_user(request.user, request=request)
+    _sync_global_slot_match(request)
     open_match = get_open_match_for_user(request.user)
     global_active_match = get_active_slot_match()
     query = request.GET.get("q", "").strip()
@@ -199,6 +207,8 @@ def match_respond(request, match_id):
         return HttpResponseNotAllowed(["POST"])
     try:
         payload = _parse_json_body(request)
+        if str(payload.get("decision") or "").strip().lower() == "accept":
+            _sync_global_slot_match(request)
         match = respond_to_invitation(
             match_id,
             request.user,
