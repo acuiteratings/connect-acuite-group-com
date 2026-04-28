@@ -293,6 +293,8 @@ DEFAULT_STATIC_URL = (
     "/static/" if RUNNING_LOCALLY else "https://acuite-connect-static.onrender.com/"
 )
 STATIC_URL = env_url("STATIC_URL", DEFAULT_STATIC_URL)
+if not RUNNING_LOCALLY and STATIC_URL.startswith("/"):
+    STATIC_URL = DEFAULT_STATIC_URL
 STATIC_ROOT = PROJECT_ROOT / "staticfiles"
 STATICFILES_DIRS = [FRONTEND_ASSET_ROOT]
 _static_url_parts = urlparse(STATIC_URL)
