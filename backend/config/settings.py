@@ -289,7 +289,10 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login.html"
 
 FRONTEND_ASSET_ROOT = PROJECT_ROOT / "assets"
-STATIC_URL = env_url("STATIC_URL", "/static/")
+DEFAULT_STATIC_URL = (
+    "/static/" if RUNNING_LOCALLY else "https://acuite-connect-static.onrender.com/"
+)
+STATIC_URL = env_url("STATIC_URL", DEFAULT_STATIC_URL)
 STATIC_ROOT = PROJECT_ROOT / "staticfiles"
 STATICFILES_DIRS = [FRONTEND_ASSET_ROOT]
 _static_url_parts = urlparse(STATIC_URL)
