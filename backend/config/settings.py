@@ -1,6 +1,7 @@
 import os
 import secrets
 from pathlib import Path
+from urllib.parse import urlparse
 
 import dj_database_url
 from dotenv import load_dotenv
@@ -20,6 +21,12 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+def env_url(name, default):
+    value = os.getenv(name, default).strip() or default
+    return value if value.endswith("/") else f"{value}/"
+
 
 def _load_build_number():
     build_number_file = PROJECT_ROOT / ".build-number"
@@ -282,9 +289,16 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login.html"
 
 FRONTEND_ASSET_ROOT = PROJECT_ROOT / "assets"
-STATIC_URL = "/static/"
+STATIC_URL = env_url("STATIC_URL", "/static/")
 STATIC_ROOT = PROJECT_ROOT / "staticfiles"
 STATICFILES_DIRS = [FRONTEND_ASSET_ROOT]
+_static_url_parts = urlparse(STATIC_URL)
+STATIC_ASSET_ORIGIN = (
+    f"{_static_url_parts.scheme}://{_static_url_parts.netloc}"
+    if _static_url_parts.scheme and _static_url_parts.netloc
+    else ""
+)
+STATIC_CSP_SOURCE = f" {STATIC_ASSET_ORIGIN}" if STATIC_ASSET_ORIGIN else ""
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend"
@@ -307,7 +321,7 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
-            if DEBUG
+            if DEBUG or STATIC_ASSET_ORIGIN
             else "whitenoise.storage.CompressedManifestStaticFilesStorage"
         ),
     },
@@ -357,11 +371,11 @@ CONTENT_SECURITY_POLICY = os.getenv(
         "form-action 'self'; "
         "frame-ancestors 'self'; "
         "object-src 'none'; "
-        "script-src 'self'; "
-        "style-src 'self' 'unsafe-inline'; "
+        f"script-src 'self'{STATIC_CSP_SOURCE}; "
+        f"style-src 'self' 'unsafe-inline'{STATIC_CSP_SOURCE}; "
         "img-src 'self' data: https:; "
-        "font-src 'self' data:; "
-        "connect-src 'self'; "
+        f"font-src 'self' data:{STATIC_CSP_SOURCE}; "
+        f"connect-src 'self'{STATIC_CSP_SOURCE}; "
         "frame-src 'none'; "
         "manifest-src 'self'"
     ),

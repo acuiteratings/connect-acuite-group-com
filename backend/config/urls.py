@@ -33,6 +33,19 @@ urlpatterns = [
     ),
 ]
 
+if settings.STATIC_ASSET_ORIGIN:
+    urlpatterns += [
+        re_path(
+            r"^static/(?P<path>.*)$",
+            RedirectView.as_view(
+                url=f"{settings.STATIC_URL}%(path)s",
+                permanent=False,
+                query_string=True,
+            ),
+            name="external-static-asset",
+        )
+    ]
+
 if settings.DEBUG:
     urlpatterns += [
         re_path(

@@ -11,5 +11,3 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
 fi
 
 "$PYTHON_BIN" -m pip install -r backend/requirements.txt
-cd "$ROOT_DIR/backend"
-"$PYTHON_BIN" manage.py collectstatic --noinput

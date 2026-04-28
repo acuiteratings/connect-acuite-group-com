@@ -5,15 +5,16 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 ## Recommended production target
 
 - App host: Render web service
+- Static assets: Render static site
 - Database: Render PostgreSQL
 - Domain: `connect.acuite-group.com`
-- Static assets: WhiteNoise from Django
 - Error monitoring: optional Sentry via `SENTRY_DSN`
 
 ## Deployment files
 
 - `render.yaml`
 - `build.sh`
+- `build-web.sh`
 - `backend/config/settings.py`
 - `backend/requirements.txt`
 
@@ -23,6 +24,7 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 2. In Render, create a new Blueprint from that repository.
 3. Let Render provision:
    - `acuite-connect` web service
+   - `acuite-connect-static` static site
    - `acuite-connect-people-sync-incremental` cron service
    - `acuite-connect-people-sync-full` cron service
    - `acuite-connect-db` PostgreSQL database
@@ -32,14 +34,22 @@ Acuité Connect now includes a Django backend and PostgreSQL-ready data layer, s
 ## Commands Render runs
 
 ```bash
-./build.sh
+./build-web.sh
 cd backend && python manage.py migrate
 cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --workers ${WEB_CONCURRENCY:-1} --max-requests ${GUNICORN_MAX_REQUESTS:-800} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-80} --timeout ${GUNICORN_TIMEOUT:-60}
 ```
 
+The static asset service runs:
+
+```bash
+./build.sh
+```
+
+and publishes `./staticfiles` at `https://acuite-connect-static.onrender.com/`.
+
 ## Production memory profile
 
-The production web service should run on at least Render `standard` while Connect serves the Django API, authenticated HTML shells, and static assets from one process. Gunicorn is intentionally pinned to one worker by default and recycles workers after a bounded number of requests to avoid gradual memory growth taking the instance down.
+The production web service should run on at least Render `standard` while Connect serves the Django API and authenticated HTML shells. Static assets are served by `acuite-connect-static`, so the web build does not run `collectstatic` and the Django process does not carry the frontend asset bundle in memory. Gunicorn is intentionally pinned to one worker by default and recycles workers after a bounded number of requests to avoid gradual memory growth taking the instance down.
 
 Recommended Render values:
 
@@ -49,6 +59,7 @@ Recommended Render values:
 - `GUNICORN_MAX_REQUESTS=800`
 - `GUNICORN_MAX_REQUESTS_JITTER=80`
 - `GUNICORN_TIMEOUT=60`
+- `STATIC_URL=https://acuite-connect-static.onrender.com/`
 
 ## People directory sync schedule
 

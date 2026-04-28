@@ -9,7 +9,7 @@ services:
     name: acuite-connect
     runtime: python
     plan: standard
-    buildCommand: ./build.sh
+    buildCommand: ./build-web.sh
     preDeployCommand: cd backend && python manage.py migrate && python manage.py register_build_deploy
     startCommand: >
       cd backend &&
@@ -43,6 +43,8 @@ services:
         value: "6"
       - key: APP_BUILD_CREDIT
         value: Built with care by Sankar Chakraborti
+      - key: STATIC_URL
+        value: https://acuite-connect-static.onrender.com/
       - key: DATABASE_URL
         fromDatabase:
           name: acuite-connect-db
@@ -110,11 +112,28 @@ services:
       - key: PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS
         value: "15"
 
+  - type: web
+    name: acuite-connect-static
+    runtime: static
+    buildCommand: ./build.sh
+    staticPublishPath: ./staticfiles
+    headers:
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: https://connect.acuite-group.com
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+
   - type: cron
     name: acuite-connect-people-sync-incremental
     runtime: python
     schedule: "*/30 * * * *"
-    buildCommand: ./build.sh
+    buildCommand: ./build-web.sh
     startCommand: cd backend && python manage.py sync_people_directory
     envVars:
       - key: PYTHON_VERSION
@@ -140,7 +159,7 @@ services:
     name: acuite-connect-people-sync-full
     runtime: python
     schedule: "40 20 * * *"
-    buildCommand: ./build.sh
+    buildCommand: ./build-web.sh
     startCommand: cd backend && python manage.py sync_people_directory --full
     envVars:
       - key: PYTHON_VERSION
