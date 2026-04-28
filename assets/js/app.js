@@ -14,6 +14,170 @@ const gradients = {
   ember: "linear-gradient(135deg,var(--orange),var(--maroon))",
   mixed: "linear-gradient(135deg,var(--lime),var(--yellow),var(--amber))",
 };
+const ANNOUNCEMENT_THEME_LIBRARY = [
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01) 34%, transparent 58%), radial-gradient(circle at top right, rgba(244, 124, 37, 0.22), transparent 28%), radial-gradient(circle at bottom left, rgba(24, 168, 145, 0.18), transparent 34%), linear-gradient(135deg, rgba(14, 40, 54, 0.98), rgba(33, 23, 58, 0.95) 58%, rgba(63, 26, 35, 0.94)), var(--bg2)",
+    "--announcement-text": "#f5f1eb",
+    "--announcement-muted": "rgba(245, 241, 235, 0.78)",
+    "--announcement-soft": "rgba(245, 241, 235, 0.56)",
+    "--announcement-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04))",
+    "--announcement-surface-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.06)",
+    "--announcement-badge-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-badge-text": "rgba(255, 255, 255, 0.8)",
+    "--announcement-badge-strong-bg": "rgba(247, 148, 29, 0.22)",
+    "--announcement-badge-strong-border": "rgba(247, 148, 29, 0.4)",
+    "--announcement-badge-strong-text": "#fff4e9",
+    "--announcement-input-bg": "rgba(12, 18, 28, 0.28)",
+    "--announcement-input-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-input-placeholder": "rgba(255, 247, 239, 0.68)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.04)",
+    "--announcement-reaction-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-reaction-pill-text": "#fff4e9",
+    "--announcement-reaction-active-bg": "rgba(247, 148, 29, 0.14)",
+    "--announcement-reaction-active-border": "rgba(247, 148, 29, 0.4)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-like-count": "rgba(255, 247, 239, 0.8)",
+    "--announcement-accent": "#f7941d",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 32%, transparent 58%), radial-gradient(circle at top left, rgba(190, 236, 88, 0.18), transparent 26%), radial-gradient(circle at bottom right, rgba(246, 171, 72, 0.16), transparent 34%), linear-gradient(135deg, rgba(18, 44, 37, 0.98), rgba(29, 74, 61, 0.95) 52%, rgba(85, 44, 31, 0.94)), var(--bg2)",
+    "--announcement-text": "#f7f4ec",
+    "--announcement-muted": "rgba(247, 244, 236, 0.8)",
+    "--announcement-soft": "rgba(247, 244, 236, 0.56)",
+    "--announcement-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05))",
+    "--announcement-surface-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-badge-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-badge-text": "rgba(255, 255, 255, 0.82)",
+    "--announcement-badge-strong-bg": "rgba(190, 236, 88, 0.18)",
+    "--announcement-badge-strong-border": "rgba(190, 236, 88, 0.34)",
+    "--announcement-badge-strong-text": "#f1ffe0",
+    "--announcement-input-bg": "rgba(10, 20, 18, 0.26)",
+    "--announcement-input-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-input-placeholder": "rgba(247, 244, 236, 0.66)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.05)",
+    "--announcement-reaction-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-reaction-pill-text": "#f7f4ec",
+    "--announcement-reaction-active-bg": "rgba(190, 236, 88, 0.12)",
+    "--announcement-reaction-active-border": "rgba(190, 236, 88, 0.34)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-like-count": "rgba(247, 244, 236, 0.82)",
+    "--announcement-accent": "#beec58",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03) 34%, transparent 58%), radial-gradient(circle at top right, rgba(129, 211, 248, 0.2), transparent 26%), radial-gradient(circle at bottom left, rgba(248, 134, 90, 0.16), transparent 34%), linear-gradient(135deg, rgba(23, 40, 78, 0.98), rgba(41, 61, 112, 0.95) 55%, rgba(94, 45, 54, 0.92)), var(--bg2)",
+    "--announcement-text": "#f6f2ec",
+    "--announcement-muted": "rgba(246, 242, 236, 0.78)",
+    "--announcement-soft": "rgba(246, 242, 236, 0.56)",
+    "--announcement-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05))",
+    "--announcement-surface-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.07)",
+    "--announcement-badge-border": "rgba(255, 255, 255, 0.13)",
+    "--announcement-badge-text": "rgba(255, 255, 255, 0.82)",
+    "--announcement-badge-strong-bg": "rgba(129, 211, 248, 0.18)",
+    "--announcement-badge-strong-border": "rgba(129, 211, 248, 0.34)",
+    "--announcement-badge-strong-text": "#effaff",
+    "--announcement-input-bg": "rgba(14, 21, 40, 0.25)",
+    "--announcement-input-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-input-placeholder": "rgba(246, 242, 236, 0.66)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.05)",
+    "--announcement-reaction-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-reaction-pill-text": "#effaff",
+    "--announcement-reaction-active-bg": "rgba(129, 211, 248, 0.12)",
+    "--announcement-reaction-active-border": "rgba(129, 211, 248, 0.34)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-like-count": "rgba(246, 242, 236, 0.82)",
+    "--announcement-accent": "#81d3f8",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.04) 30%, transparent 60%), radial-gradient(circle at top left, rgba(255, 214, 153, 0.52), transparent 28%), radial-gradient(circle at bottom right, rgba(247, 148, 29, 0.16), transparent 34%), linear-gradient(135deg, #f6efe5, #eadfcf 54%, #d8cfc2), var(--bg2)",
+    "--announcement-text": "#251b17",
+    "--announcement-muted": "rgba(37, 27, 23, 0.78)",
+    "--announcement-soft": "rgba(37, 27, 23, 0.56)",
+    "--announcement-border": "rgba(37, 27, 23, 0.08)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46))",
+    "--announcement-surface-border": "rgba(37, 27, 23, 0.08)",
+    "--announcement-badge-bg": "rgba(37, 27, 23, 0.06)",
+    "--announcement-badge-border": "rgba(37, 27, 23, 0.08)",
+    "--announcement-badge-text": "rgba(37, 27, 23, 0.8)",
+    "--announcement-badge-strong-bg": "rgba(123, 36, 28, 0.1)",
+    "--announcement-badge-strong-border": "rgba(123, 36, 28, 0.18)",
+    "--announcement-badge-strong-text": "#7b241c",
+    "--announcement-input-bg": "rgba(255, 255, 255, 0.72)",
+    "--announcement-input-border": "rgba(37, 27, 23, 0.1)",
+    "--announcement-input-placeholder": "rgba(37, 27, 23, 0.5)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.52)",
+    "--announcement-reaction-border": "rgba(37, 27, 23, 0.08)",
+    "--announcement-reaction-pill-bg": "rgba(37, 27, 23, 0.06)",
+    "--announcement-reaction-pill-text": "#251b17",
+    "--announcement-reaction-active-bg": "rgba(123, 36, 28, 0.08)",
+    "--announcement-reaction-active-border": "rgba(123, 36, 28, 0.2)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.62)",
+    "--announcement-like-count": "rgba(37, 27, 23, 0.72)",
+    "--announcement-accent": "#a34f1f",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 34%, transparent 58%), radial-gradient(circle at top right, rgba(255, 209, 102, 0.22), transparent 24%), radial-gradient(circle at bottom left, rgba(231, 111, 81, 0.18), transparent 32%), linear-gradient(135deg, rgba(73, 28, 43, 0.98), rgba(102, 39, 55, 0.95) 54%, rgba(39, 28, 55, 0.94)), var(--bg2)",
+    "--announcement-text": "#f7f0eb",
+    "--announcement-muted": "rgba(247, 240, 235, 0.8)",
+    "--announcement-soft": "rgba(247, 240, 235, 0.56)",
+    "--announcement-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05))",
+    "--announcement-surface-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.07)",
+    "--announcement-badge-border": "rgba(255, 255, 255, 0.13)",
+    "--announcement-badge-text": "rgba(255, 255, 255, 0.82)",
+    "--announcement-badge-strong-bg": "rgba(255, 209, 102, 0.18)",
+    "--announcement-badge-strong-border": "rgba(255, 209, 102, 0.36)",
+    "--announcement-badge-strong-text": "#fff6df",
+    "--announcement-input-bg": "rgba(24, 12, 24, 0.24)",
+    "--announcement-input-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-input-placeholder": "rgba(247, 240, 235, 0.66)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.05)",
+    "--announcement-reaction-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-reaction-pill-text": "#fff6df",
+    "--announcement-reaction-active-bg": "rgba(255, 209, 102, 0.12)",
+    "--announcement-reaction-active-border": "rgba(255, 209, 102, 0.36)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-like-count": "rgba(247, 240, 235, 0.82)",
+    "--announcement-accent": "#ffd166",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.04) 32%, transparent 58%), radial-gradient(circle at top left, rgba(110, 231, 183, 0.2), transparent 26%), radial-gradient(circle at bottom right, rgba(96, 165, 250, 0.14), transparent 32%), linear-gradient(135deg, #eaf2ee, #dce7df 56%, #cad7d0), var(--bg2)",
+    "--announcement-text": "#18211b",
+    "--announcement-muted": "rgba(24, 33, 27, 0.78)",
+    "--announcement-soft": "rgba(24, 33, 27, 0.56)",
+    "--announcement-border": "rgba(24, 33, 27, 0.08)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.5))",
+    "--announcement-surface-border": "rgba(24, 33, 27, 0.08)",
+    "--announcement-badge-bg": "rgba(24, 33, 27, 0.06)",
+    "--announcement-badge-border": "rgba(24, 33, 27, 0.08)",
+    "--announcement-badge-text": "rgba(24, 33, 27, 0.8)",
+    "--announcement-badge-strong-bg": "rgba(46, 173, 43, 0.12)",
+    "--announcement-badge-strong-border": "rgba(46, 173, 43, 0.2)",
+    "--announcement-badge-strong-text": "#1e6d1b",
+    "--announcement-input-bg": "rgba(255, 255, 255, 0.74)",
+    "--announcement-input-border": "rgba(24, 33, 27, 0.1)",
+    "--announcement-input-placeholder": "rgba(24, 33, 27, 0.48)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.56)",
+    "--announcement-reaction-border": "rgba(24, 33, 27, 0.08)",
+    "--announcement-reaction-pill-bg": "rgba(24, 33, 27, 0.06)",
+    "--announcement-reaction-pill-text": "#18211b",
+    "--announcement-reaction-active-bg": "rgba(46, 173, 43, 0.08)",
+    "--announcement-reaction-active-border": "rgba(46, 173, 43, 0.2)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.64)",
+    "--announcement-like-count": "rgba(24, 33, 27, 0.72)",
+    "--announcement-accent": "#2ead2b",
+  },
+];
 
 const DIRECTORY_FILTER_GROUPS = ["company", "location", "department"];
 const DIRECTORY_FILTER_GROUP_LABELS = {
@@ -2907,6 +3071,31 @@ function setComposerAccessState(form, canCreatePosts) {
   }
 }
 
+function hashAnnouncementThemeSeed(value) {
+  const source = String(value || "").trim();
+  if (!source) {
+    return 0;
+  }
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = ((hash << 5) - hash) + source.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function applyAnnouncementTheme(container, seedSource) {
+  if (!container) {
+    return;
+  }
+  const theme = ANNOUNCEMENT_THEME_LIBRARY[
+    hashAnnouncementThemeSeed(seedSource) % ANNOUNCEMENT_THEME_LIBRARY.length
+  ] || ANNOUNCEMENT_THEME_LIBRARY[0];
+  Object.entries(theme).forEach(([key, value]) => {
+    container.style.setProperty(key, value);
+  });
+}
+
 function renderHomeAnnouncement() {
   const container = document.getElementById("home-announcement");
   if (!container) {
@@ -2914,6 +3103,10 @@ function renderHomeAnnouncement() {
   }
 
   if (state.homeAnnouncementFilter === "opinion_poll" && appData.activeOpinionPoll) {
+    applyAnnouncementTheme(
+      container,
+      `opinion_poll:${appData.activeOpinionPoll.id || appData.activeOpinionPoll.question || state.homeAnnouncementFilter}`,
+    );
     renderHomeAnnouncementFilters();
     renderHomeAnnouncementAdminForm();
     renderOpinionPollAnnouncement(container, appData.activeOpinionPoll);
@@ -2926,6 +3119,12 @@ function renderHomeAnnouncement() {
     : (HOME_ANNOUNCEMENTS.find((item) => item.tag === state.homeAnnouncementFilter) || null);
   renderHomeAnnouncementFilters();
   renderHomeAnnouncementAdminForm();
+  applyAnnouncementTheme(
+    container,
+    publishedPost
+      ? `${publishedPost.sourceId || publishedPost.id || ""}:${publishedPost.title || ""}`
+      : `${state.homeAnnouncementFilter}:${announcement?.title || ""}`,
+  );
   if (!announcement) {
     container.innerHTML = `
       <div class="announcement-empty-state">

@@ -790,16 +790,41 @@ select {
 }
 
 .announcement-banner {
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
-  gap: 22px;
-  background:
+  --announcement-bg:
     linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01) 34%, transparent 58%),
     radial-gradient(circle at top right, rgba(244, 124, 37, 0.22), transparent 28%),
     radial-gradient(circle at bottom left, rgba(24, 168, 145, 0.18), transparent 34%),
     linear-gradient(135deg, rgba(14, 40, 54, 0.98), rgba(33, 23, 58, 0.95) 58%, rgba(63, 26, 35, 0.94)),
     var(--bg2);
-  color: #f5f1eb;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  --announcement-text: #f5f1eb;
+  --announcement-muted: rgba(245, 241, 235, 0.78);
+  --announcement-soft: rgba(245, 241, 235, 0.56);
+  --announcement-border: rgba(255, 255, 255, 0.12);
+  --announcement-surface-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  --announcement-surface-border: rgba(255, 255, 255, 0.12);
+  --announcement-badge-bg: rgba(255, 255, 255, 0.06);
+  --announcement-badge-border: rgba(255, 255, 255, 0.12);
+  --announcement-badge-text: rgba(255, 255, 255, 0.8);
+  --announcement-badge-strong-bg: rgba(247, 148, 29, 0.22);
+  --announcement-badge-strong-border: rgba(247, 148, 29, 0.4);
+  --announcement-badge-strong-text: #fff4e9;
+  --announcement-input-bg: rgba(12, 18, 28, 0.28);
+  --announcement-input-border: rgba(255, 255, 255, 0.14);
+  --announcement-input-placeholder: rgba(255, 247, 239, 0.68);
+  --announcement-reaction-bg: rgba(255, 255, 255, 0.04);
+  --announcement-reaction-border: rgba(255, 255, 255, 0.12);
+  --announcement-reaction-pill-bg: rgba(255, 255, 255, 0.08);
+  --announcement-reaction-pill-text: #fff4e9;
+  --announcement-reaction-active-bg: rgba(247, 148, 29, 0.14);
+  --announcement-reaction-active-border: rgba(247, 148, 29, 0.4);
+  --announcement-like-btn-bg: rgba(255, 255, 255, 0.08);
+  --announcement-like-count: rgba(255, 247, 239, 0.8);
+  --announcement-accent: var(--orange);
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 22px;
+  background: var(--announcement-bg);
+  color: var(--announcement-text);
+  border: 1px solid var(--announcement-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -18px 40px rgba(0, 0, 0, 0.18),
@@ -904,9 +929,9 @@ select {
   align-items: center;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--announcement-badge-border);
+  background: var(--announcement-badge-bg);
+  color: var(--announcement-badge-text);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -914,9 +939,9 @@ select {
 }
 
 .announcement-badge.strong {
-  background: rgba(247, 148, 29, 0.22);
-  border-color: rgba(247, 148, 29, 0.4);
-  color: #fff4e9;
+  background: var(--announcement-badge-strong-bg);
+  border-color: var(--announcement-badge-strong-border);
+  color: var(--announcement-badge-strong-text);
 }
 
 .announcement-title {
@@ -930,7 +955,7 @@ select {
 .announcement-summary {
   font-size: 18px;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--announcement-muted);
   max-width: 760px;
 }
 
@@ -945,8 +970,8 @@ select {
 .announcement-panel {
   padding: 18px;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--announcement-surface-bg);
+  border: 1px solid var(--announcement-surface-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 10px 24px rgba(0, 0, 0, 0.12);
@@ -959,14 +984,14 @@ select {
   display: block;
   font-size: 16px;
   font-weight: 800;
-  color: #fff7ef;
+  color: var(--announcement-text);
   margin-bottom: 4px;
 }
 
 .announcement-meta-card span:last-child,
 .announcement-panel p,
 .announcement-panel li {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--announcement-muted);
 }
 
 .announcement-meta-label,
@@ -976,7 +1001,7 @@ select {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--announcement-soft);
   margin-bottom: 8px;
 }
 
@@ -1008,9 +1033,9 @@ select {
   gap: 10px;
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--announcement-reaction-border);
+  background: var(--announcement-reaction-bg);
+  color: var(--announcement-text);
   font-size: 12px;
   font-weight: 700;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -1023,15 +1048,15 @@ select {
   min-width: 28px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff4e9;
+  background: var(--announcement-reaction-pill-bg);
+  color: var(--announcement-reaction-pill-text);
 }
 
 .announcement-reaction:hover,
 .announcement-reaction.is-active {
   transform: translateY(-1px);
-  border-color: rgba(247, 148, 29, 0.4);
-  background: rgba(247, 148, 29, 0.14);
+  border-color: var(--announcement-reaction-active-border);
+  background: var(--announcement-reaction-active-bg);
 }
 
 .announcement-side {
@@ -1049,8 +1074,8 @@ select {
   gap: 12px;
   padding: 18px;
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.07));
+  border: 1px solid var(--announcement-surface-border);
+  background: var(--announcement-surface-bg);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 12px 28px rgba(7, 12, 20, 0.16);
@@ -1058,7 +1083,7 @@ select {
 }
 
 .announcement-feedback-label {
-  color: #fff7ef;
+  color: var(--announcement-text);
   font-size: 16px;
   font-weight: 800;
 }
@@ -1068,14 +1093,14 @@ select {
   min-height: 140px;
   padding: 16px 18px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(12, 18, 28, 0.28);
-  color: #fff7ef;
+  border: 1px solid var(--announcement-input-border);
+  background: var(--announcement-input-bg);
+  color: var(--announcement-text);
   resize: vertical;
 }
 
 .announcement-feedback-input::placeholder {
-  color: rgba(255, 247, 239, 0.68);
+  color: var(--announcement-input-placeholder);
 }
 
 .announcement-feedback-actions {
@@ -1086,7 +1111,7 @@ select {
 }
 
 .announcement-feedback-reward {
-  color: #fff0d8;
+  color: var(--announcement-text);
   font-size: 14px;
   font-weight: 800;
 }
@@ -1103,27 +1128,28 @@ select {
   min-height: 46px;
   padding: 0 18px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff7ef;
+  border: 1px solid var(--announcement-surface-border);
+  color: var(--announcement-text);
   font-size: 14px;
   font-weight: 800;
 }
 
 .announcement-feedback-submit {
   background: linear-gradient(135deg, rgba(232, 114, 42, 0.92), rgba(166, 56, 29, 0.92));
+  color: #fff7ef;
 }
 
 .announcement-like-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--announcement-like-btn-bg);
 }
 
 .announcement-like-btn.liked {
-  border-color: rgba(247, 148, 29, 0.42);
-  background: rgba(247, 148, 29, 0.2);
+  border-color: var(--announcement-badge-strong-border);
+  background: var(--announcement-badge-strong-bg);
 }
 
 .announcement-like-count {
-  color: rgba(255, 247, 239, 0.8);
+  color: var(--announcement-like-count);
   font-size: 14px;
   font-weight: 700;
 }
@@ -1133,9 +1159,9 @@ select {
   min-height: 64px;
   padding: 18px 20px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.07));
-  color: #fff7ef;
+  border: 1px solid var(--announcement-surface-border);
+  background: var(--announcement-surface-bg);
+  color: var(--announcement-text);
   font-size: 16px;
   font-weight: 800;
   text-align: left;
@@ -1148,7 +1174,7 @@ select {
 
 .announcement-side-button:hover {
   transform: translateY(-1px);
-  border-color: rgba(247, 148, 29, 0.42);
+  border-color: var(--announcement-badge-strong-border);
   background: linear-gradient(180deg, rgba(247, 148, 29, 0.18), rgba(255, 255, 255, 0.08));
 }
 
@@ -1222,9 +1248,9 @@ select {
   width: 100%;
   padding: 16px 18px;
   border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff7ef;
+  border: 1px solid var(--announcement-surface-border);
+  background: var(--announcement-reaction-bg);
+  color: var(--announcement-text);
   text-align: left;
 }
 
@@ -1234,8 +1260,8 @@ select {
 }
 
 .announcement-poll-option.selected {
-  border-color: rgba(247, 148, 29, 0.72);
-  background: rgba(247, 148, 29, 0.08);
+  border-color: var(--announcement-badge-strong-border);
+  background: var(--announcement-badge-strong-bg);
 }
 
 .announcement-poll-option:disabled {
@@ -1252,12 +1278,12 @@ select {
 .announcement-poll-option-copy strong {
   font-size: 16px;
   line-height: 1.35;
-  color: #fff7ef;
+  color: var(--announcement-text);
 }
 
 .announcement-poll-option-copy span {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--announcement-muted);
 }
 
 .announcement-poll-option-stats {
@@ -1269,14 +1295,14 @@ select {
 .announcement-poll-votes {
   font-size: 24px;
   font-weight: 800;
-  color: var(--orange);
+  color: var(--announcement-accent);
   line-height: 1;
 }
 
 .announcement-poll-percent {
   font-size: 12px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--announcement-muted);
 }
 
 .ceo-desk-copy {
@@ -1436,7 +1462,7 @@ select {
 }
 
 [data-theme="dark"] .announcement-banner {
-  color: #f6f1eb;
+  color: var(--announcement-text);
 }
 
 .hero-banner::before {
