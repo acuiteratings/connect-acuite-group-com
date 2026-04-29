@@ -55,6 +55,7 @@ class DirectoryApiTests(TestCase):
             department_for_connect="Rating Operations",
             expertise="Infrastructure ratings",
             skills=["credit", "surveillance"],
+            profile_photos=["data:image/png;base64,RAHUL"],
         )
 
         response = self.client.get("/api/directory/", {"q": "Rahul"})
@@ -63,7 +64,7 @@ class DirectoryApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["email"], "rahul.mehta@acuite.in")
-        self.assertNotIn("profile_photos", payload["results"][0])
+        self.assertEqual(payload["results"][0]["profile_photos"], ["data:image/png;base64,RAHUL"])
         self.assertNotIn("access_rights", payload["results"][0])
 
     def test_directory_response_is_paginated_and_omits_private_fields(self):
@@ -82,6 +83,7 @@ class DirectoryApiTests(TestCase):
                 office_location="Mumbai",
                 mobile_number=f"98199603{index:02d}",
                 joined_on=date(2024, 1, 1),
+                profile_photos=[f"data:image/png;base64,PAGE{index}"],
             )
 
         response = self.client.get("/api/directory/", {"page": "1", "page_size": "2"})
@@ -97,6 +99,7 @@ class DirectoryApiTests(TestCase):
         self.assertNotIn("phone_number", first_result)
         self.assertNotIn("gender", first_result)
         self.assertNotIn("joined_on", first_result)
+        self.assertIn("profile_photos", first_result)
 
     def test_directory_filters_include_company_department_function_and_location(self):
         user = User.objects.create_user(

@@ -274,7 +274,11 @@ def directory_list(request):
         refresh_expiry=False,
     )
     results = [
-        serialize_directory_profile(profile, coin_balance=coin_balance_map.get(profile.user_id))
+        serialize_directory_profile(
+            profile,
+            coin_balance=coin_balance_map.get(profile.user_id),
+            include_profile_photos=True,
+        )
         for profile in profiles
     ]
     base_profiles = list(base_queryset.order_by("user__display_name", "user__email"))
