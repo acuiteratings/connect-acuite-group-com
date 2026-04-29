@@ -278,6 +278,7 @@ def directory_list(request):
             profile,
             coin_balance=coin_balance_map.get(profile.user_id),
             include_profile_photos=True,
+            include_directory_contact_fields=True,
         )
         for profile in profiles
     ]

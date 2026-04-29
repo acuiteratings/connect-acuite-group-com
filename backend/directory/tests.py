@@ -67,7 +67,7 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(payload["results"][0]["profile_photos"], ["data:image/png;base64,RAHUL"])
         self.assertNotIn("access_rights", payload["results"][0])
 
-    def test_directory_response_is_paginated_and_omits_private_fields(self):
+    def test_directory_response_is_paginated_and_includes_directory_contact_fields(self):
         for index in range(3):
             user = User.objects.create_user(
                 email=f"page.user{index}@acuite.in",
@@ -95,10 +95,11 @@ class DirectoryApiTests(TestCase):
         self.assertEqual(payload["pagination"]["page_size"], 2)
         self.assertTrue(payload["pagination"]["has_next"])
         first_result = payload["results"][0]
-        self.assertNotIn("mobile_number", first_result)
+        self.assertIn("mobile_number", first_result)
+        self.assertIn("joined_on", first_result)
         self.assertNotIn("phone_number", first_result)
         self.assertNotIn("gender", first_result)
-        self.assertNotIn("joined_on", first_result)
+        self.assertNotIn("phone_extension", first_result)
         self.assertIn("profile_photos", first_result)
 
     def test_directory_filters_include_company_department_function_and_location(self):

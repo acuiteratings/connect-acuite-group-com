@@ -246,3 +246,16 @@
     startCleanup();
   }
 })();
+
+(function loadDirectoryContactDetails() {
+  if (window.directoryContactDetailsRequested) {
+    return;
+  }
+  window.directoryContactDetailsRequested = true;
+  const scriptUrl = document.currentScript?.src || "";
+  const versionQuery = scriptUrl.includes("?") ? `?${scriptUrl.split("?").slice(1).join("?")}` : "";
+  const detailsScript = document.createElement("script");
+  detailsScript.src = `/static/js/directory-contact-details.js${versionQuery}`;
+  detailsScript.defer = true;
+  document.head.appendChild(detailsScript);
+})();

@@ -22,6 +22,7 @@ def serialize_directory_profile(
     *,
     coin_balance=None,
     include_profile_photos=False,
+    include_directory_contact_fields=False,
     include_private_fields=False,
 ):
     payload = _serialize_directory_user(
@@ -52,13 +53,18 @@ def serialize_directory_profile(
             "coin_balance": coin_balance or {},
         }
     )
+    if include_directory_contact_fields or include_private_fields:
+        payload.update(
+            {
+                "mobile_number": profile.mobile_number,
+                "joined_on": profile.joined_on.isoformat() if profile.joined_on else None,
+            }
+        )
     if include_private_fields:
         payload.update(
             {
                 "gender": profile.gender,
                 "phone_extension": profile.phone_extension,
-                "mobile_number": profile.mobile_number,
-                "joined_on": profile.joined_on.isoformat() if profile.joined_on else None,
             }
         )
     if include_profile_photos:

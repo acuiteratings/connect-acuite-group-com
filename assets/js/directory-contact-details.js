@@ -1,0 +1,144 @@
+(function attachDirectoryContactDetails() {
+  const DIRECTORY_GRID_ID = "directory-grid";
+  const DETAIL_CLASS = "directory-contact-details";
+  const DETAIL_ROW_SELECTOR = `.${DETAIL_CLASS}`;
+  const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  let profileMap = new Map();
+  let loadPromise = null;
+  let retryTimer = 0;
+  let syncTimer = 0;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function formatJoiningDate(value) {
+    if (!value) {
+      return "";
+    }
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value);
+    }
+    return DATE_FORMATTER.format(parsed);
+  }
+
+  function detailItem(label, value) {
+    if (!value) {
+      return "";
+    }
+    return `
+      <div class="person-detail-item">
+        <span class="person-detail-label">${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+      </div>
+    `;
+  }
+
+  function normalizeProfile(profile) {
+    return {
+      email: profile.email || "",
+      mobileNumber: profile.mobile_number || "",
+      joiningDate: formatJoiningDate(profile.joined_on),
+    };
+  }
+
+  async function loadDirectoryContacts() {
+    if (loadPromise) {
+      return loadPromise;
+    }
+    if (!window.AcuiteConnectAuth?.apiRequest) {
+      return Promise.resolve(false);
+    }
+    loadPromise = window.AcuiteConnectAuth.apiRequest("/api/directory/?page=1&page_size=500")
+      .then((payload) => {
+        const nextMap = new Map();
+        (Array.isArray(payload.results) ? payload.results : []).forEach((profile) => {
+          nextMap.set(`person-${profile.id}`, normalizeProfile(profile));
+        });
+        profileMap = nextMap;
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        loadPromise = null;
+      });
+    return loadPromise;
+  }
+
+  function renderDetailsForCard(card, profile) {
+    const details = [
+      detailItem("Email", profile.email),
+      detailItem("Mobile No.", profile.mobileNumber),
+      detailItem("Joining date", profile.joiningDate),
+    ].filter(Boolean).join("");
+    if (!details) {
+      return;
+    }
+
+    let detailRow = card.querySelector(DETAIL_ROW_SELECTOR);
+    if (!detailRow) {
+      detailRow = document.createElement("div");
+      detailRow.className = `person-detail-grid ${DETAIL_CLASS}`;
+      const head = card.querySelector(".person-head");
+      if (head?.parentNode) {
+        head.insertAdjacentElement("afterend", detailRow);
+      } else {
+        card.prepend(detailRow);
+      }
+    }
+    detailRow.innerHTML = details;
+
+    const legacyFooter = card.querySelector(".person-footer");
+    if (legacyFooter) {
+      legacyFooter.hidden = true;
+    }
+  }
+
+  function syncDirectoryCards() {
+    const grid = document.getElementById(DIRECTORY_GRID_ID);
+    if (!grid || !profileMap.size) {
+      return;
+    }
+    grid.querySelectorAll(".person-card[id]").forEach((card) => {
+      const profile = profileMap.get(card.id);
+      if (profile) {
+        renderDetailsForCard(card, profile);
+      }
+    });
+  }
+
+  function scheduleSync() {
+    window.clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(() => {
+      void loadDirectoryContacts().then(syncDirectoryCards);
+    }, 80);
+  }
+
+  function start() {
+    const grid = document.getElementById(DIRECTORY_GRID_ID);
+    if (!grid) {
+      retryTimer = window.setTimeout(start, 400);
+      return;
+    }
+    window.clearTimeout(retryTimer);
+    new MutationObserver(scheduleSync).observe(grid, { childList: true });
+    scheduleSync();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
