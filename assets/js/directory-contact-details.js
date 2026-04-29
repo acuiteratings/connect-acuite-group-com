@@ -13,15 +13,6 @@
   let retryTimer = 0;
   let syncTimer = 0;
 
-  function escapeHtml(value) {
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
   function formatJoiningDate(value) {
     if (!value) {
       return "";
@@ -31,18 +22,6 @@
       return String(value);
     }
     return DATE_FORMATTER.format(parsed);
-  }
-
-  function detailItem(label, value) {
-    if (!value) {
-      return "";
-    }
-    return `
-      <div class="person-detail-item">
-        <span class="person-detail-label">${escapeHtml(label)}</span>
-        <strong>${escapeHtml(value)}</strong>
-      </div>
-    `;
   }
 
   function normalizeProfile(profile) {
@@ -77,32 +56,32 @@
   }
 
   function renderDetailsForCard(card, profile) {
-    const details = [
-      detailItem("Email", profile.email),
-      detailItem("Mobile No.", profile.mobileNumber),
-      detailItem("Joining date", profile.joiningDate),
-    ].filter(Boolean).join("");
-    if (!details) {
+    card.querySelectorAll(DETAIL_ROW_SELECTOR).forEach((element) => element.remove());
+
+    const footerText = [
+      profile.email,
+      profile.mobileNumber,
+      profile.joiningDate ? `Date of Joining: ${profile.joiningDate}` : "",
+    ].filter(Boolean).join(" | ");
+    if (!footerText) {
       return;
     }
 
-    let detailRow = card.querySelector(DETAIL_ROW_SELECTOR);
-    if (!detailRow) {
-      detailRow = document.createElement("div");
-      detailRow.className = `person-detail-grid ${DETAIL_CLASS}`;
-      const head = card.querySelector(".person-head");
-      if (head?.parentNode) {
-        head.insertAdjacentElement("afterend", detailRow);
-      } else {
-        card.prepend(detailRow);
-      }
+    let footer = card.querySelector(".person-footer");
+    if (!footer) {
+      footer = document.createElement("div");
+      footer.className = "person-footer";
+      card.appendChild(footer);
     }
-    detailRow.innerHTML = details;
+    footer.hidden = false;
 
-    const legacyFooter = card.querySelector(".person-footer");
-    if (legacyFooter) {
-      legacyFooter.hidden = true;
+    let contactLine = footer.querySelector(".availability");
+    if (!contactLine) {
+      contactLine = document.createElement("span");
+      contactLine.className = "availability";
+      footer.prepend(contactLine);
     }
+    contactLine.textContent = footerText;
   }
 
   function syncDirectoryCards() {
