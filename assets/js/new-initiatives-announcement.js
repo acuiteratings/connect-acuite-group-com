@@ -179,6 +179,13 @@
     }
   }
 
+  function syncAnnouncementReminderCopy() {
+    const copy = document.querySelector(".announcement-reminder-copy");
+    if (copy?.textContent.includes("importance information")) {
+      copy.textContent = "Do not miss out on important information.";
+    }
+  }
+
   function preventAnnouncementFormSubmissions(event) {
     if (
       event.target?.id === "home-announcement-feedback-form"
@@ -203,6 +210,7 @@
   function scheduleSync() {
     window.requestAnimationFrame(() => {
       syncAnnouncementsReadOnly();
+      syncAnnouncementReminderCopy();
       restoreSnapshotOverPrefetchEmptyState();
       scheduleSnapshotCapture();
     });
@@ -221,6 +229,7 @@
     injectStyle();
     watchAnnouncementFetches();
     syncAnnouncementsReadOnly();
+    syncAnnouncementReminderCopy();
     restoreAnnouncementSnapshot();
 
     const observer = new MutationObserver(scheduleSync);
