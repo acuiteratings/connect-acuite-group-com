@@ -10,7 +10,7 @@ services:
     runtime: python
     plan: standard
     buildCommand: ./build-web.sh
-    preDeployCommand: cd backend && python manage.py migrate && python manage.py register_build_deploy
+    preDeployCommand: cd backend && python manage.py migrate && python manage.py register_build_deploy && python manage.py sync_people_directory --full
     startCommand: >
       cd backend &&
       python -m gunicorn config.asgi:application
