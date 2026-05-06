@@ -1,8 +1,36 @@
 (function keepAnnouncementsReadOnly() {
+  const LEADERSHIP_FILTER = "leadership";
   const NEW_INITIATIVES_FILTER = "new_initiatives";
   const STYLE_ID = "announcements-readonly-cleanup-style";
   const SNAPSHOT_KEY = "acuite-connect-announcement-snapshot-v1";
   const SNAPSHOT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const LEADERSHIP_BLUE_THEME = {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 34%, transparent 58%), radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%), radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.24), transparent 34%), linear-gradient(135deg, #0f3b68, #174f82 54%, #0b2f55), var(--bg2)",
+    "--announcement-text": "#f4f8ff",
+    "--announcement-muted": "rgba(244, 248, 255, 0.82)",
+    "--announcement-soft": "rgba(244, 248, 255, 0.58)",
+    "--announcement-border": "rgba(191, 219, 254, 0.24)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06))",
+    "--announcement-surface-border": "rgba(191, 219, 254, 0.22)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-badge-border": "rgba(191, 219, 254, 0.2)",
+    "--announcement-badge-text": "rgba(244, 248, 255, 0.84)",
+    "--announcement-badge-strong-bg": "rgba(125, 211, 252, 0.22)",
+    "--announcement-badge-strong-border": "rgba(125, 211, 252, 0.42)",
+    "--announcement-badge-strong-text": "#f0f9ff",
+    "--announcement-input-bg": "rgba(8, 47, 83, 0.38)",
+    "--announcement-input-border": "rgba(191, 219, 254, 0.22)",
+    "--announcement-input-placeholder": "rgba(244, 248, 255, 0.68)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.06)",
+    "--announcement-reaction-border": "rgba(191, 219, 254, 0.22)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-reaction-pill-text": "#f4f8ff",
+    "--announcement-reaction-active-bg": "rgba(125, 211, 252, 0.16)",
+    "--announcement-reaction-active-border": "rgba(125, 211, 252, 0.42)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-like-count": "rgba(244, 248, 255, 0.84)",
+    "--announcement-accent": "#7dd3fc",
+  };
   let captureTimer = 0;
   let freshAnnouncementsLoaded = false;
 
@@ -23,6 +51,19 @@
 
   function activeFilterIsNewInitiatives() {
     return getActiveAnnouncementFilter() === NEW_INITIATIVES_FILTER;
+  }
+
+  function activeFilterIsLeadership() {
+    return getActiveAnnouncementFilter() === LEADERSHIP_FILTER;
+  }
+
+  function applyLeadershipBlueTheme(container) {
+    if (!container || !activeFilterIsLeadership()) {
+      return;
+    }
+    Object.entries(LEADERSHIP_BLUE_THEME).forEach(([key, value]) => {
+      container.style.setProperty(key, value);
+    });
   }
 
   function injectStyle() {
@@ -157,6 +198,7 @@
     const announcement = document.getElementById("home-announcement");
     if (announcement) {
       announcement.classList.toggle("announcement-banner-no-actions", isNewInitiatives);
+      applyLeadershipBlueTheme(announcement);
     }
 
     document
