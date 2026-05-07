@@ -1,10 +1,12 @@
-(function loadNewInitiativesAnnouncementCleanup() {
+(function loadSupplementalConnectScripts() {
   const scriptUrl = document.currentScript?.src || "";
   const versionQuery = scriptUrl.includes("?") ? `?${scriptUrl.split("?").slice(1).join("?")}` : "";
-  const cleanupScript = document.createElement("script");
-  cleanupScript.src = `/static/js/new-initiatives-announcement.js${versionQuery}`;
-  cleanupScript.defer = true;
-  document.head.appendChild(cleanupScript);
+  ["new-initiatives-announcement.js", "events.js"].forEach((fileName) => {
+    const supplementalScript = document.createElement("script");
+    supplementalScript.src = `/static/js/${fileName}${versionQuery}`;
+    supplementalScript.defer = true;
+    document.head.appendChild(supplementalScript);
+  });
 })();
 
 (function attachQuizArena() {
