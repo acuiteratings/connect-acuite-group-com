@@ -42,6 +42,15 @@ def _active_profiles_queryset():
     )
 
 
+def _profile_photo_url(profile):
+    photos = profile.profile_photos if isinstance(profile.profile_photos, list) else []
+    for photo in photos:
+        photo_url = str(photo or "").strip()
+        if photo_url:
+            return photo_url
+    return ""
+
+
 def build_points_table():
     eligible_users = {
         user.id: {
@@ -129,6 +138,7 @@ def build_birthdays(limit=5):
                 "name": profile.user.full_name,
                 "initials": profile.user.initials,
                 "title": profile.user.title,
+                "photo_url": _profile_photo_url(profile),
                 "date_label": _format_upcoming_label(next_date, today),
                 "highlight": next_date == today,
                 "next_date": next_date,
@@ -158,6 +168,7 @@ def build_anniversaries(limit=5):
                 "name": profile.user.full_name,
                 "initials": profile.user.initials,
                 "title": profile.user.title,
+                "photo_url": _profile_photo_url(profile),
                 "date_label": _format_upcoming_label(next_date, today),
                 "years": years,
                 "highlight": next_date == today,

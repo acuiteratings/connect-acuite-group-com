@@ -29,13 +29,10 @@
     }
     state.loading = true;
     try {
-      const [recognitionPayload, directoryPayload] = await Promise.all([
-        auth.apiRequest("/api/recognition/overview/"),
-        auth.apiRequest("/api/directory/people/?page_size=500"),
-      ]);
+      const recognitionPayload = await auth.apiRequest("/api/recognition/overview/");
       state.birthdays = Array.isArray(recognitionPayload.birthdays) ? recognitionPayload.birthdays : [];
       state.anniversaries = Array.isArray(recognitionPayload.anniversaries) ? recognitionPayload.anniversaries : [];
-      state.photoByUserId = buildPhotoMap(directoryPayload);
+      state.photoByUserId = buildPhotoMap(state.birthdays, state.anniversaries);
       state.loaded = true;
       applyCelebrationPhotos();
     } catch (error) {
@@ -100,13 +97,11 @@
     });
   }
 
-  function buildPhotoMap(directoryPayload) {
-    const profiles = Array.isArray(directoryPayload?.results) ? directoryPayload.results : [];
+  function buildPhotoMap(...groups) {
     const photoMap = new Map();
-    profiles.forEach((profile) => {
-      const userId = Number(profile?.id || 0);
-      const photos = Array.isArray(profile?.profile_photos) ? profile.profile_photos : [];
-      const photoUrl = photos.map((photo) => String(photo || "").trim()).find(Boolean) || "";
+    groups.flat().forEach((profile) => {
+      const userId = Number(profile?.id || profile?.user_id || 0);
+      const photoUrl = String(profile?.photo_url || "").trim();
       if (userId && photoUrl) {
         photoMap.set(userId, photoUrl);
       }
@@ -115,6 +110,10 @@
   }
 
   function getPhotoUrl(person) {
+    const directPhotoUrl = String(person?.photo_url || "").trim();
+    if (directPhotoUrl) {
+      return directPhotoUrl;
+    }
     const userId = Number(person?.id || 0);
     if (!userId) {
       return "";

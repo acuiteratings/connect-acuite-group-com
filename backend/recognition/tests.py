@@ -33,6 +33,7 @@ class RecognitionOverviewTests(TestCase):
             date_of_birth=today,
             joined_on=today - timedelta(days=365 * 5),
             is_visible=True,
+            profile_photos=["data:image/png;base64,PRIYA"],
         )
         DirectoryProfile.objects.create(
             user=self.peer,
@@ -40,6 +41,7 @@ class RecognitionOverviewTests(TestCase):
             date_of_birth=today + timedelta(days=1),
             joined_on=today - timedelta(days=365 * 3),
             is_visible=True,
+            profile_photos=["https://example.com/karthik.jpg"],
         )
         self.post = Post.objects.create(
             author=self.user,
@@ -69,5 +71,12 @@ class RecognitionOverviewTests(TestCase):
         self.assertEqual(payload["totals"]["kudos_posts"], 1)
         self.assertEqual(len(payload["birthdays"]), 2)
         self.assertEqual(len(payload["anniversaries"]), 2)
+        self.assertEqual(payload["birthdays"][0]["photo_url"], "data:image/png;base64,PRIYA")
+        anniversary_photos = {
+            item["name"]: item["photo_url"]
+            for item in payload["anniversaries"]
+        }
+        self.assertEqual(anniversary_photos["Priya Sharma"], "data:image/png;base64,PRIYA")
+        self.assertEqual(anniversary_photos["Karthik Iyer"], "https://example.com/karthik.jpg")
         self.assertGreater(payload["current_user_points"], 0)
         self.assertEqual(payload["leaderboard"][0]["name"], self.user.full_name)
