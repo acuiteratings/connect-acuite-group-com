@@ -84,7 +84,7 @@ class BrandStoreApiTests(TestCase):
             if item["name"] in {"Acuite Coffee Mug", "Acuite T Shirt"}
         }
         self.assertEqual(seeded_prices["Acuite Coffee Mug"], 5000)
-        self.assertEqual(seeded_prices["Acuite T Shirt"], 10000)
+        self.assertEqual(seeded_prices["Acuite T Shirt"], 3000)
 
     def test_store_overview_returns_monthly_coin_summary(self):
         CoinLedgerEntry.objects.all().delete()
