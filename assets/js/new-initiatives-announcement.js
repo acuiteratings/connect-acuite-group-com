@@ -1,3 +1,12 @@
+(function loadCelebrationPhotoSupplement() {
+  const scriptUrl = document.currentScript?.src || "";
+  const versionQuery = scriptUrl.includes("?") ? `?${scriptUrl.split("?").slice(1).join("?")}` : "";
+  const script = document.createElement("script");
+  script.src = `/static/js/celebration-photos.js${versionQuery}`;
+  script.defer = true;
+  document.head.appendChild(script);
+})();
+
 (function keepAnnouncementsReadOnly() {
   const LEADERSHIP_FILTER = "leadership";
   const NEW_INITIATIVES_FILTER = "new_initiatives";
