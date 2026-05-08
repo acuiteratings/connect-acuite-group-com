@@ -33,6 +33,7 @@ class PeopleSyncServiceTests(TestCase):
                         "office_location": "Mumbai",
                         "city": "Mumbai",
                         "mobile_number": "+91-9000000000",
+                        "attendance_to_be_recorded_via": "Field attendance",
                         "date_of_birth": "1994-04-04",
                         "joined_on": "2022-04-04",
                         "manager_employee_id": "",
@@ -57,6 +58,7 @@ class PeopleSyncServiceTests(TestCase):
         self.assertEqual(profile.company_name, "Acuité Ratings & Research Limited")
         self.assertEqual(profile.function_name, "Business Development")
         self.assertEqual(profile.department_for_connect, "Business Development")
+        self.assertEqual(profile.attendance_recording_method, "Field attendance")
         self.assertEqual(profile.city, "Mumbai")
 
     def test_sync_updates_existing_user_and_links_manager(self):

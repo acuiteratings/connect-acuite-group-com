@@ -160,6 +160,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "accounts",
+    "attendance",
     "battleship",
     "directory",
     "feed",
@@ -183,6 +184,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "accounts.middleware.EmployeeApiAccessMiddleware",
     "accounts.middleware.SessionDeadlineMiddleware",
+    "attendance.middleware.AttendanceCaptureMiddleware",
     "operations.middleware.ErrorMonitoringMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -268,6 +270,7 @@ BATTLESHIP_INACTIVITY_TIMEOUT_MINUTES = int(
 )
 BATTLESHIP_POLL_INTERVAL_SECONDS = int(os.getenv("BATTLESHIP_POLL_INTERVAL_SECONDS", "4"))
 BATTLESHIP_BLOCK_WINDOWS = []
+ATTENDANCE_OFFICE_NETWORKS = os.getenv("ATTENDANCE_OFFICE_NETWORKS", "").strip()
 for raw_window in env_list(
     "BATTLESHIP_BLOCK_WINDOWS",
     "10:00-13:00,14:00-18:30",

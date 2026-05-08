@@ -62,6 +62,17 @@ def _parse_optional_date(value):
     return date.fromisoformat(raw_value)
 
 
+def _first_text_value(item, *field_names):
+    for field_name in field_names:
+        value = item.get(field_name)
+        if value is None:
+            continue
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
 def _split_name_parts(item):
     display_name = str(
         item.get("display_name")
@@ -197,6 +208,13 @@ def _apply_directory_fields(profile, user, item):
     desired_values = {
         "company_name": str(item.get("company_name") or "").strip(),
         "function_name": str(item.get("function_name") or "").strip(),
+        "attendance_recording_method": _first_text_value(
+            item,
+            "attendance_to_be_recorded_via",
+            "attendance_recorded_via",
+            "attendance_recording_method",
+            "Attendance to be recorded via",
+        ),
         "office_location": str(item.get("office_location") or "").strip(),
         "city": str(item.get("city") or item.get("office_location") or "").strip(),
         "mobile_number": str(item.get("mobile_number") or "").strip(),

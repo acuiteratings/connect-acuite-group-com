@@ -10,6 +10,7 @@ class DirectoryProfileAdmin(admin.ModelAdmin):
         "company_name",
         "department_for_connect",
         "function_name",
+        "attendance_recording_method",
         "manager",
         "office_location",
         "city",
@@ -21,6 +22,7 @@ class DirectoryProfileAdmin(admin.ModelAdmin):
         "company_name",
         "department_for_connect",
         "function_name",
+        "attendance_recording_method",
         "work_mode",
         "is_visible",
         "office_location",
@@ -34,6 +36,7 @@ class DirectoryProfileAdmin(admin.ModelAdmin):
         "company_name",
         "department_for_connect",
         "function_name",
+        "attendance_recording_method",
         "expertise",
         "skills",
     )

@@ -28,6 +28,7 @@ class DirectoryProfile(models.Model):
     date_of_birth = models.DateField(blank=True, null=True)
     function_name = models.CharField(max_length=150, blank=True)
     department_for_connect = models.CharField(max_length=120, blank=True)
+    attendance_recording_method = models.CharField(max_length=120, blank=True)
     city = models.CharField(max_length=120, blank=True)
     office_location = models.CharField(max_length=120, blank=True)
     work_mode = models.CharField(

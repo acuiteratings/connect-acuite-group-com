@@ -1,7 +1,7 @@
 (function loadSupplementalConnectScripts() {
   const scriptUrl = document.currentScript?.src || "";
   const versionQuery = scriptUrl.includes("?") ? `?${scriptUrl.split("?").slice(1).join("?")}` : "";
-  ["new-initiatives-announcement.js", "events.js"].forEach((fileName) => {
+  ["new-initiatives-announcement.js", "events.js", "attendance.js"].forEach((fileName) => {
     const supplementalScript = document.createElement("script");
     supplementalScript.src = `/static/js/${fileName}${versionQuery}`;
     supplementalScript.defer = true;
