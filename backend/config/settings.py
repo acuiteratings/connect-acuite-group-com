@@ -127,6 +127,7 @@ PEOPLE_DIRECTORY_API_TOKEN = os.getenv("PEOPLE_DIRECTORY_API_TOKEN", "").strip()
 PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS = int(
     os.getenv("PEOPLE_DIRECTORY_API_TIMEOUT_SECONDS", "15")
 )
+CONNECT_ATTENDANCE_EXPORT_TOKENS = env_list("CONNECT_ATTENDANCE_EXPORT_TOKENS", "")
 
 
 def register_trusted_sso_client(client_id, env_prefix, default_name):

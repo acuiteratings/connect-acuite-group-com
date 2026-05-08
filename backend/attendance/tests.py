@@ -1,7 +1,7 @@
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import EmployeeSSOIdentitySnapshot, User
 from directory.models import DirectoryProfile
 
 from .models import AttendanceDayRecord
@@ -20,6 +20,13 @@ class AttendanceApiTests(TestCase):
             password_changed_at=timezone.now(),
         )
         DirectoryProfile.objects.create(user=self.user, office_location="Mumbai", is_visible=True)
+        EmployeeSSOIdentitySnapshot.objects.create(
+            user=self.user,
+            sso_user_id="sso-employee-1",
+            email=self.user.email,
+            full_name=self.user.full_name,
+            employee_id="EMP9001",
+        )
         self.admin = User.objects.create_user(
             email="admin@acuite.in",
             password="testpass123",
@@ -86,3 +93,37 @@ class AttendanceApiTests(TestCase):
         payload = response.json()
         self.assertIn("results", payload)
         self.assertTrue(any(row["user"]["email"] == self.user.email for row in payload["results"]))
+
+    @override_settings(
+        ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16",
+        CONNECT_ATTENDANCE_EXPORT_TOKENS=["export-token"],
+    )
+    def test_export_requires_service_token_and_returns_raw_attendance_rows(self):
+        today = timezone.localdate()
+        AttendanceDayRecord.objects.create(
+            user=self.user,
+            attendance_date=today,
+            status=AttendanceDayRecord.Status.NO_PUNCHOUT,
+            punch_in_at=timezone.now(),
+            office_label="Mumbai",
+            punch_in_source=AttendanceDayRecord.Source.ACTIVITY,
+            requires_regularization=True,
+        )
+
+        denied = self.client.get(
+            f"/api/attendance/export/?from={today.isoformat()}&to={today.isoformat()}"
+        )
+        self.assertEqual(denied.status_code, 401)
+
+        response = self.client.get(
+            f"/api/attendance/export/?from={today.isoformat()}&to={today.isoformat()}",
+            HTTP_AUTHORIZATION="Bearer export-token",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        row = next(item for item in payload["records"] if item["email"] == self.user.email)
+        self.assertEqual(row["employee_sso_id"], "sso-employee-1")
+        self.assertEqual(row["employee_code"], "EMP9001")
+        self.assertEqual(row["status"], "no_punchout")
+        self.assertTrue(row["requires_regularization"])
