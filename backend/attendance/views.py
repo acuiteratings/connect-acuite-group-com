@@ -1,8 +1,10 @@
-from datetime import date
+import secrets
+from datetime import date, timedelta
 
+from django.conf import settings
 from django.http import HttpResponseNotAllowed, JsonResponse
 
-from .services import admin_attendance_overview, serialize_attendance_status
+from .services import attendance_export_payload, admin_attendance_overview, serialize_attendance_status
 
 
 def _is_attendance_admin(user):
@@ -18,6 +20,17 @@ def _parse_date(value):
     if not raw_value:
         return None
     return date.fromisoformat(raw_value)
+
+
+def _service_token_allowed(request):
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return False
+    token = auth_header.split(" ", 1)[1].strip()
+    return any(
+        secrets.compare_digest(token, allowed_token)
+        for allowed_token in getattr(settings, "CONNECT_ATTENDANCE_EXPORT_TOKENS", [])
+    )
 
 
 def attendance_status(request):
@@ -36,3 +49,22 @@ def attendance_admin_overview(request):
     except ValueError:
         return JsonResponse({"detail": "Date must be in YYYY-MM-DD format."}, status=400)
     return JsonResponse(admin_attendance_overview(target_date=target_date, request=request))
+
+
+def attendance_export(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    if not _service_token_allowed(request):
+        return JsonResponse({"detail": "Valid service token required."}, status=401)
+    try:
+        from_date = _parse_date(request.GET.get("from"))
+        to_date = _parse_date(request.GET.get("to"))
+    except ValueError:
+        return JsonResponse({"detail": "from and to must be in YYYY-MM-DD format."}, status=400)
+    if not from_date or not to_date:
+        return JsonResponse({"detail": "from and to are required."}, status=400)
+    if to_date < from_date:
+        return JsonResponse({"detail": "to must be on or after from."}, status=400)
+    if to_date - from_date > timedelta(days=62):
+        return JsonResponse({"detail": "Date range cannot exceed 63 days."}, status=400)
+    return JsonResponse(attendance_export_payload(from_date=from_date, to_date=to_date))

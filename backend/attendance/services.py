@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.utils import timezone
@@ -215,6 +215,81 @@ def serialize_attendance_record(record: AttendanceDayRecord):
         "duration_minutes": duration_minutes,
         "office_label": record.office_label,
         "requires_regularization": _status_from_record(record) == AttendanceDayRecord.Status.NO_PUNCHOUT,
+    }
+
+
+def attendance_export_payload(*, from_date: date, to_date: date):
+    records = {
+        (record.user_id, record.attendance_date): record
+        for record in AttendanceDayRecord.objects.select_related("user").filter(
+            attendance_date__gte=from_date,
+            attendance_date__lte=to_date,
+        )
+    }
+    users = (
+        User.objects.filter(is_active=True, employment_status=User.EmploymentStatus.ACTIVE)
+        .select_related("directory_profile", "employee_sso_identity")
+        .order_by("employee_code", "email")
+    )
+
+    results = []
+    current_date = from_date
+    while current_date <= to_date:
+        for user in users:
+            results.append(_serialize_attendance_export_row(user, current_date, records.get((user.id, current_date))))
+        current_date += timedelta(days=1)
+
+    return {
+        "from": from_date.isoformat(),
+        "to": to_date.isoformat(),
+        "generated_at": timezone.now().isoformat(),
+        "records": results,
+    }
+
+
+def _serialize_attendance_export_row(user, attendance_date, record=None):
+    profile = _profile_for_user(user)
+    identity = getattr(user, "employee_sso_identity", None)
+    calendar_status, calendar_label = working_day_status(attendance_date)
+    status = AttendanceDayRecord.Status.NOT_MARKED
+    source = AttendanceDayRecord.Source.SYSTEM
+    requires_regularization = True
+    punch_in_at = ""
+    punch_out_at = ""
+    office_label = ""
+    updated_at = timezone.now()
+
+    if not uses_connect_attendance(profile):
+        status = AttendanceDayRecord.Status.NOT_APPLICABLE
+        requires_regularization = False
+    elif calendar_status:
+        status = calendar_status
+        requires_regularization = False
+    elif record:
+        status = _status_from_record(record)
+        source = record.punch_out_source or record.punch_in_source or AttendanceDayRecord.Source.SYSTEM
+        requires_regularization = status in {
+            AttendanceDayRecord.Status.NO_PUNCHOUT,
+            AttendanceDayRecord.Status.NOT_MARKED,
+        }
+        punch_in_at = record.punch_in_at.isoformat() if record.punch_in_at else ""
+        punch_out_at = record.punch_out_at.isoformat() if record.punch_out_at else ""
+        office_label = record.office_label
+        updated_at = record.updated_at
+
+    return {
+        "employee_sso_id": getattr(identity, "sso_user_id", "") or "",
+        "employee_code": user.employee_code or getattr(identity, "employee_id", "") or "",
+        "email": user.email,
+        "attendance_date": attendance_date.isoformat(),
+        "punch_in_at": punch_in_at,
+        "punch_out_at": punch_out_at,
+        "status": status,
+        "status_label": status.replace("_", " ").title(),
+        "source": source,
+        "office_label": office_label or calendar_label,
+        "requires_regularization": requires_regularization,
+        "updated_at": updated_at.isoformat(),
     }
 
 

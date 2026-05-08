@@ -9,6 +9,7 @@ class EmployeeApiAccessMiddleware:
     )
     PUBLIC_API_PATHS = {
         "/api/accounts/me/",
+        "/api/attendance/export/",
         "/api/ops/health/",
     }
 
