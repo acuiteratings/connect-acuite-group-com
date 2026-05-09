@@ -1,3 +1,6 @@
+from datetime import date
+from unittest.mock import patch
+
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -5,6 +8,9 @@ from accounts.models import EmployeeSSOIdentitySnapshot, User
 from directory.models import DirectoryProfile
 
 from .models import AttendanceDayRecord
+
+
+WORKING_DAY = date(2026, 5, 8)
 
 
 class AttendanceApiTests(TestCase):
@@ -43,7 +49,8 @@ class AttendanceApiTests(TestCase):
     def test_status_is_not_marked_when_office_networks_are_not_configured(self):
         self.client.force_login(self.user)
 
-        response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -55,20 +62,33 @@ class AttendanceApiTests(TestCase):
     def test_office_activity_records_punch_in_and_logout_confirms_punch_out(self):
         self.client.force_login(self.user)
 
-        status_response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            status_response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
 
         self.assertEqual(status_response.status_code, 200)
         self.assertEqual(status_response.json()["status"], "no_punchout")
-        record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=timezone.localdate())
+        record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
         self.assertEqual(record.office_label, "Mumbai")
         self.assertEqual(record.status, AttendanceDayRecord.Status.NO_PUNCHOUT)
 
-        logout_response = self.client.post("/api/accounts/auth/logout/", REMOTE_ADDR="10.10.1.7")
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            logout_response = self.client.post("/api/accounts/auth/logout/", REMOTE_ADDR="10.10.1.7")
 
         self.assertEqual(logout_response.status_code, 200)
         record.refresh_from_db()
         self.assertEqual(record.status, AttendanceDayRecord.Status.PRESENT)
         self.assertEqual(record.punch_out_source, AttendanceDayRecord.Source.LOGOUT)
+
+    def test_default_office_ip_allowlist_records_attendance(self):
+        self.client.force_login(self.user)
+
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/attendance/status/", REMOTE_ADDR="122.179.133.53")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "no_punchout")
+        record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
+        self.assertEqual(record.punch_in_ip, "122.179.133.53")
 
     @override_settings(ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16")
     def test_non_connect_attendance_employee_is_not_applicable(self):
@@ -77,7 +97,8 @@ class AttendanceApiTests(TestCase):
         profile.save(update_fields=["attendance_recording_method", "updated_at"])
         self.client.force_login(self.user)
 
-        response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "not_applicable")
@@ -87,7 +108,8 @@ class AttendanceApiTests(TestCase):
     def test_admin_overview_returns_employee_attendance_statuses(self):
         self.client.force_login(self.admin)
 
-        response = self.client.get("/api/attendance/admin/overview/", REMOTE_ADDR="10.10.1.7")
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/attendance/admin/overview/", REMOTE_ADDR="10.10.1.7")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -99,7 +121,7 @@ class AttendanceApiTests(TestCase):
         CONNECT_ATTENDANCE_EXPORT_TOKENS=["export-token"],
     )
     def test_export_requires_service_token_and_returns_raw_attendance_rows(self):
-        today = timezone.localdate()
+        today = WORKING_DAY
         AttendanceDayRecord.objects.create(
             user=self.user,
             attendance_date=today,
