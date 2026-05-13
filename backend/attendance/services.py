@@ -159,7 +159,7 @@ def serialize_attendance_status(user, *, target_date=None, record=None, request=
     office_network, _ip_text = office_for_request(request) if request else (None, "")
     if not record:
         is_configured = bool(configured_office_networks())
-        outside_detail = "Not marked. Connect is being accessed outside office network."
+        outside_detail = "Not marked. Outside office network."
         return {
             "user": _serialize_user(user),
             "date": target_date.isoformat(),
@@ -175,7 +175,7 @@ def serialize_attendance_status(user, *, target_date=None, record=None, request=
 
     status = _status_from_record(record)
     detail = (
-        "Punch-out is not confirmed yet. Use Regularize Attendance in Phase 2 if this remains unresolved."
+        "Punch-out has not been recorded yet."
         if status == AttendanceDayRecord.Status.NO_PUNCHOUT
         else "Attendance captured from trusted office network."
     )
@@ -210,6 +210,7 @@ def serialize_attendance_record(record: AttendanceDayRecord):
         "status_label": _status_from_record(record).replace("_", " ").title(),
         "punch_in_at": record.punch_in_at.isoformat() if record.punch_in_at else "",
         "punch_out_at": record.punch_out_at.isoformat() if record.punch_out_at else "",
+        "punch_out_source": record.punch_out_source,
         "first_activity_at": record.first_activity_at.isoformat() if record.first_activity_at else "",
         "last_activity_at": record.last_activity_at.isoformat() if record.last_activity_at else "",
         "duration_minutes": duration_minutes,

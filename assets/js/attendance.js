@@ -4,6 +4,7 @@
   const STYLE_ID = "attendance-experience-style";
   let attendanceStatus = null;
   let adminOverview = null;
+  let adminSearchTerm = "";
   let loading = false;
 
   if (document.readyState === "loading") {
@@ -17,6 +18,7 @@
     injectSidebarTab();
     injectPanel();
     document.addEventListener("click", handleAttendanceClick, true);
+    document.addEventListener("input", handleAttendanceInput);
     void loadAttendanceData();
   }
 
@@ -43,18 +45,24 @@
       .attendance-actions { display: flex; flex-wrap: wrap; gap: 10px; }
       .attendance-admin-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
       .attendance-admin-summary .mini-chip { background: var(--bg2); }
-      .attendance-table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 8px; max-height: min(58vh, 620px); }
-      .attendance-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+      .attendance-admin-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .attendance-search { min-width: min(320px, 100%); }
+      .attendance-search span { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); }
+      .attendance-search input { width: 100%; border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; background: var(--bg); color: var(--text); }
+      .attendance-table-wrap { overflow-y: auto; overflow-x: hidden; border: 1px solid var(--border); border-radius: 8px; max-height: min(58vh, 620px); }
+      .attendance-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
       .attendance-table th, .attendance-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; vertical-align: top; }
       .attendance-table th { position: sticky; top: 0; z-index: 1; background: var(--bg2); color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
       .attendance-table tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.015); }
       .attendance-admin-card { min-width: 0; }
       .attendance-admin-card .section-card-head { align-items: flex-start; }
       .attendance-employee-cell strong { display: block; line-height: 1.25; }
-      .attendance-detail-cell { max-width: 360px; color: var(--text2); }
+      .attendance-detail-cell { color: var(--text2); overflow-wrap: anywhere; line-height: 1.45; }
+      .attendance-empty-row { color: var(--text3); text-align: center; }
       @media (max-width: 1100px) { .attendance-status-card.has-admin { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 700px) {
         .attendance-status-card.has-admin { grid-template-columns: 1fr; }
+        .attendance-table-wrap { overflow-x: auto; }
         .attendance-table { min-width: 760px; }
       }
     `;
@@ -138,6 +146,14 @@
     openAttendancePanel();
   }
 
+  function handleAttendanceInput(event) {
+    if (event.target?.id !== "attendance-admin-search") {
+      return;
+    }
+    adminSearchTerm = String(event.target.value || "").trim().toLowerCase();
+    updateAdminRows();
+  }
+
   function openAttendancePanel() {
     document.querySelectorAll(".panel").forEach((panel) => {
       panel.classList.toggle("active", panel.id === PANEL_ID);
@@ -177,7 +193,7 @@
         </div>
         <div class="attendance-time-box">
           <span>Punch Out</span>
-          <strong>${formatTime(record.punch_out_at)}</strong>
+          <strong>${formatPunchOut(status, record)}</strong>
         </div>
       </div>
       <p class="attendance-note">${escapeValue(status.detail || "Attendance status will appear here.")}</p>
@@ -200,6 +216,7 @@
       return;
     }
     const results = Array.isArray(adminOverview?.results) ? adminOverview.results : [];
+    const filteredResults = filterAdminResults(results);
     const user = window.AcuiteConnectAuth?.getAuthenticatedUser?.();
     const canAdmin = Boolean(user?.access_rights?.can_administer);
     adminCard.hidden = !canAdmin;
@@ -207,25 +224,56 @@
       return;
     }
     adminCard.innerHTML = `
-      <div class="section-card-head">
+      <div class="section-card-head attendance-admin-head">
         <div>
           <p class="widget-kicker">Admin</p>
           <h2>Attendance records</h2>
-          <div class="mini-item-meta">${results.length} employees for ${escapeValue(adminOverview?.date || "today")}</div>
+          <div class="mini-item-meta" id="attendance-admin-results-meta">${filteredResults.length} of ${results.length} employees for ${escapeValue(adminOverview?.date || "today")}</div>
           ${renderAdminSummary()}
         </div>
+        <label class="attendance-search" for="attendance-admin-search">
+          <span>Search</span>
+          <input id="attendance-admin-search" type="search" value="${escapeValue(adminSearchTerm)}" placeholder="Search employee name or email">
+        </label>
       </div>
       <div class="attendance-table-wrap">
         <table class="attendance-table">
+          <colgroup>
+            <col style="width: 30%">
+            <col style="width: 12%">
+            <col style="width: 11%">
+            <col style="width: 11%">
+            <col style="width: 11%">
+            <col style="width: 25%">
+          </colgroup>
           <thead>
             <tr><th>Employee</th><th>Status</th><th>Punch In</th><th>Punch Out</th><th>Office</th><th>Detail</th></tr>
           </thead>
           <tbody>
-            ${results.length ? results.map(renderAdminRow).join("") : '<tr><td colspan="6">No attendance records available.</td></tr>'}
+            ${renderAdminRows(filteredResults)}
           </tbody>
         </table>
       </div>
     `;
+  }
+
+  function updateAdminRows() {
+    const results = Array.isArray(adminOverview?.results) ? adminOverview.results : [];
+    const filteredResults = filterAdminResults(results);
+    const meta = document.getElementById("attendance-admin-results-meta");
+    const tbody = document.querySelector("#attendance-admin-card .attendance-table tbody");
+    if (meta) {
+      meta.textContent = `${filteredResults.length} of ${results.length} employees for ${adminOverview?.date || "today"}`;
+    }
+    if (tbody) {
+      tbody.innerHTML = renderAdminRows(filteredResults);
+    }
+  }
+
+  function renderAdminRows(results) {
+    return results.length
+      ? results.map(renderAdminRow).join("")
+      : '<tr><td colspan="6" class="attendance-empty-row">No matching attendance records.</td></tr>';
   }
 
   function renderAdminRow(row) {
@@ -235,11 +283,27 @@
         <td class="attendance-employee-cell"><strong>${escapeValue(row.user?.name || "Employee")}</strong><span class="mini-item-meta">${escapeValue(row.user?.email || "")}</span></td>
         <td>${escapeValue(row.status_label || "")}</td>
         <td>${formatTime(record.punch_in_at)}</td>
-        <td>${formatTime(record.punch_out_at)}</td>
+        <td>${formatPunchOut(row, record)}</td>
         <td>${escapeValue(record.office_label || row.calendar_label || "-")}</td>
         <td class="attendance-detail-cell">${escapeValue(row.detail || "")}</td>
       </tr>
     `;
+  }
+
+  function filterAdminResults(results) {
+    if (!adminSearchTerm) {
+      return results;
+    }
+    return results.filter((row) => {
+      const user = row.user || {};
+      return [
+        user.name,
+        user.email,
+        user.employee_code,
+        row.status_label,
+        row.detail,
+      ].some((value) => String(value || "").toLowerCase().includes(adminSearchTerm));
+    });
   }
 
   function renderAdminSummary() {
@@ -267,6 +331,15 @@
       return "-";
     }
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatPunchOut(row, record) {
+    const status = String(row?.status || record?.status || "").trim();
+    const punchOutSource = String(record?.punch_out_source || "").trim();
+    if (status === "no_punchout" || (record?.punch_out_at && punchOutSource && punchOutSource !== "logout")) {
+      return "-";
+    }
+    return formatTime(record?.punch_out_at);
   }
 
   function escapeValue(value) {
