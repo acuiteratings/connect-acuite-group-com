@@ -208,7 +208,12 @@ const IAM_ACUITE_PLACEHOLDER_COLOR = "#7b241c";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
-const CELEBRATION_TEMPLATE_KEYS = new Set(["birthday_wish", "work_anniversary"]);
+const CELEBRATION_TEMPLATE_KEYS = new Set([
+  "birthday_wish",
+  "work_anniversary",
+  "new_parent_mother",
+  "new_parent_father",
+]);
 const BULLETIN_BOARD_ADMIN_TEMPLATE_KEYS = new Set([
   ...CELEBRATION_TEMPLATE_KEYS,
   "welcome_employee",
