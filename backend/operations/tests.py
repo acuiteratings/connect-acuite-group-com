@@ -642,6 +642,7 @@ class CelebrationAdminApiTests(TestCase):
         payload = response.json()["preview"]
         self.assertEqual(payload["parent_role"], "mother")
         self.assertEqual(payload["card"]["occasion_label"], "Congratulations New Mother")
+        self.assertEqual(payload["card"]["style_key"], "newborn")
         self.assertIn("new bundle of joy", payload["body"])
         self.assertTrue(payload["template_file"].endswith(".html"))
 

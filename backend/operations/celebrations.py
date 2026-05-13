@@ -158,6 +158,8 @@ def _template_label(template_path: Path) -> str:
 
 
 def _template_style_key(template_path: Path) -> str:
+    if template_path.parent.name == "new_parent":
+        return "newborn"
     styles = ("sunrise", "confetti", "emerald", "midnight", "pearl", "gold")
     digest = hashlib.sha256(template_path.name.encode("utf-8")).hexdigest()
     return styles[int(digest[:8], 16) % len(styles)]

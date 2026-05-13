@@ -530,6 +530,8 @@ button {
   padding: 20px;
   border-radius: 20px;
   color: #fff;
+  overflow: hidden;
+  position: relative;
 }
 
 .celebration-style-sunrise {
@@ -554,6 +556,59 @@ button {
 
 .celebration-style-gold {
   background: linear-gradient(135deg, #a56a18, #6d3d12);
+}
+
+.celebration-style-newborn {
+  background:
+    radial-gradient(circle at 14% 20%, rgba(168, 207, 222, 0.42) 0 12%, transparent 13%),
+    radial-gradient(circle at 88% 18%, rgba(218, 190, 170, 0.32) 0 10%, transparent 11%),
+    linear-gradient(135deg, #f7fbfb 0%, #eef6f4 52%, #f5efe8 100%);
+  border: 1px solid rgba(89, 119, 126, 0.22);
+  color: #24363b;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.celebration-style-newborn::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  width: 92px;
+  height: 92px;
+  border: 1px solid rgba(96, 130, 136, 0.18);
+  border-radius: 50%;
+}
+
+.celebration-style-newborn .celebration-native-card-top,
+.celebration-style-newborn .celebration-native-person,
+.celebration-style-newborn .celebration-native-message {
+  position: relative;
+  z-index: 1;
+}
+
+.celebration-style-newborn .celebration-native-kicker,
+.celebration-style-newborn .celebration-native-date {
+  color: #527078;
+}
+
+.celebration-style-newborn .celebration-native-person p {
+  color: #5f7377;
+}
+
+.celebration-style-newborn .celebration-native-photo {
+  border-color: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 28px rgba(82, 112, 120, 0.18);
+}
+
+.celebration-style-newborn .celebration-native-photo-fallback {
+  background: linear-gradient(135deg, #8fb9c4, #d7b49a);
+  color: #fff;
+}
+
+.celebration-style-newborn .celebration-native-message {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(96, 130, 136, 0.18);
+  color: #2f4145;
 }
 
 .celebration-native-card-top {
