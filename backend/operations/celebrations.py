@@ -15,6 +15,10 @@ from feed.models import Post
 from .services import record_analytics_event, record_audit_event
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent / "bulletin_templates"
+NEW_PARENT_ROLE_LABELS = {
+    "mother": "New Mother",
+    "father": "New Father",
+}
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,7 @@ def _candidate_payload(candidate: CelebrationCandidate) -> dict:
         "auto_key": candidate.auto_key,
         "years_completed": years_completed,
         "photo_url": _profile_photo_url(profile),
+        "parent_role": _parent_role_from_template_key(candidate.template_key),
     }
 
 
@@ -147,6 +152,7 @@ def _initials_from_name(name: str) -> str:
 def _template_label(template_path: Path) -> str:
     name = template_path.stem
     name = name.replace("birthday-", "").replace("anniversary-", "")
+    name = name.replace("new-parent-", "")
     parts = [part for part in name.split("-") if part and not part.isdigit()]
     return " ".join(word.capitalize() for word in parts) or template_path.name
 
@@ -173,13 +179,61 @@ def _celebration_person_meta(profile: DirectoryProfile) -> str:
     return " | ".join(item for item in [location, department] if item)
 
 
+def _parent_role_from_template_key(template_key: str) -> str:
+    value = str(template_key or "").strip().casefold()
+    if value == "new_parent_mother":
+        return "mother"
+    if value == "new_parent_father":
+        return "father"
+    return ""
+
+
+def _normalize_parent_role(parent_role: str) -> str:
+    role = str(parent_role or "").strip().casefold()
+    if role not in NEW_PARENT_ROLE_LABELS:
+        raise ValueError("Parent role must be either 'mother' or 'father'.")
+    return role
+
+
+def _celebration_occasion_label(candidate: CelebrationCandidate) -> str:
+    if candidate.template_key == "birthday_wish":
+        return "Happy Birthday"
+    if candidate.template_key == "work_anniversary":
+        return "Happy Work Anniversary"
+    parent_role = _parent_role_from_template_key(candidate.template_key)
+    if parent_role:
+        return f"Congratulations {NEW_PARENT_ROLE_LABELS[parent_role]}"
+    return "Celebration"
+
+
+def _template_kind_for_candidate(candidate: CelebrationCandidate) -> str:
+    if candidate.template_key == "birthday_wish":
+        return "birthday"
+    if candidate.template_key == "work_anniversary":
+        return "anniversary"
+    if _parent_role_from_template_key(candidate.template_key):
+        return "new_parent"
+    raise ValueError(f"Unsupported celebration template: {candidate.template_key}")
+
+
+def _template_kind_for_request(kind: str) -> str:
+    value = str(kind or "").strip().casefold()
+    if value == "birthday":
+        return "birthday"
+    if value == "anniversary":
+        return "anniversary"
+    if value == "new_parent":
+        return "new_parent"
+    raise ValueError(f"Unsupported celebration kind: {kind}")
+
+
 def _build_celebration_card(candidate: CelebrationCandidate, *, template_path: Path) -> dict:
     profile = candidate.profile
     user = profile.user
     return {
         "style_key": _template_style_key(template_path),
         "template_label": _template_label(template_path),
-        "occasion_label": "Happy Birthday" if candidate.template_key == "birthday_wish" else "Happy Work Anniversary",
+        "occasion_label": _celebration_occasion_label(candidate),
         "person_name": user.full_name,
         "person_role": _celebration_person_meta(profile),
         "date_label": candidate.occasion_date_label,
@@ -241,11 +295,56 @@ def _build_anniversary_candidate(profile: DirectoryProfile, *, reference_date: d
     )
 
 
-def _build_candidate(kind: str, *, profile: DirectoryProfile, reference_date: date) -> CelebrationCandidate:
+def _build_new_parent_candidate(
+    profile: DirectoryProfile,
+    *,
+    reference_date: date,
+    parent_role: str,
+) -> CelebrationCandidate:
+    role = _normalize_parent_role(parent_role)
+    role_label = NEW_PARENT_ROLE_LABELS[role]
+    name = profile.user.full_name
+    auto_key = f"new_parent:{role}:{profile.user_id}:{reference_date.isoformat()}"
+    return CelebrationCandidate(
+        profile=profile,
+        template_key=f"new_parent_{role}",
+        auto_key=auto_key,
+        title=f"Congratulations | {name}",
+        body=(
+            f"Congratulations, {name}! Wishing you and your family happiness, "
+            "good health, and countless blessings as you welcome your new bundle of joy."
+        ),
+        meta_lines=[
+            item
+            for item in [
+                role_label,
+                profile.user.department or profile.company_name,
+                f"Posted: {_format_display_date(reference_date)}",
+            ]
+            if item
+        ],
+        occasion_date_label=_format_display_date(reference_date),
+        source_date=reference_date,
+    )
+
+
+def _build_candidate(
+    kind: str,
+    *,
+    profile: DirectoryProfile,
+    reference_date: date,
+    parent_role: str = "",
+) -> CelebrationCandidate:
     if kind == "birthday":
         return _build_birthday_candidate(profile, reference_date=reference_date)
     if kind == "anniversary":
         return _build_anniversary_candidate(profile, reference_date=reference_date)
+    if kind == "new_parent":
+        return _build_new_parent_candidate(
+            profile,
+            reference_date=reference_date,
+            parent_role=parent_role,
+        )
     raise ValueError(f"Unsupported celebration kind: {kind}")
 
 
@@ -262,19 +361,33 @@ def get_today_celebration_candidates(*, reference_date: date | None = None) -> d
     return payload
 
 
-def build_celebration_preview(*, kind: str, user_id: int, reference_date: date | None = None, template_name: str = "") -> dict:
+def build_celebration_preview(
+    *,
+    kind: str,
+    user_id: int,
+    reference_date: date | None = None,
+    template_name: str = "",
+    parent_role: str = "",
+) -> dict:
     reference_date = reference_date or timezone.localdate()
+    kind = str(kind or "").strip().casefold()
     profile = DirectoryProfile.objects.select_related("user").get(user_id=user_id)
-    candidate = _build_candidate(kind, profile=profile, reference_date=reference_date)
+    candidate = _build_candidate(
+        kind,
+        profile=profile,
+        reference_date=reference_date,
+        parent_role=parent_role,
+    )
+    template_kind = _template_kind_for_request(kind)
     if template_name:
         template_path = _rotate_template(
-            kind,
+            template_kind,
             current_template_name=template_name,
             user_id=user_id,
             reference_date=reference_date,
         )
     else:
-        template_path = _select_template(kind, user_id=user_id, reference_date=reference_date)
+        template_path = _select_template(template_kind, user_id=user_id, reference_date=reference_date)
     card = _build_celebration_card(candidate, template_path=template_path)
     payload = _candidate_payload(candidate)
     payload.update(
@@ -298,7 +411,7 @@ def _existing_auto_post(auto_key: str) -> bool:
 
 
 def _create_post_for_candidate(candidate: CelebrationCandidate, *, author: User) -> Post:
-    kind = "birthday" if candidate.template_key == "birthday_wish" else "anniversary"
+    kind = _template_kind_for_candidate(candidate)
     template_path = _select_template(
         kind,
         user_id=candidate.profile.user_id,
@@ -356,14 +469,27 @@ def _create_post_for_candidate(candidate: CelebrationCandidate, *, author: User)
     return post
 
 
-def publish_celebration_post_from_preview(*, kind: str, user_id: int, template_name: str, reference_date: date | None = None) -> Post:
+def publish_celebration_post_from_preview(
+    *,
+    kind: str,
+    user_id: int,
+    template_name: str,
+    reference_date: date | None = None,
+    parent_role: str = "",
+) -> Post:
     reference_date = reference_date or timezone.localdate()
+    kind = str(kind or "").strip().casefold()
     author = _pick_company_author()
     profile = DirectoryProfile.objects.select_related("user").get(user_id=user_id)
-    candidate = _build_candidate(kind, profile=profile, reference_date=reference_date)
+    candidate = _build_candidate(
+        kind,
+        profile=profile,
+        reference_date=reference_date,
+        parent_role=parent_role,
+    )
     if _existing_auto_post(candidate.auto_key):
         raise RuntimeError("This celebration post has already been published for today.")
-    template_kind = "birthday" if kind == "birthday" else "anniversary"
+    template_kind = _template_kind_for_request(kind)
     template_path = TEMPLATE_ROOT / template_kind / template_name
     if not template_path.exists():
         raise RuntimeError("Selected template file was not found.")

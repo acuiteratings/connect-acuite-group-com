@@ -13,6 +13,7 @@
     previews: {
       birthday: null,
       anniversary: null,
+      new_parent: null,
     },
     employeePosts: [],
     toastTimer: null,
@@ -68,6 +69,12 @@
       anniversaryResultsMeta: document.getElementById("admin-anniversary-results-meta"),
       anniversaryPreviewShell: document.getElementById("admin-anniversary-preview-shell"),
       anniversaryPreviewMeta: document.getElementById("admin-anniversary-preview-meta"),
+      newParentEmployeeInput: document.getElementById("admin-new-parent-employee-input"),
+      newParentEmployeeOptions: document.getElementById("admin-new-parent-employee-options"),
+      newParentRole: document.getElementById("admin-new-parent-role"),
+      newParentSelectedMeta: document.getElementById("admin-new-parent-selected-meta"),
+      newParentPreviewShell: document.getElementById("admin-new-parent-preview-shell"),
+      newParentPreviewMeta: document.getElementById("admin-new-parent-preview-meta"),
       employeePostList: document.getElementById("admin-employee-post-list"),
       employeePostMeta: document.getElementById("admin-employee-post-meta"),
       ceoRequestList: document.getElementById("admin-ceo-request-list"),
@@ -85,6 +92,7 @@
     document.addEventListener("click", handleDocumentClick);
     document.addEventListener("submit", handleSubmit);
     document.addEventListener("change", handleDocumentChange);
+    document.addEventListener("input", handleDocumentInput);
   }
 
   async function loadCelebrations() {
@@ -115,6 +123,7 @@
 
   function renderAll() {
     renderWelcomeEmployeeOptions();
+    renderNewParentEmployeeOptions();
     renderCelebrationSections();
     renderEmployeePosts();
     renderCeoRequests();
@@ -151,6 +160,11 @@
 
     if (action.dataset.action === "post-celebration-card") {
       void publishCelebrationPreview(action.dataset.kind);
+      return;
+    }
+
+    if (action.dataset.action === "generate-new-parent-card") {
+      void generateNewParentPreview();
       return;
     }
 
@@ -205,6 +219,15 @@
     if (event.target === elements.welcomeEmployeeInput) {
       syncWelcomeEmployeeSelection();
     }
+    if (event.target === elements.newParentEmployeeInput || event.target === elements.newParentRole) {
+      syncNewParentSelection();
+    }
+  }
+
+  function handleDocumentInput(event) {
+    if (event.target === elements.newParentEmployeeInput) {
+      syncNewParentSelection();
+    }
   }
 
   function renderCelebrationSections() {
@@ -212,6 +235,7 @@
     renderCelebrationList("anniversary");
     renderCelebrationPreview("birthday");
     renderCelebrationPreview("anniversary");
+    renderCelebrationPreview("new_parent");
   }
 
   function renderWelcomeEmployeeOptions() {
@@ -219,6 +243,16 @@
       return;
     }
     elements.welcomeEmployeeOptions.innerHTML = state.directoryEmployees.map((person) => {
+      const optionLabel = buildWelcomeEmployeeOptionLabel(person);
+      return `<option value="${escapeHtml(optionLabel)}"></option>`;
+    }).join("");
+  }
+
+  function renderNewParentEmployeeOptions() {
+    if (!elements.newParentEmployeeOptions) {
+      return;
+    }
+    elements.newParentEmployeeOptions.innerHTML = state.directoryEmployees.map((person) => {
       const optionLabel = buildWelcomeEmployeeOptionLabel(person);
       return `<option value="${escapeHtml(optionLabel)}"></option>`;
     }).join("");
@@ -279,6 +313,24 @@
         person.department_for_connect || person.department,
         person.branch_location || person.location || person.city,
       ].filter(Boolean).join(" | ") || "Employee selected";
+    }
+  }
+
+  function syncNewParentSelection() {
+    const person = findWelcomeEmployeeByInputValue(elements.newParentEmployeeInput?.value);
+    if (!person) {
+      if (elements.newParentSelectedMeta) {
+        elements.newParentSelectedMeta.textContent = "Choose an employee first.";
+      }
+      return;
+    }
+    if (elements.newParentSelectedMeta) {
+      elements.newParentSelectedMeta.textContent = [
+        parentRoleLabel(elements.newParentRole?.value),
+        person.title,
+        person.department_for_connect || person.department,
+        person.branch_location || person.location || person.city,
+      ].filter(Boolean).join(" | ");
     }
   }
 
@@ -459,14 +511,15 @@
 
   function renderCelebrationPreview(kind) {
     const preview = state.previews[kind];
-    const shell = kind === "birthday" ? elements.birthdayPreviewShell : elements.anniversaryPreviewShell;
-    const meta = kind === "birthday" ? elements.birthdayPreviewMeta : elements.anniversaryPreviewMeta;
+    const target = celebrationPreviewTarget(kind);
+    const shell = target.shell;
+    const meta = target.meta;
     if (!shell || !meta) {
       return;
     }
     if (!preview) {
       meta.textContent = "Choose a person to generate a card.";
-      shell.innerHTML = `<div class="admin-selected-user">Choose ${kind === "birthday" ? "a birthday" : "an anniversary"} entry and click Generate card.</div>`;
+      shell.innerHTML = `<div class="admin-selected-user">${emptyCelebrationPreviewText(kind)}</div>`;
       return;
     }
     meta.textContent = `${preview.name} | ${preview.template_label || preview.template_file}`;
@@ -481,11 +534,39 @@
           </div>
         </div>
         <div class="celebration-preview-actions">
-          <button type="button" class="admin-btn admin-btn-secondary" data-action="generate-celebration-card" data-kind="${kind}" data-user-id="${preview.user_id}">Regenerate</button>
+          ${
+            kind === "new_parent"
+              ? '<button type="button" class="admin-btn admin-btn-secondary" data-action="generate-new-parent-card">Regenerate</button>'
+              : `<button type="button" class="admin-btn admin-btn-secondary" data-action="generate-celebration-card" data-kind="${kind}" data-user-id="${preview.user_id}">Regenerate</button>`
+          }
           <button type="button" class="admin-btn admin-btn-primary" data-action="post-celebration-card" data-kind="${kind}">Post</button>
         </div>
       </div>
     `;
+  }
+
+  function celebrationPreviewTarget(kind) {
+    if (kind === "birthday") {
+      return { shell: elements.birthdayPreviewShell, meta: elements.birthdayPreviewMeta };
+    }
+    if (kind === "anniversary") {
+      return { shell: elements.anniversaryPreviewShell, meta: elements.anniversaryPreviewMeta };
+    }
+    return { shell: elements.newParentPreviewShell, meta: elements.newParentPreviewMeta };
+  }
+
+  function emptyCelebrationPreviewText(kind) {
+    if (kind === "birthday") {
+      return "Choose a birthday entry and click Generate card.";
+    }
+    if (kind === "anniversary") {
+      return "Choose an anniversary entry and click Generate card.";
+    }
+    return "Choose an employee and click Generate card.";
+  }
+
+  function parentRoleLabel(value) {
+    return String(value || "") === "father" ? "New Father" : "New Mother";
   }
 
   function renderCelebrationCard(card) {
@@ -515,7 +596,7 @@
     `;
   }
 
-  async function generateCelebrationPreview(kind, userId) {
+  async function generateCelebrationPreview(kind, userId, options = {}) {
     if (!userId) {
       return;
     }
@@ -530,6 +611,7 @@
           kind,
           user_id: userId,
           template_file: previousTemplateFile,
+          ...options,
         },
       });
       state.previews[kind] = payload.preview || null;
@@ -538,6 +620,16 @@
     } catch (error) {
       showToast(error.message || "Could not generate the celebration card.");
     }
+  }
+
+  async function generateNewParentPreview() {
+    const person = findWelcomeEmployeeByInputValue(elements.newParentEmployeeInput?.value);
+    if (!person) {
+      showToast("Select the employee from the list first.");
+      return;
+    }
+    const parentRole = String(elements.newParentRole?.value || "mother").trim() || "mother";
+    await generateCelebrationPreview("new_parent", person.id, { parent_role: parentRole });
   }
 
   async function publishCelebrationPreview(kind) {
@@ -553,12 +645,13 @@
           kind,
           user_id: preview.user_id,
           template_file: preview.template_file,
+          parent_role: preview.parent_role || "",
         },
       });
       state.previews[kind] = null;
       await loadCelebrations();
       renderCelebrationSections();
-      showToast(`${kind === "birthday" ? "Birthday" : "Anniversary"} post published to the bulletin board.`);
+      showToast(`${kind === "birthday" ? "Birthday" : kind === "anniversary" ? "Anniversary" : "New parent"} post published to the bulletin board.`);
     } catch (error) {
       showToast(error.message || "Could not publish the celebration post.");
     }

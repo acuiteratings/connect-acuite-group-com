@@ -622,3 +622,59 @@ class CelebrationAdminApiTests(TestCase):
         post = Post.objects.get()
         self.assertEqual(post.metadata["bulletin_card"]["person_name"], "Riya Sen")
         self.assertEqual(post.metadata["bulletin_template_file"], template_file)
+
+    def test_new_parent_preview_returns_congratulations_card(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps(
+                {
+                    "kind": "new_parent",
+                    "user_id": self.birthday_user.id,
+                    "parent_role": "mother",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["preview"]
+        self.assertEqual(payload["parent_role"], "mother")
+        self.assertEqual(payload["card"]["occasion_label"], "Congratulations New Mother")
+        self.assertIn("new bundle of joy", payload["body"])
+        self.assertTrue(payload["template_file"].endswith(".html"))
+
+    def test_new_parent_publish_creates_post(self):
+        self.client.force_login(self.admin)
+        preview_response = self.client.post(
+            "/api/ops/celebrations/preview/",
+            data=json.dumps(
+                {
+                    "kind": "new_parent",
+                    "user_id": self.birthday_user.id,
+                    "parent_role": "father",
+                }
+            ),
+            content_type="application/json",
+        )
+        template_file = preview_response.json()["preview"]["template_file"]
+
+        response = self.client.post(
+            "/api/ops/celebrations/publish/",
+            data=json.dumps(
+                {
+                    "kind": "new_parent",
+                    "user_id": self.birthday_user.id,
+                    "template_file": template_file,
+                    "parent_role": "father",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        post = Post.objects.get()
+        self.assertEqual(post.metadata["bulletin_template"], "new_parent_father")
+        self.assertEqual(post.metadata["bulletin_card"]["occasion_label"], "Congratulations New Father")
+        self.assertEqual(post.metadata["bulletin_template_file"], template_file)

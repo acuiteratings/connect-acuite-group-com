@@ -496,10 +496,12 @@ def celebration_preview(request):
         kind = str(payload.get("kind", "")).strip().lower()
         user_id = int(payload.get("user_id") or 0)
         template_name = str(payload.get("template_file", "")).strip()
+        parent_role = str(payload.get("parent_role", "")).strip().lower()
         preview = build_celebration_preview(
             kind=kind,
             user_id=user_id,
             template_name=template_name,
+            parent_role=parent_role,
         )
     except (ValueError, DirectoryProfile.DoesNotExist) as exc:
         return JsonResponse({"detail": str(exc) or "Could not build the preview."}, status=400)
@@ -518,12 +520,14 @@ def celebration_publish(request):
         kind = str(payload.get("kind", "")).strip().lower()
         user_id = int(payload.get("user_id") or 0)
         template_name = str(payload.get("template_file", "")).strip()
+        parent_role = str(payload.get("parent_role", "")).strip().lower()
         if not template_name:
             raise ValueError("Template file is required.")
         post = publish_celebration_post_from_preview(
             kind=kind,
             user_id=user_id,
             template_name=template_name,
+            parent_role=parent_role,
         )
     except (ValueError, DirectoryProfile.DoesNotExist) as exc:
         return JsonResponse({"detail": str(exc) or "Could not publish the celebration post."}, status=400)
