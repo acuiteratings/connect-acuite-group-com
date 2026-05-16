@@ -3161,6 +3161,18 @@ function renderHomeAnnouncement() {
 
       <h1 class="announcement-title">${escapeHtml(announcement.title)}</h1>
       <p class="announcement-summary">${escapeHtml(announcement.summary)}</p>
+      ${
+        announcement.ctaLabel && announcement.ctaTarget
+          ? `<button
+              type="button"
+              class="btn-outline announcement-cta"
+              data-action="open-bulletin-cta"
+              data-target="${escapeHtml(announcement.ctaTarget)}"
+            >
+              ${escapeHtml(announcement.ctaLabel)}
+            </button>`
+          : ""
+      }
 
       <div class="announcement-meta-grid">
         <article class="announcement-meta-card">
@@ -5188,6 +5200,8 @@ function mapHomeAnnouncementPost(post) {
     hostLabel: String(display.hostLabel || post.authorName || "Acuité Ratings & Research").trim(),
     audienceLabel: String(display.audienceLabel || "Visible to all employees").trim(),
     countdownLabel: String(display.countdownLabel || post.postedAtLabel || "").trim(),
+    ctaLabel: String(display.ctaLabel || post.ctaLabel || "").trim(),
+    ctaTarget: String(display.ctaTarget || post.ctaTarget || "").trim(),
     baseMetrics: {
       likes: Number(post.reactionCount || 0),
     },
