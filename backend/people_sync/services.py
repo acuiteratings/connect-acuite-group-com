@@ -55,10 +55,34 @@ def _parse_iso_datetime(value, field_name):
     return parsed.astimezone(dt_timezone.utc)
 
 
+DATE_INPUT_FORMATS = (
+    "%Y-%m-%d",
+    "%d-%m-%Y",
+    "%d-%m-%y",
+    "%d/%m/%Y",
+    "%d/%m/%y",
+    "%d.%m.%Y",
+    "%d.%m.%y",
+    "%d-%b-%Y",
+    "%d-%b-%y",
+    "%d %b %Y",
+    "%d %b %y",
+    "%d-%B-%Y",
+    "%d-%B-%y",
+    "%d %B %Y",
+    "%d %B %y",
+)
+
+
 def _parse_optional_date(value):
     raw_value = str(value or "").strip()
     if not raw_value:
         return None
+    for date_format in DATE_INPUT_FORMATS:
+        try:
+            return datetime.strptime(raw_value, date_format).date()
+        except ValueError:
+            continue
     return date.fromisoformat(raw_value)
 
 

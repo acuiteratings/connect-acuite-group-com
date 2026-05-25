@@ -123,6 +123,40 @@ class PeopleSyncServiceTests(TestCase):
         self.assertEqual(profile.date_of_birth, date(1994, 4, 4))
         self.assertEqual(profile.joined_on, date(2022, 4, 4))
 
+    def test_sync_accepts_common_people_date_formats(self):
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00422",
+                        "email": "shayan.kundu@acuite.in",
+                        "full_name": "Shayan Kundu",
+                        "title": "Associate",
+                        "department": "Corporate Sector Ratings",
+                        "function_name": "Ratings",
+                        "company_name": "Acuite",
+                        "office_location": "Mumbai",
+                        "city": "Mumbai",
+                        "mobile_number": "+91-9000000000",
+                        "date_of_birth": "26-May-1994",
+                        "joined_on": "04/04/2022",
+                        "manager_employee_id": "",
+                        "employment_status": "active",
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run = run_people_sync(fetch_page=fake_fetch_page)
+
+        self.assertEqual(run.status, PeopleSyncRun.Status.SUCCESS)
+        profile = DirectoryProfile.objects.get(user__email="shayan.kundu@acuite.in")
+        self.assertEqual(profile.date_of_birth, date(1994, 5, 26))
+        self.assertEqual(profile.joined_on, date(2022, 4, 4))
+
     def test_sync_keeps_existing_celebration_dates_when_source_values_are_blank(self):
         user = User.objects.create_user(
             email="nidhi.shree@acuite.in",

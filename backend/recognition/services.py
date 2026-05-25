@@ -6,6 +6,7 @@ import calendar
 from accounts.models import User
 from directory.models import DirectoryProfile
 from django.db import models
+from django.utils import timezone
 from feed.models import Comment, Post, PostReaction
 
 POINT_RULES = {
@@ -124,7 +125,7 @@ def build_points_table():
 
 
 def build_birthdays(limit=5):
-    today = date.today()
+    today = timezone.localdate()
     items = []
     for profile in _active_profiles_queryset().exclude(date_of_birth__isnull=True):
         next_date = _next_annual_occurrence(
@@ -153,7 +154,7 @@ def build_birthdays(limit=5):
 
 
 def build_anniversaries(limit=5):
-    today = date.today()
+    today = timezone.localdate()
     items = []
     for profile in _active_profiles_queryset().exclude(joined_on__isnull=True):
         next_date = _next_annual_occurrence(
