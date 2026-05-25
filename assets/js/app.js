@@ -1316,7 +1316,18 @@ function getActiveCommunityClub() {
   return appData.communityClubs.find((club) => club.key === state.communityClubKey) || null;
 }
 
-function setActiveCommunityClub(clubKey) {
+function scrollCommunityWorkspaceIntoView() {
+  const workspace = elements.communityWorkspace || document.getElementById("community-workspace");
+  if (!workspace) {
+    return;
+  }
+  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (typeof workspace.focus === "function") {
+    workspace.focus({ preventScroll: true });
+  }
+}
+
+function setActiveCommunityClub(clubKey, { scrollToWorkspace = false } = {}) {
   const nextKey = String(clubKey || "").trim();
   if (!nextKey) {
     return;
@@ -1327,6 +1338,9 @@ function setActiveCommunityClub(clubKey) {
   const club = getActiveCommunityClub();
   if (club?.joined) {
     void loadCommunityPosts(club.key);
+  }
+  if (scrollToWorkspace) {
+    window.requestAnimationFrame(scrollCommunityWorkspaceIntoView);
   }
 }
 
@@ -1604,7 +1618,7 @@ async function handleDocumentClick(event) {
     }
 
     if (actionName === "select-community-club") {
-      setActiveCommunityClub(action.dataset.clubKey);
+      setActiveCommunityClub(action.dataset.clubKey, { scrollToWorkspace: true });
       return;
     }
 
@@ -3956,7 +3970,7 @@ function renderCommunityPanel() {
               data-action="select-community-club"
               data-club-key="${escapeHtml(club.key)}"
             >
-              Open club
+              ${state.communityClubKey === club.key ? "Open above" : "Open club"}
             </button>
             ${club.joined ? '<span class="mini-chip success">Joined</span>' : ""}
           </div>
