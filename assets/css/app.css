@@ -959,6 +959,20 @@ select {
   max-width: 760px;
 }
 
+.announcement-details {
+  display: grid;
+  gap: 8px;
+  max-width: 820px;
+  margin-top: 18px;
+  color: var(--announcement-muted);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.announcement-details p {
+  margin: 0;
+}
+
 .announcement-cta {
   width: fit-content;
   margin-top: 18px;

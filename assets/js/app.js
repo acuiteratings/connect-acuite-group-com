@@ -3176,6 +3176,13 @@ function renderHomeAnnouncement() {
       <h1 class="announcement-title">${escapeHtml(announcement.title)}</h1>
       <p class="announcement-summary">${escapeHtml(announcement.summary)}</p>
       ${
+        (announcement.details || []).length
+          ? `<div class="announcement-details">
+              ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
+            </div>`
+          : ""
+      }
+      ${
         announcement.ctaLabel && announcement.ctaTarget
           ? `<button
               type="button"
@@ -5214,6 +5221,9 @@ function mapHomeAnnouncementPost(post) {
     hostLabel: String(display.hostLabel || post.authorName || "Acuité Ratings & Research").trim(),
     audienceLabel: String(display.audienceLabel || "Visible to all employees").trim(),
     countdownLabel: String(display.countdownLabel || post.postedAtLabel || "").trim(),
+    details: Array.isArray(display.details)
+      ? display.details.map((item) => String(item || "").trim()).filter(Boolean)
+      : [],
     ctaLabel: String(display.ctaLabel || post.ctaLabel || "").trim(),
     ctaTarget: String(display.ctaTarget || post.ctaTarget || "").trim(),
     baseMetrics: {
