@@ -274,7 +274,11 @@ def _serialize_attendance_export_row(user, attendance_date, record=None):
             AttendanceDayRecord.Status.NOT_MARKED,
         }
         punch_in_at = record.punch_in_at.isoformat() if record.punch_in_at else ""
-        punch_out_at = record.punch_out_at.isoformat() if record.punch_out_at else ""
+        punch_out_at = (
+            record.punch_out_at.isoformat()
+            if record.punch_out_at and status != AttendanceDayRecord.Status.NO_PUNCHOUT
+            else ""
+        )
         office_label = record.office_label
         updated_at = record.updated_at
 
