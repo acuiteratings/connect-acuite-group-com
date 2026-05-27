@@ -4,7 +4,12 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.http import HttpResponseNotAllowed, JsonResponse
 
-from .services import attendance_export_payload, admin_attendance_overview, serialize_attendance_status
+from .services import (
+    attendance_employee_day_export_payload,
+    attendance_export_payload,
+    admin_attendance_overview,
+    serialize_attendance_status,
+)
 
 
 def _is_attendance_admin(user):
@@ -68,3 +73,34 @@ def attendance_export(request):
     if to_date - from_date > timedelta(days=62):
         return JsonResponse({"detail": "Date range cannot exceed 63 days."}, status=400)
     return JsonResponse(attendance_export_payload(from_date=from_date, to_date=to_date))
+
+
+def attendance_employee_day_export(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    if not _service_token_allowed(request):
+        return JsonResponse({"detail": "Valid service token required."}, status=401)
+    try:
+        attendance_date = _parse_date(request.GET.get("date") or request.GET.get("attendance_date"))
+    except ValueError:
+        return JsonResponse({"detail": "date must be in YYYY-MM-DD format."}, status=400)
+    if not attendance_date:
+        return JsonResponse({"detail": "date is required."}, status=400)
+
+    employee_sso_id = request.GET.get("employee_sso_id", "")
+    employee_code = request.GET.get("employee_code", "")
+    email = request.GET.get("email", "")
+    if not any(str(value or "").strip() for value in [employee_sso_id, employee_code, email]):
+        return JsonResponse(
+            {"detail": "employee_sso_id, employee_code, or email is required."},
+            status=400,
+        )
+
+    return JsonResponse(
+        attendance_employee_day_export_payload(
+            attendance_date=attendance_date,
+            employee_sso_id=employee_sso_id,
+            employee_code=employee_code,
+            email=email,
+        )
+    )

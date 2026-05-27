@@ -149,3 +149,57 @@ class AttendanceApiTests(TestCase):
         self.assertEqual(row["employee_code"], "EMP9001")
         self.assertEqual(row["status"], "no_punchout")
         self.assertTrue(row["requires_regularization"])
+
+    @override_settings(
+        ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16",
+        CONNECT_ATTENDANCE_EXPORT_TOKENS=["export-token"],
+    )
+    def test_employee_day_export_returns_only_requested_employee_day(self):
+        today = WORKING_DAY
+        other_user = User.objects.create_user(
+            email="other@acuite.in",
+            password="testpass123",
+            first_name="Other",
+            last_name="Employee",
+            employment_status=User.EmploymentStatus.ACTIVE,
+            access_level=User.AccessLevel.EMPLOYEE,
+            must_change_password=False,
+            password_changed_at=timezone.now(),
+        )
+        DirectoryProfile.objects.create(user=other_user, office_location="Mumbai", is_visible=True)
+        AttendanceDayRecord.objects.create(
+            user=self.user,
+            attendance_date=today,
+            status=AttendanceDayRecord.Status.NO_PUNCHOUT,
+            punch_in_at=timezone.now(),
+            office_label="Mumbai",
+            punch_in_source=AttendanceDayRecord.Source.ACTIVITY,
+            requires_regularization=True,
+        )
+        AttendanceDayRecord.objects.create(
+            user=other_user,
+            attendance_date=today,
+            status=AttendanceDayRecord.Status.PRESENT,
+            punch_in_at=timezone.now(),
+            punch_out_at=timezone.now(),
+            office_label="Mumbai",
+            punch_in_source=AttendanceDayRecord.Source.ACTIVITY,
+            punch_out_source=AttendanceDayRecord.Source.LOGOUT,
+        )
+
+        denied = self.client.get(
+            f"/api/attendance/export/employee-day/?date={today.isoformat()}&employee_sso_id=sso-employee-1"
+        )
+        self.assertEqual(denied.status_code, 401)
+
+        response = self.client.get(
+            f"/api/attendance/export/employee-day/?date={today.isoformat()}&employee_sso_id=sso-employee-1",
+            HTTP_AUTHORIZATION="Bearer export-token",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["date"], today.isoformat())
+        self.assertEqual(len(payload["records"]), 1)
+        self.assertEqual(payload["records"][0]["email"], self.user.email)
+        self.assertEqual(payload["records"][0]["status"], "no_punchout")

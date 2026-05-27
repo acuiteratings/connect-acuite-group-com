@@ -6,10 +6,10 @@ from .session import enforce_session_deadline
 class EmployeeApiAccessMiddleware:
     PUBLIC_API_PATH_PREFIXES = (
         "/api/accounts/auth/",
+        "/api/attendance/export/",
     )
     PUBLIC_API_PATHS = {
         "/api/accounts/me/",
-        "/api/attendance/export/",
         "/api/ops/health/",
     }
 

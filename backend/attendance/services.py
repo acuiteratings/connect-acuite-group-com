@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import User
@@ -248,6 +249,33 @@ def attendance_export_payload(*, from_date: date, to_date: date):
     }
 
 
+def attendance_employee_day_export_payload(
+    *,
+    attendance_date: date,
+    employee_sso_id="",
+    employee_code="",
+    email="",
+):
+    user = _attendance_export_user(
+        employee_sso_id=employee_sso_id,
+        employee_code=employee_code,
+        email=email,
+    )
+    records = []
+    if user:
+        record = AttendanceDayRecord.objects.filter(
+            user=user,
+            attendance_date=attendance_date,
+        ).first()
+        records.append(_serialize_attendance_export_row(user, attendance_date, record))
+
+    return {
+        "date": attendance_date.isoformat(),
+        "generated_at": timezone.now().isoformat(),
+        "records": records,
+    }
+
+
 def _serialize_attendance_export_row(user, attendance_date, record=None):
     profile = _profile_for_user(user)
     identity = getattr(user, "employee_sso_identity", None)
@@ -296,6 +324,31 @@ def _serialize_attendance_export_row(user, attendance_date, record=None):
         "requires_regularization": requires_regularization,
         "updated_at": updated_at.isoformat(),
     }
+
+
+def _attendance_export_user(*, employee_sso_id="", employee_code="", email=""):
+    users = (
+        User.objects.filter(is_active=True, employment_status=User.EmploymentStatus.ACTIVE)
+        .select_related("directory_profile", "employee_sso_identity")
+        .order_by("employee_code", "email")
+    )
+    employee_sso_id = str(employee_sso_id or "").strip()
+    employee_code = str(employee_code or "").strip()
+    email = str(email or "").strip()
+    if employee_sso_id:
+        user = users.filter(employee_sso_identity__sso_user_id=employee_sso_id).first()
+        if user:
+            return user
+    if employee_code:
+        user = users.filter(
+            Q(employee_code__iexact=employee_code)
+            | Q(employee_sso_identity__employee_id__iexact=employee_code)
+        ).first()
+        if user:
+            return user
+    if email:
+        return users.filter(Q(email__iexact=email) | Q(employee_sso_identity__email__iexact=email)).first()
+    return None
 
 
 def capture_attendance_activity(request, *, source="activity"):
