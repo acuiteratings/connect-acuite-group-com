@@ -410,8 +410,16 @@ const DEFAULT_CEO_DESK_ARCHIVE = [
 const BULLETIN_BOARD_RETENTION_DAYS = 30;
 const CEO_DESK_ARCHIVE_LIMIT = 12;
 const COMPANY_HOLIDAY_CALENDAR = [
+  { date: "2026-01-01", label: "New Year", applicability: "All Offices" },
+  { date: "2026-01-15", label: "Pongal", applicability: "Chennai, Hyderabad" },
+  { date: "2026-01-23", label: "Birth of Netaji", applicability: "Kolkata" },
+  { date: "2026-01-26", label: "Republic Day", applicability: "All Offices" },
+  { date: "2026-03-03", label: "Holi", applicability: "Mumbai, Kolkata, Delhi, Ahmedabad" },
+  { date: "2026-03-19", label: "Ugadi", applicability: "Bangalore" },
+  { date: "2026-03-21", label: "Eid-al-Fitr", applicability: "All Offices" },
+  { date: "2026-04-03", label: "Good Friday", applicability: "Mumbai" },
   { date: "2026-04-14", label: "Tamil New Year", applicability: "Chennai" },
-  { date: "2026-05-01", label: "Maharashtra Day", applicability: "All Offices" },
+  { date: "2026-05-01", label: "May / Labour Day", applicability: "All Offices" },
   { date: "2026-06-02", label: "Telangana Foundation Day", applicability: "Hyderabad" },
   { date: "2026-08-15", label: "Independence Day", applicability: "All Offices" },
   { date: "2026-09-04", label: "Janmashtami", applicability: "Delhi" },

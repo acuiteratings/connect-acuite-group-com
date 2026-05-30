@@ -4,6 +4,7 @@ from .views import (
     attendance_admin_overview,
     attendance_employee_day_export,
     attendance_export,
+    attendance_holidays_export,
     attendance_status,
 )
 
@@ -13,4 +14,5 @@ urlpatterns = [
     path("admin/overview/", attendance_admin_overview, name="attendance-admin-overview"),
     path("export/", attendance_export, name="attendance-export"),
     path("export/employee-day/", attendance_employee_day_export, name="attendance-employee-day-export"),
+    path("export/holidays/", attendance_holidays_export, name="attendance-holidays-export"),
 ]

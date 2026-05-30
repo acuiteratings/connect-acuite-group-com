@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.http import HttpResponseNotAllowed, JsonResponse
 
+from .holidays import holiday_export_payload
 from .services import (
     attendance_employee_day_export_payload,
     attendance_export_payload,
@@ -102,5 +103,24 @@ def attendance_employee_day_export(request):
             employee_sso_id=employee_sso_id,
             employee_code=employee_code,
             email=email,
+        )
+    )
+
+
+def attendance_holidays_export(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    if not _service_token_allowed(request):
+        return JsonResponse({"detail": "Valid service token required."}, status=401)
+    try:
+        year = int(str(request.GET.get("year") or "2026").strip())
+    except ValueError:
+        return JsonResponse({"detail": "year must be a number."}, status=400)
+    if year < 2026 or year > 2035:
+        return JsonResponse({"detail": "year is outside the supported range."}, status=400)
+    return JsonResponse(
+        holiday_export_payload(
+            year=year,
+            location=request.GET.get("location", ""),
         )
     )

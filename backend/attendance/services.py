@@ -10,26 +10,10 @@ from django.utils import timezone
 
 from accounts.models import User
 from directory.models import DirectoryProfile
+from directory.utils import resolve_branch_location
 
+from .holidays import holiday_for_date
 from .models import AttendanceDayRecord
-
-
-COMPANY_HOLIDAYS = {
-    date(2026, 4, 14): "Tamil New Year",
-    date(2026, 5, 1): "Maharashtra Day",
-    date(2026, 6, 2): "Telangana Foundation Day",
-    date(2026, 8, 15): "Independence Day",
-    date(2026, 9, 4): "Janmashtami",
-    date(2026, 9, 14): "Ganesh Chaturthi",
-    date(2026, 10, 2): "Gandhi Jayanti",
-    date(2026, 10, 19): "Durgapuja Nabami",
-    date(2026, 10, 20): "Dussehra",
-    date(2026, 11, 1): "Karnataka Day",
-    date(2026, 11, 8): "Diwali (Laxmi Pujan)",
-    date(2026, 11, 10): "Vikram Samvat New Year",
-    date(2026, 11, 24): "Guru Nanak Jayanti",
-    date(2026, 12, 25): "Christmas",
-}
 
 
 @dataclass(frozen=True)
@@ -85,9 +69,20 @@ def uses_connect_attendance(profile: DirectoryProfile | None) -> bool:
     return method.casefold() in {"connect", "connect app", "acuite connect", "connect-app"}
 
 
-def working_day_status(target_date: date):
-    if target_date in COMPANY_HOLIDAYS:
-        return AttendanceDayRecord.Status.HOLIDAY, COMPANY_HOLIDAYS[target_date]
+def branch_location_for_profile(profile: DirectoryProfile | None) -> str:
+    if not profile:
+        return ""
+    return resolve_branch_location(
+        profile.office_location,
+        profile.city,
+        getattr(profile.user, "location", ""),
+    )
+
+
+def working_day_status(target_date: date, profile: DirectoryProfile | None = None):
+    holiday = holiday_for_date(target_date, location=branch_location_for_profile(profile))
+    if holiday:
+        return AttendanceDayRecord.Status.HOLIDAY, holiday["name"]
     if target_date.weekday() >= 5:
         return AttendanceDayRecord.Status.WEEKEND, "Weekend"
     return None, ""
@@ -128,7 +123,7 @@ def _serialize_user(user):
 def serialize_attendance_status(user, *, target_date=None, record=None, request=None):
     target_date = target_date or timezone.localdate()
     profile = _profile_for_user(user)
-    calendar_status, calendar_label = working_day_status(target_date)
+    calendar_status, calendar_label = working_day_status(target_date, profile)
     if not uses_connect_attendance(profile):
         return {
             "user": _serialize_user(user),
@@ -279,7 +274,7 @@ def attendance_employee_day_export_payload(
 def _serialize_attendance_export_row(user, attendance_date, record=None):
     profile = _profile_for_user(user)
     identity = getattr(user, "employee_sso_identity", None)
-    calendar_status, calendar_label = working_day_status(attendance_date)
+    calendar_status, calendar_label = working_day_status(attendance_date, profile)
     status = AttendanceDayRecord.Status.NOT_MARKED
     source = AttendanceDayRecord.Source.SYSTEM
     requires_regularization = True
@@ -359,11 +354,11 @@ def capture_attendance_activity(request, *, source="activity"):
         return None
 
     today = timezone.localdate()
-    calendar_status, _calendar_label = working_day_status(today)
+    profile = _profile_for_user(user)
+    calendar_status, _calendar_label = working_day_status(today, profile)
     if calendar_status:
         return None
 
-    profile = _profile_for_user(user)
     if not uses_connect_attendance(profile):
         return None
 

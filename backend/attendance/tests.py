@@ -8,6 +8,7 @@ from accounts.models import EmployeeSSOIdentitySnapshot, User
 from directory.models import DirectoryProfile
 
 from .models import AttendanceDayRecord
+from .services import working_day_status
 
 
 WORKING_DAY = date(2026, 5, 8)
@@ -103,6 +104,49 @@ class AttendanceApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "not_applicable")
         self.assertFalse(AttendanceDayRecord.objects.filter(user=self.user).exists())
+
+    def test_branch_specific_holiday_status_uses_employee_location(self):
+        mumbai_status, mumbai_label = working_day_status(date(2026, 4, 3), self.user.directory_profile)
+        self.assertEqual(mumbai_status, AttendanceDayRecord.Status.HOLIDAY)
+        self.assertEqual(mumbai_label, "Good Friday")
+
+        self.user.directory_profile.office_location = "Delhi"
+        self.user.directory_profile.save(update_fields=["office_location", "updated_at"])
+        delhi_status, delhi_label = working_day_status(date(2026, 4, 3), self.user.directory_profile)
+        self.assertIsNone(delhi_status)
+        self.assertEqual(delhi_label, "")
+
+        unknown_status, unknown_label = working_day_status(date(2026, 4, 3), None)
+        self.assertIsNone(unknown_status)
+        self.assertEqual(unknown_label, "")
+
+    @override_settings(CONNECT_ATTENDANCE_EXPORT_TOKENS=["export-token"])
+    def test_holiday_export_returns_branch_wise_records(self):
+        denied = self.client.get("/api/attendance/export/holidays/?year=2026")
+        self.assertEqual(denied.status_code, 401)
+
+        response = self.client.get(
+            "/api/attendance/export/holidays/?year=2026",
+            HTTP_AUTHORIZATION="Bearer export-token",
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 22)
+        pongal = next(item for item in payload["holidays"] if item["name"] == "Pongal")
+        self.assertEqual(pongal["applicable_locations"], ["Chennai", "Hyderabad"])
+        self.assertFalse(pongal["applies_to_all_offices"])
+        self.assertEqual(pongal["category"], "Festive")
+        self.assertEqual(pongal["state_holiday"], "Tamil Nadu, Telangana")
+
+        delhi_response = self.client.get(
+            "/api/attendance/export/holidays/?year=2026&location=Delhi",
+            HTTP_AUTHORIZATION="Bearer export-token",
+        )
+        self.assertEqual(delhi_response.status_code, 200)
+        delhi_holidays = {item["name"] for item in delhi_response.json()["holidays"]}
+        self.assertIn("Janmashtami", delhi_holidays)
+        self.assertIn("Republic Day", delhi_holidays)
+        self.assertNotIn("Good Friday", delhi_holidays)
 
     @override_settings(ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16")
     def test_admin_overview_returns_employee_attendance_statuses(self):
