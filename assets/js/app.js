@@ -177,7 +177,71 @@ const ANNOUNCEMENT_THEME_LIBRARY = [
     "--announcement-like-count": "rgba(24, 33, 27, 0.72)",
     "--announcement-accent": "#2ead2b",
   },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 34%, transparent 58%), radial-gradient(circle at top left, rgba(250, 204, 21, 0.22), transparent 26%), radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.18), transparent 34%), linear-gradient(135deg, rgba(67, 47, 22, 0.98), rgba(92, 64, 27, 0.95) 52%, rgba(24, 59, 54, 0.94)), var(--bg2)",
+    "--announcement-text": "#fff7e6",
+    "--announcement-muted": "rgba(255, 247, 230, 0.8)",
+    "--announcement-soft": "rgba(255, 247, 230, 0.56)",
+    "--announcement-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05))",
+    "--announcement-surface-border": "rgba(255, 255, 255, 0.13)",
+    "--announcement-badge-bg": "rgba(255, 255, 255, 0.07)",
+    "--announcement-badge-border": "rgba(255, 255, 255, 0.13)",
+    "--announcement-badge-text": "rgba(255, 255, 255, 0.82)",
+    "--announcement-badge-strong-bg": "rgba(250, 204, 21, 0.18)",
+    "--announcement-badge-strong-border": "rgba(250, 204, 21, 0.36)",
+    "--announcement-badge-strong-text": "#fff9d8",
+    "--announcement-input-bg": "rgba(24, 18, 8, 0.25)",
+    "--announcement-input-border": "rgba(255, 255, 255, 0.14)",
+    "--announcement-input-placeholder": "rgba(255, 247, 230, 0.66)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.05)",
+    "--announcement-reaction-border": "rgba(255, 255, 255, 0.12)",
+    "--announcement-reaction-pill-bg": "rgba(255, 255, 255, 0.1)",
+    "--announcement-reaction-pill-text": "#fff9d8",
+    "--announcement-reaction-active-bg": "rgba(250, 204, 21, 0.12)",
+    "--announcement-reaction-active-border": "rgba(250, 204, 21, 0.36)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.08)",
+    "--announcement-like-count": "rgba(255, 247, 230, 0.82)",
+    "--announcement-accent": "#facc15",
+  },
+  {
+    "--announcement-bg": "linear-gradient(140deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.05) 32%, transparent 58%), radial-gradient(circle at top right, rgba(99, 102, 241, 0.2), transparent 26%), radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.12), transparent 32%), linear-gradient(135deg, #eef2ff, #dfe7ff 54%, #d6ddf2), var(--bg2)",
+    "--announcement-text": "#171a33",
+    "--announcement-muted": "rgba(23, 26, 51, 0.78)",
+    "--announcement-soft": "rgba(23, 26, 51, 0.56)",
+    "--announcement-border": "rgba(23, 26, 51, 0.08)",
+    "--announcement-surface-bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.52))",
+    "--announcement-surface-border": "rgba(23, 26, 51, 0.09)",
+    "--announcement-badge-bg": "rgba(23, 26, 51, 0.06)",
+    "--announcement-badge-border": "rgba(23, 26, 51, 0.08)",
+    "--announcement-badge-text": "rgba(23, 26, 51, 0.8)",
+    "--announcement-badge-strong-bg": "rgba(99, 102, 241, 0.12)",
+    "--announcement-badge-strong-border": "rgba(99, 102, 241, 0.22)",
+    "--announcement-badge-strong-text": "#3430a1",
+    "--announcement-input-bg": "rgba(255, 255, 255, 0.74)",
+    "--announcement-input-border": "rgba(23, 26, 51, 0.1)",
+    "--announcement-input-placeholder": "rgba(23, 26, 51, 0.5)",
+    "--announcement-reaction-bg": "rgba(255, 255, 255, 0.58)",
+    "--announcement-reaction-border": "rgba(23, 26, 51, 0.08)",
+    "--announcement-reaction-pill-bg": "rgba(23, 26, 51, 0.06)",
+    "--announcement-reaction-pill-text": "#171a33",
+    "--announcement-reaction-active-bg": "rgba(99, 102, 241, 0.08)",
+    "--announcement-reaction-active-border": "rgba(99, 102, 241, 0.22)",
+    "--announcement-like-btn-bg": "rgba(255, 255, 255, 0.66)",
+    "--announcement-like-count": "rgba(23, 26, 51, 0.72)",
+    "--announcement-accent": "#6366f1",
+  },
 ];
+const ANNOUNCEMENT_THEME_BY_TAG = {
+  leadership: 0,
+  people_culture: 5,
+  cybersecurity: 2,
+  compliance: 4,
+  regulations: 3,
+  new_initiatives: 1,
+  giving: 6,
+  opinion_poll: 7,
+};
 
 const DIRECTORY_FILTER_GROUPS = ["company", "location", "department"];
 const DIRECTORY_FILTER_GROUP_LABELS = {
@@ -3103,13 +3167,15 @@ function hashAnnouncementThemeSeed(value) {
   return Math.abs(hash);
 }
 
-function applyAnnouncementTheme(container, seedSource) {
+function applyAnnouncementTheme(container, seedSource, tag = state.homeAnnouncementFilter) {
   if (!container) {
     return;
   }
-  const theme = ANNOUNCEMENT_THEME_LIBRARY[
-    hashAnnouncementThemeSeed(seedSource) % ANNOUNCEMENT_THEME_LIBRARY.length
-  ] || ANNOUNCEMENT_THEME_LIBRARY[0];
+  const tagKey = String(tag || "").trim();
+  const themeIndex = Number.isInteger(ANNOUNCEMENT_THEME_BY_TAG[tagKey])
+    ? ANNOUNCEMENT_THEME_BY_TAG[tagKey]
+    : hashAnnouncementThemeSeed(seedSource) % ANNOUNCEMENT_THEME_LIBRARY.length;
+  const theme = ANNOUNCEMENT_THEME_LIBRARY[themeIndex] || ANNOUNCEMENT_THEME_LIBRARY[0];
   Object.entries(theme).forEach(([key, value]) => {
     container.style.setProperty(key, value);
   });
