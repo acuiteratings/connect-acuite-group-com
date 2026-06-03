@@ -18,21 +18,23 @@ MEDICLAIM_NOTICE_BODY = (
     "policy period 18 April 2026 to 17 April 2027.\n\n"
     "During this session, a comprehensive overview of the Mediclaim policy will be given and "
     "any questions you may have will be addressed.\n\n"
-    "To help you access policy-related services conveniently, all are requested to download the "
-    "Loop Health mobile application prior to the session.\n\n"
+    "Please download the Loop Health mobile application prior to the session to access "
+    "policy-related services conveniently.\n\n"
     f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}\n"
+    "\n"
     "Meeting ID: 471 237 799 317 99\n"
-    "Passcode: ry92FY6P"
+    "\n"
+    "Passcode: ry92FY6P\n"
+    "\n"
+    "When: 4th June 2026\n"
+    "Where: Microsoft Teams\n"
+    "Hosted by: HR"
 )
 MEDICLAIM_NOTICE_SUMMARY = (
     "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
     "policy period 18 April 2026 to 17 April 2027."
 )
 MEDICLAIM_NOTICE_DETAILS = [
-    "Session Details:",
-    "Date: 4 June 2026",
-    "Time: 4:30 PM",
-    "Platform: Microsoft Teams",
     (
         "During this session, a comprehensive overview of the Mediclaim policy will be given "
         "and any questions you may have will be addressed."
@@ -44,6 +46,9 @@ MEDICLAIM_NOTICE_DETAILS = [
     f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}",
     "Meeting ID: 471 237 799 317 99",
     "Passcode: ry92FY6P",
+    "When: 4th June 2026",
+    "Where: Microsoft Teams",
+    "Hosted by: HR",
 ]
 
 
@@ -67,13 +72,13 @@ def is_mediclaim_notice_active(post, *, today=None):
 def _mediclaim_notice_metadata(metadata):
     return {
         **metadata,
-        "bulletin_meta_lines": ["4 June 2026 | 4:30 PM | Microsoft Teams"],
+        "bulletin_meta_lines": ["4th June 2026 | Microsoft Teams | HR"],
         "home_announcement_display": {
             "formatLabel": "Orientation",
-            "dateLabel": "4 June 2026",
-            "timeLabel": "4:30 PM",
+            "dateLabel": "4th June 2026",
+            "timeLabel": "4th June 2026",
             "venueLabel": "Microsoft Teams",
-            "hostLabel": "People & Culture",
+            "hostLabel": "HR",
             "audienceLabel": "For all employees",
             "countdownLabel": "Policy period: 18 April 2026 to 17 April 2027",
             "summary": MEDICLAIM_NOTICE_SUMMARY,
@@ -84,9 +89,9 @@ def _mediclaim_notice_metadata(metadata):
         "bulletin_cta_label": "Join on Microsoft Teams",
         "bulletin_cta_target": MEDICLAIM_NOTICE_TEAMS_LINK,
         "post_as_company": True,
-        "company_author_name": "People & Culture",
+        "company_author_name": "HR",
         "company_author_title": "Official company post",
-        "company_author_initials": "PC",
+        "company_author_initials": "HR",
     }
 
 
