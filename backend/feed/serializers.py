@@ -24,11 +24,7 @@ MEDICLAIM_NOTICE_BODY = (
     "\n"
     "Meeting ID: 471 237 799 317 99\n"
     "\n"
-    "Passcode: ry92FY6P\n"
-    "\n"
-    "When: 4th June 2026\n"
-    "Where: Microsoft Teams\n"
-    "Hosted by: HR"
+    "Passcode: ry92FY6P"
 )
 MEDICLAIM_NOTICE_SUMMARY = (
     "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
@@ -46,9 +42,6 @@ MEDICLAIM_NOTICE_DETAILS = [
     f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}",
     "Meeting ID: 471 237 799 317 99",
     "Passcode: ry92FY6P",
-    "When: 4th June 2026",
-    "Where: Microsoft Teams",
-    "Hosted by: HR",
 ]
 
 
