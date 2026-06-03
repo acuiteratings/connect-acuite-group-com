@@ -10,17 +10,19 @@ from .models import Comment, PostReaction
 MEDICLAIM_NOTICE_START_DATE = date(2026, 6, 3)
 MEDICLAIM_NOTICE_REVERT_DATE = date(2026, 6, 5)
 MEDICLAIM_NOTICE_TITLE = "Mediclaim Policy Orientation Session"
+MEDICLAIM_NOTICE_TEAMS_LINK = (
+    "https://teams.microsoft.com/meet/47123779931799?p=ofNdg3rsrsalS0dj1O"
+)
 MEDICLAIM_NOTICE_BODY = (
     "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
     "policy period 18 April 2026 to 17 April 2027.\n\n"
-    "Session Details:\n"
-    "- Date: 4 June 2026\n"
-    "- Time: 4:30 PM\n"
-    "- Platform: Microsoft Teams\n\n"
     "During this session, a comprehensive overview of the Mediclaim policy will be given and "
     "any questions you may have will be addressed.\n\n"
     "To help you access policy-related services conveniently, all are requested to download the "
-    "Loop Health mobile application prior to the session."
+    "Loop Health mobile application prior to the session.\n\n"
+    f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}\n"
+    "Meeting ID: 471 237 799 317 99\n"
+    "Passcode: ry92FY6P"
 )
 MEDICLAIM_NOTICE_SUMMARY = (
     "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
@@ -39,6 +41,9 @@ MEDICLAIM_NOTICE_DETAILS = [
         "Please download the Loop Health mobile application prior to the session to access "
         "policy-related services conveniently."
     ),
+    f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}",
+    "Meeting ID: 471 237 799 317 99",
+    "Passcode: ry92FY6P",
 ]
 
 
@@ -73,7 +78,11 @@ def _mediclaim_notice_metadata(metadata):
             "countdownLabel": "Policy period: 18 April 2026 to 17 April 2027",
             "summary": MEDICLAIM_NOTICE_SUMMARY,
             "details": MEDICLAIM_NOTICE_DETAILS,
+            "ctaLabel": "Join on Microsoft Teams",
+            "ctaTarget": MEDICLAIM_NOTICE_TEAMS_LINK,
         },
+        "bulletin_cta_label": "Join on Microsoft Teams",
+        "bulletin_cta_target": MEDICLAIM_NOTICE_TEAMS_LINK,
         "post_as_company": True,
         "company_author_name": "People & Culture",
         "company_author_title": "Official company post",

@@ -228,7 +228,9 @@ class FeedApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         june_3_post = response.json()["results"][0]
         self.assertEqual(june_3_post["title"], "Mediclaim Policy Orientation Session")
-        self.assertIn("Microsoft Teams", june_3_post["body"])
+        self.assertIn("teams.microsoft.com/meet/47123779931799", june_3_post["body"])
+        self.assertIn("Meeting ID: 471 237 799 317 99", june_3_post["body"])
+        self.assertNotIn("Session Details:", june_3_post["body"])
 
         with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
@@ -236,10 +238,18 @@ class FeedApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         june_4_post = response.json()["results"][0]
         self.assertEqual(june_4_post["title"], "Mediclaim Policy Orientation Session")
-        self.assertIn("Microsoft Teams", june_4_post["body"])
+        self.assertIn("teams.microsoft.com/meet/47123779931799", june_4_post["body"])
         self.assertEqual(
             june_4_post["metadata"]["home_announcement_display"]["dateLabel"],
             "4 June 2026",
+        )
+        self.assertEqual(
+            june_4_post["metadata"]["home_announcement_display"]["ctaLabel"],
+            "Join on Microsoft Teams",
+        )
+        self.assertIn(
+            "teams.microsoft.com/meet/47123779931799",
+            june_4_post["metadata"]["home_announcement_display"]["ctaTarget"],
         )
 
         with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 5)):
