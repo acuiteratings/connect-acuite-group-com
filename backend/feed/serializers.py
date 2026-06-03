@@ -1,10 +1,87 @@
+from datetime import date
+
+from django.utils import timezone
+
 from accounts.serializers import serialize_user
 
 from .models import Comment, PostReaction
 
 
+MEDICLAIM_NOTICE_DATE = date(2026, 6, 4)
+MEDICLAIM_NOTICE_TITLE = "Mediclaim Policy Orientation Session"
+MEDICLAIM_NOTICE_BODY = (
+    "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
+    "policy period 18 April 2026 to 17 April 2027.\n\n"
+    "Session Details:\n"
+    "- Date: 4 June 2026\n"
+    "- Time: 4:30 PM\n"
+    "- Platform: Microsoft Teams\n\n"
+    "During this session, a comprehensive overview of the Mediclaim policy will be given and "
+    "any questions you may have will be addressed.\n\n"
+    "To help you access policy-related services conveniently, all are requested to download the "
+    "Loop Health mobile application prior to the session."
+)
+MEDICLAIM_NOTICE_SUMMARY = (
+    "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
+    "policy period 18 April 2026 to 17 April 2027."
+)
+MEDICLAIM_NOTICE_DETAILS = [
+    "Session Details:",
+    "Date: 4 June 2026",
+    "Time: 4:30 PM",
+    "Platform: Microsoft Teams",
+    (
+        "During this session, a comprehensive overview of the Mediclaim policy will be given "
+        "and any questions you may have will be addressed."
+    ),
+    (
+        "Please download the Loop Health mobile application prior to the session to access "
+        "policy-related services conveniently."
+    ),
+]
+
+
+def _is_people_culture_announcement(post):
+    metadata = post.metadata or {}
+    return (
+        str(metadata.get("home_announcement_tag", "")).strip().lower() == "people_culture"
+        and post.module == "bulletin"
+        and post.topic == "announcements"
+    )
+
+
+def is_mediclaim_notice_active(post, *, today=None):
+    today = today or timezone.localdate()
+    return _is_people_culture_announcement(post) and today == MEDICLAIM_NOTICE_DATE
+
+
+def _mediclaim_notice_metadata(metadata):
+    return {
+        **metadata,
+        "bulletin_meta_lines": ["4 June 2026 | 4:30 PM | Microsoft Teams"],
+        "home_announcement_display": {
+            "formatLabel": "Orientation",
+            "dateLabel": "4 June 2026",
+            "timeLabel": "4:30 PM",
+            "venueLabel": "Microsoft Teams",
+            "hostLabel": "People & Culture",
+            "audienceLabel": "For all employees",
+            "countdownLabel": "Policy period: 18 April 2026 to 17 April 2027",
+            "summary": MEDICLAIM_NOTICE_SUMMARY,
+            "details": MEDICLAIM_NOTICE_DETAILS,
+        },
+        "post_as_company": True,
+        "company_author_name": "People & Culture",
+        "company_author_title": "Official company post",
+        "company_author_initials": "PC",
+    }
+
+
 def serialize_post(post, *, viewer=None):
     metadata = post.metadata or {}
+    mediclaim_notice_active = is_mediclaim_notice_active(post)
+    if mediclaim_notice_active:
+        metadata = _mediclaim_notice_metadata(metadata)
     author = serialize_user(post.author)
     if metadata.get("post_as_company"):
         author = {
@@ -41,10 +118,13 @@ def serialize_post(post, *, viewer=None):
             or viewer.has_perm("feed.moderate_post")
             or viewer.has_perm("feed.moderate_comment")
         )
+    if mediclaim_notice_active:
+        reaction_count = 0
+        current_user_has_reacted = False
     return {
         "id": post.id,
-        "title": post.title,
-        "body": post.body,
+        "title": MEDICLAIM_NOTICE_TITLE if mediclaim_notice_active else post.title,
+        "body": MEDICLAIM_NOTICE_BODY if mediclaim_notice_active else post.body,
         "kind": post.kind,
         "module": post.module,
         "topic": post.topic,

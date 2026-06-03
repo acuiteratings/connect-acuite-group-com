@@ -1,4 +1,6 @@
 import json
+from datetime import date
+from unittest.mock import patch
 
 from django.core import mail
 from django.test import Client, TestCase, override_settings
@@ -202,6 +204,44 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
 
+    def test_people_culture_announcement_shows_mediclaim_notice_only_on_june_4(self):
+        Post.objects.create(
+            author=self.admin_user,
+            title="Wellness at Work: Healthy Habits for a Productive Day",
+            body="Wellness content",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={
+                "home_announcement_tag": "people_culture",
+                "bulletin_channel": "announcements",
+                "home_announcement_display": {
+                    "formatLabel": "Wellness",
+                    "summary": "Productivity is often supported by simple habits.",
+                },
+            },
+        )
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
+            response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
+
+        self.assertEqual(response.status_code, 200)
+        june_4_post = response.json()["results"][0]
+        self.assertEqual(june_4_post["title"], "Mediclaim Policy Orientation Session")
+        self.assertIn("Microsoft Teams", june_4_post["body"])
+        self.assertEqual(
+            june_4_post["metadata"]["home_announcement_display"]["dateLabel"],
+            "4 June 2026",
+        )
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 5)):
+            response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
+
+        self.assertEqual(response.status_code, 200)
+        june_5_post = response.json()["results"][0]
+        self.assertEqual(june_5_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
+        self.assertEqual(june_5_post["body"], "Wellness content")
+
     def test_feed_can_exclude_ceo_and_home_announcements_from_bulletin_board(self):
         Post.objects.create(
             author=self.admin_user,
@@ -362,6 +402,30 @@ class FeedApiTests(TestCase):
         self.assertFalse(second_response.json()["reacted"])
         self.assertEqual(second_response.json()["post"]["reaction_count"], 0)
         self.assertFalse(second_response.json()["post"]["current_user_has_reacted"])
+        self.assertEqual(PostReaction.objects.count(), 0)
+
+    def test_mediclaim_notice_like_does_not_persist_to_wellness_post(self):
+        post = Post.objects.create(
+            author=self.admin_user,
+            title="Wellness at Work: Healthy Habits for a Productive Day",
+            body="Wellness content",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            metadata={
+                "home_announcement_tag": "people_culture",
+                "bulletin_channel": "announcements",
+            },
+        )
+        self.client.force_login(self.user)
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
+            response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["reacted"])
+        self.assertEqual(response.json()["post"]["title"], "Mediclaim Policy Orientation Session")
+        self.assertEqual(response.json()["post"]["reaction_count"], 0)
         self.assertEqual(PostReaction.objects.count(), 0)
 
     def test_feed_comment_count_is_not_multiplied_by_reactions(self):
