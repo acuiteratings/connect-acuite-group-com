@@ -204,7 +204,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
 
-    def test_people_culture_announcement_shows_mediclaim_notice_only_on_june_4(self):
+    def test_people_culture_announcement_shows_mediclaim_notice_until_june_5(self):
         Post.objects.create(
             author=self.admin_user,
             title="Wellness at Work: Healthy Habits for a Productive Day",
@@ -221,6 +221,14 @@ class FeedApiTests(TestCase):
                 },
             },
         )
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 3)):
+            response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
+
+        self.assertEqual(response.status_code, 200)
+        june_3_post = response.json()["results"][0]
+        self.assertEqual(june_3_post["title"], "Mediclaim Policy Orientation Session")
+        self.assertIn("Microsoft Teams", june_3_post["body"])
 
         with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")

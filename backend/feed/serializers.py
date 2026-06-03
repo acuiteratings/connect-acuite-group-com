@@ -7,7 +7,8 @@ from accounts.serializers import serialize_user
 from .models import Comment, PostReaction
 
 
-MEDICLAIM_NOTICE_DATE = date(2026, 6, 4)
+MEDICLAIM_NOTICE_START_DATE = date(2026, 6, 3)
+MEDICLAIM_NOTICE_REVERT_DATE = date(2026, 6, 5)
 MEDICLAIM_NOTICE_TITLE = "Mediclaim Policy Orientation Session"
 MEDICLAIM_NOTICE_BODY = (
     "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
@@ -52,7 +53,10 @@ def _is_people_culture_announcement(post):
 
 def is_mediclaim_notice_active(post, *, today=None):
     today = today or timezone.localdate()
-    return _is_people_culture_announcement(post) and today == MEDICLAIM_NOTICE_DATE
+    return (
+        _is_people_culture_announcement(post)
+        and MEDICLAIM_NOTICE_START_DATE <= today < MEDICLAIM_NOTICE_REVERT_DATE
+    )
 
 
 def _mediclaim_notice_metadata(metadata):
