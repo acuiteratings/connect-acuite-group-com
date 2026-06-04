@@ -300,6 +300,54 @@ class PeopleSyncServiceTests(TestCase):
         self.assertFalse(user.is_directory_visible)
         self.assertFalse(profile.is_visible)
 
+    def test_full_sync_hides_local_employee_missing_from_people_payload(self):
+        chetan = User.objects.create_user(
+            email="chetan.bagade@acuite.in",
+            employee_code="ARR-00423",
+            first_name="Chetan",
+            last_name="Bagade",
+            display_name="Chetan Raghunath Bagade",
+            employment_status=User.EmploymentStatus.ACTIVE,
+            is_active=True,
+            is_directory_visible=True,
+            must_change_password=False,
+        )
+        DirectoryProfile.objects.create(
+            user=chetan,
+            city="Mumbai",
+            office_location="Mumbai",
+            date_of_birth=date(1990, 6, 5),
+            joined_on=date(2022, 4, 4),
+            is_visible=True,
+        )
+
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            self.assertIsNone(updated_since)
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00424",
+                        "email": "active.employee@acuite.in",
+                        "full_name": "Active Employee",
+                        "employment_status": "active",
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run = run_people_sync(sync_type=PeopleSyncRun.SyncType.FULL, fetch_page=fake_fetch_page)
+
+        self.assertEqual(run.status, PeopleSyncRun.Status.SUCCESS)
+        chetan.refresh_from_db()
+        profile = chetan.directory_profile
+        self.assertEqual(chetan.employment_status, User.EmploymentStatus.SUSPENDED)
+        self.assertFalse(chetan.is_active)
+        self.assertFalse(chetan.is_directory_visible)
+        self.assertFalse(profile.is_visible)
+
     def test_partial_success_logs_failures_and_keeps_same_checkpoint(self):
         checkpoint = timezone.make_aware(datetime(2026, 4, 4, 10, 0, 0), dt_timezone.utc)
 

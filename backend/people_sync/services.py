@@ -466,6 +466,39 @@ def sync_one_employee(item):
     }
 
 
+def _hide_users_missing_from_full_sync(seen_user_ids):
+    seen_user_ids = {int(user_id) for user_id in seen_user_ids if user_id}
+    if not seen_user_ids:
+        return 0
+
+    stale_profiles = list(
+        DirectoryProfile.objects.select_related("user")
+        .filter(user__employee_code__gt="")
+        .exclude(user_id__in=seen_user_ids)
+        .filter(
+            is_visible=True,
+            user__is_directory_visible=True,
+            user__is_active=True,
+            user__employment_status__in={
+                User.EmploymentStatus.ACTIVE,
+                User.EmploymentStatus.PENDING,
+            },
+        )
+    )
+    updated_count = 0
+    with transaction.atomic():
+        for profile in stale_profiles:
+            user = profile.user
+            user.employment_status = User.EmploymentStatus.SUSPENDED
+            user.is_active = False
+            user.is_directory_visible = False
+            user.save(update_fields=["employment_status", "is_active", "is_directory_visible", "updated_at"])
+            profile.is_visible = False
+            profile.save(update_fields=["is_visible", "updated_at"])
+            updated_count += 1
+    return updated_count
+
+
 def run_people_sync(*, sync_type="incremental", requested_updated_since=None, fetch_page=None):
     sync_type = str(sync_type or PeopleSyncRun.SyncType.INCREMENTAL).strip().lower()
     if sync_type not in {PeopleSyncRun.SyncType.FULL, PeopleSyncRun.SyncType.INCREMENTAL}:
@@ -487,6 +520,7 @@ def run_people_sync(*, sync_type="incremental", requested_updated_since=None, fe
 
     latest_source_updated_at = None
     pending_links = []
+    seen_user_ids = set()
     cursor = None
 
     try:
@@ -522,6 +556,8 @@ def run_people_sync(*, sync_type="incremental", requested_updated_since=None, fe
 
                 if result["manager_employee_id"]:
                     pending_links.append((result["user_id"], result["manager_employee_id"]))
+                if result["user_id"]:
+                    seen_user_ids.add(result["user_id"])
                 if latest_source_updated_at is None or result["source_updated_at"] > latest_source_updated_at:
                     latest_source_updated_at = result["source_updated_at"]
 
@@ -532,6 +568,8 @@ def run_people_sync(*, sync_type="incremental", requested_updated_since=None, fe
         _link_managers(pending_links)
 
         if run.records_failed == 0:
+            if sync_type == PeopleSyncRun.SyncType.FULL and seen_user_ids:
+                run.records_updated += _hide_users_missing_from_full_sync(seen_user_ids)
             run.status = PeopleSyncRun.Status.SUCCESS
             run.next_updated_since = latest_source_updated_at or actual_updated_since or run.source_generated_at
         elif run.records_created or run.records_updated or run.records_skipped:
