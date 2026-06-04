@@ -413,6 +413,14 @@ def _ensure_reward_entry(
 def sync_coin_ledger_for_reaction(reaction):
     if reaction.reaction_type != PostReaction.ReactionType.LIKE:
         return None, False
+    if CoinLedgerEntry.objects.filter(
+        user=reaction.user,
+        entry_type=CoinLedgerEntry.EntryType.EARN,
+        event_key="reaction_given",
+        metadata__post_id=reaction.post_id,
+        metadata__reaction_type=reaction.reaction_type,
+    ).exists():
+        return None, False
     return _ensure_reward_entry(
         qualifies=True,
         user=reaction.user,

@@ -9,6 +9,7 @@ from django.utils import timezone
 from accounts.models import User
 from directory.models import CommunityMembership
 from operations.models import AnalyticsEvent, AuditLog
+from store.models import CoinLedgerEntry
 
 from .models import Comment, Post, PostReaction
 
@@ -445,6 +446,35 @@ class FeedApiTests(TestCase):
         self.assertEqual(second_response.json()["post"]["reaction_count"], 0)
         self.assertFalse(second_response.json()["post"]["current_user_has_reacted"])
         self.assertEqual(PostReaction.objects.count(), 0)
+
+    def test_reliking_same_post_does_not_award_like_coins_again(self):
+        post = Post.objects.create(
+            author=self.user,
+            title="Recognition post",
+            body="Visible post",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        self.client.force_login(self.user)
+
+        first_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+        unlike_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+        relike_response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(unlike_response.status_code, 200)
+        self.assertEqual(relike_response.status_code, 200)
+        self.assertTrue(relike_response.json()["reacted"])
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                event_key="reaction_given",
+                entry_type=CoinLedgerEntry.EntryType.EARN,
+                metadata__post_id=post.id,
+            ).count(),
+            1,
+        )
 
     def test_mediclaim_notice_like_does_not_persist_to_wellness_post(self):
         post = Post.objects.create(
