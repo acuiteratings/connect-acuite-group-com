@@ -73,6 +73,44 @@ DATE_INPUT_FORMATS = (
     "%d %B %y",
 )
 
+ACTIVE_STATUS_VALUES = {"active", "current", "enabled", "live", "working"}
+ALUMNI_STATUS_VALUES = {
+    "alumni",
+    "exit",
+    "exited",
+    "former",
+    "inactive",
+    "in-active",
+    "left",
+    "not active",
+    "offboarded",
+    "relieved",
+    "resigned",
+    "separated",
+    "terminated",
+}
+SUSPENDED_STATUS_VALUES = {
+    "blocked",
+    "deactivated",
+    "deactivate",
+    "disabled",
+    "disable",
+    "locked",
+    "suspended",
+}
+ACTIVE_FLAG_FIELDS = (
+    "is_active",
+    "active",
+    "enabled",
+    "is_enabled",
+    "account_enabled",
+    "sso_enabled",
+    "is_sso_enabled",
+    "login_enabled",
+)
+TRUE_VALUES = {"1", "true", "yes", "y", "active", "enabled"}
+FALSE_VALUES = {"0", "false", "no", "n", "inactive", "disabled", "deactivated"}
+
 
 def _parse_optional_date(value):
     raw_value = str(value or "").strip()
@@ -84,6 +122,28 @@ def _parse_optional_date(value):
         except ValueError:
             continue
     return date.fromisoformat(raw_value)
+
+
+def _coerce_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    normalized = str(value or "").strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+    return default
+
+
+def _extract_active_flag(item):
+    for field_name in ACTIVE_FLAG_FIELDS:
+        if field_name in item:
+            return _coerce_bool(item.get(field_name), default=True)
+    return None
 
 
 def _first_text_value(item, *field_names):
@@ -137,24 +197,28 @@ def _validate_employee_item(item):
         payload.get("source_updated_at"),
         "source_updated_at",
     )
-    payload["is_directory_visible"] = bool(payload.get("is_directory_visible"))
+    payload["is_directory_visible"] = _coerce_bool(payload.get("is_directory_visible"))
     return payload
 
 
-def _map_employment_status(value):
+def _map_employment_status(value, *, active_flag=None):
     normalized = str(value or "").strip().lower()
-    if normalized in {"alumni", "exited", "exit"}:
+    if normalized in ALUMNI_STATUS_VALUES:
         return User.EmploymentStatus.ALUMNI
-    if normalized == "suspended":
+    if normalized in SUSPENDED_STATUS_VALUES:
         return User.EmploymentStatus.SUSPENDED
     if normalized == "pending":
         return User.EmploymentStatus.PENDING
+    if active_flag is False:
+        return User.EmploymentStatus.SUSPENDED
     return User.EmploymentStatus.ACTIVE
 
 
 def _resolve_local_employment_status(existing_user, source_status):
     if source_status in {User.EmploymentStatus.ALUMNI, User.EmploymentStatus.SUSPENDED}:
         return source_status
+    if source_status == User.EmploymentStatus.PENDING:
+        return User.EmploymentStatus.PENDING
     if existing_user and existing_user.employment_status == User.EmploymentStatus.PENDING:
         return User.EmploymentStatus.PENDING
     return User.EmploymentStatus.ACTIVE
@@ -199,7 +263,10 @@ def _apply_user_fields(user, item, *, source_status, is_new):
         "phone_number": str(item.get("mobile_number") or "").strip(),
         "employment_status": resolved_status,
         "is_directory_visible": source_visible,
-        "is_active": source_status != User.EmploymentStatus.ALUMNI,
+        "is_active": resolved_status in {
+            User.EmploymentStatus.ACTIVE,
+            User.EmploymentStatus.PENDING,
+        },
     }
 
     update_fields = []
@@ -222,7 +289,10 @@ def _apply_user_fields(user, item, *, source_status, is_new):
 
 
 def _apply_directory_fields(profile, user, item):
-    source_status = _map_employment_status(item.get("employment_status"))
+    source_status = _map_employment_status(
+        item.get("employment_status"),
+        active_flag=_extract_active_flag(item),
+    )
     source_visible = _directory_visibility_for_source(
         source_status,
         item.get("is_directory_visible"),
@@ -343,7 +413,10 @@ def fetch_people_page(*, updated_since=None, cursor=None):
 
 def sync_one_employee(item):
     payload = _validate_employee_item(item)
-    source_status = _map_employment_status(payload.get("employment_status"))
+    source_status = _map_employment_status(
+        payload.get("employment_status"),
+        active_flag=_extract_active_flag(payload),
+    )
     manager_employee_id = str(payload.get("manager_employee_id") or "").strip()
 
     with transaction.atomic():
@@ -368,7 +441,10 @@ def sync_one_employee(item):
                     source_status,
                     payload.get("is_directory_visible"),
                 ),
-                is_active=source_status != User.EmploymentStatus.ALUMNI,
+                is_active=source_status in {
+                    User.EmploymentStatus.ACTIVE,
+                    User.EmploymentStatus.PENDING,
+                },
                 can_post_in_connect=False,
                 must_change_password=False,
                 password_changed_at=timezone.now(),

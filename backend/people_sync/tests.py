@@ -207,6 +207,99 @@ class PeopleSyncServiceTests(TestCase):
         self.assertEqual(profile.date_of_birth, date(1994, 4, 4))
         self.assertEqual(profile.joined_on, date(2022, 4, 4))
 
+    def test_sync_disables_employee_when_source_status_is_disabled(self):
+        user = User.objects.create_user(
+            email="chetan.bagade@acuite.in",
+            employee_code="ARR-00423",
+            first_name="Chetan",
+            last_name="Bagade",
+            display_name="Chetan Raghunath Bagade",
+            employment_status=User.EmploymentStatus.ACTIVE,
+            is_active=True,
+            is_directory_visible=True,
+            must_change_password=False,
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            city="Mumbai",
+            office_location="Mumbai",
+            date_of_birth=date(1990, 6, 5),
+            joined_on=date(2022, 4, 4),
+            is_visible=True,
+        )
+
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00423",
+                        "email": "chetan.bagade@acuite.in",
+                        "full_name": "Chetan Raghunath Bagade",
+                        "employment_status": "disabled",
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run_people_sync(fetch_page=fake_fetch_page)
+
+        user.refresh_from_db()
+        profile = user.directory_profile
+        self.assertEqual(user.employment_status, User.EmploymentStatus.SUSPENDED)
+        self.assertFalse(user.is_active)
+        self.assertFalse(user.is_directory_visible)
+        self.assertFalse(profile.is_visible)
+
+    def test_sync_disables_employee_when_source_active_flag_is_false(self):
+        user = User.objects.create_user(
+            email="chetan.bagade@acuite.in",
+            employee_code="ARR-00423",
+            first_name="Chetan",
+            last_name="Bagade",
+            display_name="Chetan Raghunath Bagade",
+            employment_status=User.EmploymentStatus.ACTIVE,
+            is_active=True,
+            is_directory_visible=True,
+            must_change_password=False,
+        )
+        DirectoryProfile.objects.create(
+            user=user,
+            city="Mumbai",
+            office_location="Mumbai",
+            date_of_birth=date(1990, 6, 5),
+            joined_on=date(2022, 4, 4),
+            is_visible=True,
+        )
+
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00423",
+                        "email": "chetan.bagade@acuite.in",
+                        "full_name": "Chetan Raghunath Bagade",
+                        "employment_status": "active",
+                        "is_active": False,
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run_people_sync(fetch_page=fake_fetch_page)
+
+        user.refresh_from_db()
+        profile = user.directory_profile
+        self.assertEqual(user.employment_status, User.EmploymentStatus.SUSPENDED)
+        self.assertFalse(user.is_active)
+        self.assertFalse(user.is_directory_visible)
+        self.assertFalse(profile.is_visible)
+
     def test_partial_success_logs_failures_and_keeps_same_checkpoint(self):
         checkpoint = timezone.make_aware(datetime(2026, 4, 4, 10, 0, 0), dt_timezone.utc)
 
