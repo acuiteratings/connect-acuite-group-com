@@ -38,6 +38,7 @@ def _format_upcoming_label(target_date: date, reference_date: date) -> str:
 def _active_profiles_queryset():
     return DirectoryProfile.objects.select_related("user").filter(
         user__is_active=True,
+        user__employment_status=User.EmploymentStatus.ACTIVE,
         is_visible=True,
         user__is_directory_visible=True,
     )

@@ -43,6 +43,23 @@ class RecognitionOverviewTests(TestCase):
             is_visible=True,
             profile_photos=["https://example.com/karthik.jpg"],
         )
+        self.exit_user = User.objects.create_user(
+            email="exit.employee@acuite.in",
+            password="testpass123",
+            first_name="Exit",
+            last_name="Employee",
+            title="Former Analyst",
+            location="Mumbai",
+            employment_status=User.EmploymentStatus.ALUMNI,
+            is_active=True,
+        )
+        DirectoryProfile.objects.create(
+            user=self.exit_user,
+            company_name="Acuite",
+            date_of_birth=today,
+            joined_on=today - timedelta(days=365 * 2),
+            is_visible=True,
+        )
         self.post = Post.objects.create(
             author=self.user,
             title="Priya's recognition",
@@ -71,6 +88,10 @@ class RecognitionOverviewTests(TestCase):
         self.assertEqual(payload["totals"]["kudos_posts"], 1)
         self.assertEqual(len(payload["birthdays"]), 2)
         self.assertEqual(len(payload["anniversaries"]), 2)
+        self.assertNotIn(
+            "Exit Employee",
+            {item["name"] for item in payload["birthdays"] + payload["anniversaries"]},
+        )
         self.assertEqual(payload["birthdays"][0]["photo_url"], "data:image/png;base64,PRIYA")
         anniversary_photos = {
             item["name"]: item["photo_url"]
