@@ -560,6 +560,7 @@ const appData = {
   learningBooks: [],
   learningRequisitions: [],
   homeAnnouncementPosts: [],
+  eventPosts: [],
   activeOpinionPoll: null,
   bulletinPosts: [
     {
@@ -784,6 +785,7 @@ Object.assign(appData, {
   learningRequisitions: [],
   homePosts: [],
   bulletinPosts: [],
+  eventPosts: [],
   ceoDeskPosts: [],
   myPosts: [],
   communityClubs: [],
@@ -1081,6 +1083,7 @@ async function init() {
       loadCurrentProfile(),
       loadCommunityData(),
       loadHomeAnnouncementPosts(),
+      loadEventPosts(),
       loadOpinionPoll(),
       loadBulletinPosts(),
       loadCeoDeskPosts(),
@@ -1301,6 +1304,23 @@ async function loadBulletinPosts() {
     appData.bulletinPosts = sortBulletinPostsNewestFirst([...employeeResults, ...celebrationResults]);
   } catch (error) {
     bulletinLoadError = error.message || "Could not load the Bulletin Board.";
+  }
+}
+
+async function loadEventPosts() {
+  appData.eventPosts = [];
+
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/feed/events/");
+    appData.eventPosts = Array.isArray(payload.results)
+      ? payload.results.map(mapBulletinPost)
+      : [];
+  } catch (error) {
+    appData.eventPosts = [];
   }
 }
 
@@ -5185,6 +5205,7 @@ function mapBulletinPost(post) {
       : [],
     ctaLabel: String(metadata.bulletin_cta_label || "").trim(),
     ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
+    eventDate: String(metadata.event_date || metadata.eventDate || "").trim(),
     imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
     homeAnnouncementTag: String(metadata.home_announcement_tag || "").trim(),
@@ -6952,6 +6973,70 @@ function formatMonthDay(value) {
   });
 }
 
+function parseSidebarEventDateLabel(value) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue || /now live|to be announced|published on connect/i.test(rawValue)) {
+    return null;
+  }
+  const normalized = rawValue
+    .split("|")[0]
+    .replace(/\b(mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday|sun|sunday)\b,?/ig, "")
+    .replace(/\b(last date of submission|last date|date|when)\b\s*[:-]?/ig, "")
+    .replace(/\b(\d{1,2})(st|nd|rd|th)\b/ig, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  const candidates = [
+    /^\d{4}-\d{2}-\d{2}/.test(rawValue) ? rawValue.slice(0, 10) : "",
+    normalized,
+    normalized.replace(/-/g, " "),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const parsed = new Date(`${candidate}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    const fallback = new Date(candidate);
+    if (!Number.isNaN(fallback.getTime())) {
+      return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
+    }
+  }
+  return null;
+}
+
+function collectSidebarEventItems() {
+  const liveEvents = (appData.eventPosts || []).map((post) => ({
+    id: `event:${post.sourceId || post.id}`,
+    label: post.title,
+    dateLabel: post.eventDate || post.metaLines?.[0] || post.publishedAt,
+  }));
+  const announcementEvents = (appData.homeAnnouncementPosts || []).map((post) => {
+    const display = post.homeAnnouncementDisplay || {};
+    const townHallDate = post.townHallDetails?.date || "";
+    return {
+      id: `announcement:${post.sourceId || post.id}`,
+      label: post.title,
+      dateLabel: townHallDate || display.dateLabel || post.metaLines?.[0] || "",
+    };
+  });
+  const staticEvents = COMPANY_EVENT_CALENDAR.map((item) => ({
+    id: `static:${item.date}:${item.label}`,
+    label: item.label,
+    dateLabel: item.date,
+  }));
+  const deduped = new Map();
+  [...liveEvents, ...announcementEvents, ...staticEvents].forEach((item) => {
+    const parsedDate = parseSidebarEventDateLabel(item.dateLabel);
+    if (!parsedDate) {
+      return;
+    }
+    const key = `${item.label.toLowerCase()}|${parsedDate.toISOString().slice(0, 10)}`;
+    if (!deduped.has(key)) {
+      deduped.set(key, { ...item, parsedDate });
+    }
+  });
+  return Array.from(deduped.values());
+}
+
 function formatHolidayLongDate(value) {
   if (!value) {
     return "";
@@ -7053,12 +7138,7 @@ function renderSidebarEvents() {
   const now = new Date();
   const todayStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const endStamp = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).getTime();
-  const upcoming = COMPANY_EVENT_CALENDAR
-    .map((item) => ({
-      ...item,
-      parsedDate: new Date(`${item.date}T00:00:00`),
-    }))
-    .filter((item) => !Number.isNaN(item.parsedDate.getTime()))
+  const upcoming = collectSidebarEventItems()
     .filter((item) => item.parsedDate.getTime() >= todayStamp)
     .filter((item) => item.parsedDate.getTime() <= endStamp)
     .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime());
@@ -7072,7 +7152,7 @@ function renderSidebarEvents() {
   container.innerHTML = upcoming.map((item) => `
     <article class="sidebar-holiday-item">
       <strong>${escapeHtml(item.label)}</strong>
-      <span>${escapeHtml(formatMonthDay(item.date))}</span>
+      <span>${escapeHtml(formatMonthDay(item.parsedDate.toISOString()))}</span>
     </article>
   `).join("");
 }
