@@ -77,6 +77,22 @@ class RecognitionOverviewTests(TestCase):
             moderation_status=Comment.ModerationStatus.PUBLISHED,
         )
         PostReaction.objects.create(post=self.post, user=self.peer)
+        self.peer_post = Post.objects.create(
+            author=self.peer,
+            title="Karthik's update",
+            body="A bulletin note.",
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        Comment.objects.create(
+            post=self.peer_post,
+            author=self.user,
+            body="Useful update.",
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        PostReaction.objects.create(post=self.peer_post, user=self.user)
 
     def test_overview_returns_points_and_celebrations(self):
         self.client.force_login(self.user)
@@ -100,4 +116,6 @@ class RecognitionOverviewTests(TestCase):
         self.assertEqual(anniversary_photos["Priya Sharma"], "data:image/png;base64,PRIYA")
         self.assertEqual(anniversary_photos["Karthik Iyer"], "https://example.com/karthik.jpg")
         self.assertGreater(payload["current_user_points"], 0)
+        self.assertEqual(payload["current_user_activity"]["published_comments"], 2)
+        self.assertEqual(payload["current_user_activity"]["likes_given"], 1)
         self.assertEqual(payload["leaderboard"][0]["name"], self.user.full_name)

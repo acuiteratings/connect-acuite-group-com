@@ -188,10 +188,23 @@ def build_anniversaries(limit=5):
 def build_recognition_overview(for_user):
     points_table = build_points_table()
     my_points = 0
+    current_user_activity = {
+        "published_comments": 0,
+        "likes_given": 0,
+        "posts_published": 0,
+        "likes_received": 0,
+    }
     if getattr(for_user, "is_authenticated", False):
         match = next((row for row in points_table if row["user_id"] == for_user.id), None)
         if match:
             my_points = match["points"]
+            breakdown = match.get("breakdown") or {}
+            current_user_activity = {
+                "published_comments": int(breakdown.get("published_comment") or 0),
+                "likes_given": int(breakdown.get("reaction_given") or 0),
+                "posts_published": int(breakdown.get("published_post") or 0),
+                "likes_received": int(breakdown.get("reaction_received") or 0),
+            }
 
     recognition_posts = Post.objects.filter(
         module=Post.Module.EMPLOYEE_POSTS,
@@ -204,6 +217,7 @@ def build_recognition_overview(for_user):
 
     return {
         "current_user_points": my_points,
+        "current_user_activity": current_user_activity,
         "point_rules": [
             {"key": key, "points": points}
             for key, points in POINT_RULES.items()

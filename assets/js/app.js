@@ -538,6 +538,12 @@ const appData = {
   currentProfile: null,
   profileSkillLibrary: [],
   currentUserPoints: 0,
+  currentUserActivity: {
+    published_comments: 0,
+    likes_given: 0,
+    posts_published: 0,
+    likes_received: 0,
+  },
   rewardRules: [],
   storeItems: [],
   storeRedemptions: [],
@@ -755,6 +761,12 @@ Object.assign(appData, {
   currentProfile: null,
   profileSkillLibrary: [],
   currentUserPoints: 0,
+  currentUserActivity: {
+    published_comments: 0,
+    likes_given: 0,
+    posts_published: 0,
+    likes_received: 0,
+  },
   rewardRules: [],
   storeItems: [],
   storeRedemptions: [],
@@ -1179,6 +1191,12 @@ async function loadRecognitionData() {
     appData.birthdays = [];
     appData.anniversaries = [];
     appData.currentUserPoints = 0;
+    appData.currentUserActivity = {
+      published_comments: 0,
+      likes_given: 0,
+      posts_published: 0,
+      likes_received: 0,
+    };
     appData.rewardRules = [];
     return;
   }
@@ -1192,6 +1210,19 @@ async function loadRecognitionData() {
       ? overviewPayload.anniversaries
       : [];
     appData.currentUserPoints = Number(overviewPayload.current_user_points || 0);
+    appData.currentUserActivity = overviewPayload.current_user_activity && typeof overviewPayload.current_user_activity === "object"
+      ? {
+          published_comments: Number(overviewPayload.current_user_activity.published_comments || 0),
+          likes_given: Number(overviewPayload.current_user_activity.likes_given || 0),
+          posts_published: Number(overviewPayload.current_user_activity.posts_published || 0),
+          likes_received: Number(overviewPayload.current_user_activity.likes_received || 0),
+        }
+      : {
+          published_comments: 0,
+          likes_given: 0,
+          posts_published: 0,
+          likes_received: 0,
+        };
     appData.rewardRules = Array.isArray(overviewPayload.point_rules)
       ? overviewPayload.point_rules
       : [];
@@ -1199,6 +1230,12 @@ async function loadRecognitionData() {
     appData.birthdays = [];
     appData.anniversaries = [];
     appData.currentUserPoints = 0;
+    appData.currentUserActivity = {
+      published_comments: 0,
+      likes_given: 0,
+      posts_published: 0,
+      likes_received: 0,
+    };
     appData.rewardRules = [];
   }
 }
@@ -2863,16 +2900,12 @@ function renderPanels() {
 }
 
 function renderProfile() {
-  const canAdminister = currentUserCanAdministerConnect();
-  const totalComments = appData.myPosts.reduce(
-    (sum, post) => sum + Number(post.commentCount || 0),
-    0,
-  );
+  const activity = appData.currentUserActivity && typeof appData.currentUserActivity === "object"
+    ? appData.currentUserActivity
+    : {};
+  const totalComments = Number(activity.published_comments || 0);
   const availableCoins = Number(appData.storeBalance.available_points || 0);
-  const totalLikes = appData.myPosts.reduce(
-    (sum, post) => sum + Number(post.reactionCount || 0),
-    0,
-  );
+  const totalLikes = Number(activity.likes_given || 0);
 
   setAvatarElement(elements.navAvatar, {
     initials: appData.currentUser.initials,
