@@ -265,6 +265,9 @@ def posts_collection(request):
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
+        if _query_flag_enabled(request, "latest_first"):
+            queryset = queryset.order_by("-published_at", "-created_at")
+
         limit = _query_limit(request)
         posts = [serialize_post(post, viewer=request.user) for post in queryset[:limit]]
         return JsonResponse({"count": len(posts), "results": posts})

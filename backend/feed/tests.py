@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 
 from django.core import mail
@@ -147,6 +147,36 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Bulletin post")
         self.assertEqual(payload["results"][0]["topic"], "announcements")
+
+    def test_feed_latest_first_ignores_pinned_priority_before_limit(self):
+        old_time = datetime(2026, 1, 1, 9, 0, tzinfo=timezone.get_current_timezone())
+        new_time = datetime(2026, 1, 2, 9, 0, tzinfo=timezone.get_current_timezone())
+        Post.objects.create(
+            author=self.user,
+            title="Older pinned bulletin",
+            body="Pinned but older",
+            module=Post.Module.BULLETIN,
+            topic="hr",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            pinned=True,
+            published_at=old_time,
+        )
+        Post.objects.create(
+            author=self.user,
+            title="Latest birthday card",
+            body="Newest celebration",
+            module=Post.Module.BULLETIN,
+            topic="hr",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=new_time,
+        )
+
+        response = self.client.get("/api/feed/posts/?module=bulletin&topic=hr&latest_first=1&limit=1")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["title"], "Latest birthday card")
 
     def test_feed_can_filter_posts_by_bulletin_channel(self):
         Post.objects.create(

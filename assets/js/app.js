@@ -272,7 +272,7 @@ const IAM_ACUITE_PLACEHOLDER_COLOR = "#7b241c";
 const FEED_MODULE_BULLETIN = "bulletin";
 const FEED_MODULE_EMPLOYEE_POSTS = "employee_posts";
 const FEED_MODULE_COMMUNITY = "community";
-const FEED_BULLETIN_BOARD_LIMIT = 200;
+const FEED_BULLETIN_BOARD_LIMIT = 50;
 const CELEBRATION_TEMPLATE_KEYS = new Set([
   "birthday_wish",
   "work_anniversary",
@@ -1286,10 +1286,10 @@ async function loadBulletinPosts() {
   try {
     const [employeePostsPayload, celebrationPostsPayload] = await Promise.all([
       window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission&moderation_status=published&limit=${FEED_BULLETIN_BOARD_LIMIT}`,
+        `/api/feed/posts/?module=${FEED_MODULE_EMPLOYEE_POSTS}&topic=employee_submission&moderation_status=published&latest_first=1&limit=${FEED_BULLETIN_BOARD_LIMIT}`,
       ),
       window.AcuiteConnectAuth.apiRequest(
-        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&topic=hr&moderation_status=published&limit=${FEED_BULLETIN_BOARD_LIMIT}`,
+        `/api/feed/posts/?module=${FEED_MODULE_BULLETIN}&topic=hr&moderation_status=published&latest_first=1&limit=${FEED_BULLETIN_BOARD_LIMIT}`,
       ),
     ]);
     const employeeResults = Array.isArray(employeePostsPayload.results)
