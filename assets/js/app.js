@@ -866,6 +866,8 @@ let brochurePresentationHudTimer = null;
 let brochurePresentationHintTimer = null;
 let selectedAdminUserId = null;
 let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
+const dataLoadPromises = {};
+const dataLoadComplete = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -936,20 +938,119 @@ function safeRender(label, renderFn) {
 function renderShell() {
   safeRender("panels", renderPanels);
   safeRender("profile", renderProfile);
-  safeRender("profile builder", renderProfileBuilder);
-  safeRender("brochure builder", renderBrochureBuilderPanel);
   safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
-  safeRender("community panel", renderCommunityPanel);
-  safeRender("home announcement", renderHomeAnnouncement);
-  safeRender("holiday panel", renderHolidayPanel);
+  safeRender("active panel", renderActivePanel);
   safeRender("birthdays", renderBirthdays);
   safeRender("anniversaries", renderAnniversaries);
   safeRender("sidebar holidays", renderSidebarHolidays);
   safeRender("sidebar events", renderSidebarEvents);
   safeRender("CEO desk like button", renderCeoDeskLikeButton);
   safeRender("filter buttons", syncFilterButtons);
+}
+
+function isDataLoading(key) {
+  return Boolean(dataLoadPromises[key]);
+}
+
+function tabDependsOnDataKey(tabId, key) {
+  const tab = String(tabId || state.activeTab || "home");
+  const dependencies = {
+    home: ["homeAnnouncements", "events", "opinionPoll"],
+    "ceo-desk": ["ceoDesk"],
+    bulletin: ["bulletin"],
+    "my-posts": ["myPosts"],
+    community: ["community"],
+    library: ["learning"],
+    store: ["store"],
+    directory: ["directory"],
+    profile: ["profile"],
+    "iam-acuite": ["directory"],
+    "engagement-score": ["engagementScore"],
+  };
+  return Boolean(dependencies[tab]?.includes(key));
+}
+
+function requestDataLoad(key, loader, { force = false, render = true } = {}) {
+  if (!force && dataLoadComplete[key]) {
+    return Promise.resolve();
+  }
+  if (dataLoadPromises[key]) {
+    return dataLoadPromises[key];
+  }
+  const shouldRenderAfter = () => render || tabDependsOnDataKey(state.activeTab, key);
+  dataLoadPromises[key] = Promise.resolve()
+    .then(loader)
+    .then(() => {
+      dataLoadComplete[key] = true;
+    })
+    .catch((error) => {
+      console.error(`Could not load ${key}.`, error);
+    })
+    .finally(() => {
+      delete dataLoadPromises[key];
+      if (shouldRenderAfter()) {
+        renderAll();
+      }
+    });
+  if (shouldRenderAfter()) {
+    renderAll();
+  }
+  return dataLoadPromises[key];
+}
+
+function loadCommonData({ render = true } = {}) {
+  return Promise.allSettled([
+    requestDataLoad("profile", loadCurrentProfile, { render }),
+    requestDataLoad("recognition", loadRecognitionData, { render }),
+    requestDataLoad("events", loadEventPosts, { render }),
+  ]);
+}
+
+function loadDataForTab(tabId, { render = true } = {}) {
+  const tab = ENABLED_TABS.has(tabId) ? tabId : "home";
+  const tasksByTab = {
+    home: [
+      ["homeAnnouncements", loadHomeAnnouncementPosts],
+      ["opinionPoll", loadOpinionPoll],
+      ["events", loadEventPosts],
+    ],
+    "ceo-desk": [["ceoDesk", loadCeoDeskPosts]],
+    bulletin: [["bulletin", loadBulletinPosts]],
+    "my-posts": [["myPosts", loadMyPosts]],
+    community: [["community", loadCommunityData]],
+    library: [["learning", loadLearningData]],
+    store: [["store", loadStoreData]],
+    directory: [["directory", loadDirectoryData]],
+    profile: [["profile", loadCurrentProfile]],
+    "iam-acuite": [["directory", loadDirectoryData]],
+    "engagement-score": [["engagementScore", loadEngagementScores]],
+  };
+  const tasks = tasksByTab[tab] || [];
+  return Promise.allSettled(
+    tasks.map(([key, loader]) => requestDataLoad(key, loader, { render })),
+  );
+}
+
+function warmDataInBackground() {
+  const warmups = [
+    ["homeAnnouncements", loadHomeAnnouncementPosts],
+    ["opinionPoll", loadOpinionPoll],
+    ["bulletin", loadBulletinPosts],
+    ["ceoDesk", loadCeoDeskPosts],
+    ["myPosts", loadMyPosts],
+    ["store", loadStoreData],
+    ["learning", loadLearningData],
+    ["community", loadCommunityData],
+    ["directory", loadDirectoryData],
+  ].filter(([key]) => !dataLoadComplete[key] && !tabDependsOnDataKey(state.activeTab, key));
+
+  warmups.forEach(([key, loader], index) => {
+    window.setTimeout(() => {
+      void requestDataLoad(key, loader, { render: false });
+    }, 600 + index * 350);
+  });
 }
 
 async function init() {
@@ -1080,26 +1181,12 @@ async function init() {
   }
 
   try {
-    const criticalTasks = [
-      loadCurrentProfile(),
-      loadCommunityData(),
-      loadHomeAnnouncementPosts(),
-      loadEventPosts(),
-      loadOpinionPoll(),
-      loadBulletinPosts(),
-      loadCeoDeskPosts(),
-      loadMyPosts(),
-      loadStoreData(),
-      loadRecognitionData(),
-    ];
-    await Promise.allSettled(criticalTasks);
+    await Promise.allSettled([
+      loadCommonData({ render: false }),
+      loadDataForTab(state.activeTab, { render: false }),
+    ]);
     renderAll();
-    void Promise.allSettled([
-      loadDirectoryData(),
-      loadLearningData(),
-    ]).then(() => {
-      renderAll();
-    });
+    warmDataInBackground();
   } catch (error) {
     console.error("Could not complete the initial Connect render.", error);
     renderAll();
@@ -2141,37 +2228,46 @@ function handleSearchKeydown(event) {
   }
 }
 
+function renderActivePanel() {
+  const renderersByTab = {
+    "iam-acuite": [["I am Acuite panel", renderIamAcuitePanel]],
+    home: [["home announcement", renderHomeAnnouncement]],
+    holidays: [["holiday panel", renderHolidayPanel]],
+    "brochure-builder": [["brochure builder", renderBrochureBuilderPanel]],
+    "ceo-desk": [
+      ["CEO desk message", renderCeoDeskMessage],
+      ["CEO desk like button", renderCeoDeskLikeButton],
+    ],
+    library: [["library panel", renderLearningPanel]],
+    store: [["store panel", renderStorePanel]],
+    bulletin: [["bulletin panel", renderBulletinPanel]],
+    "my-posts": [["my posts panel", renderMyPostsPanel]],
+    community: [["community panel", renderCommunityPanel]],
+    profile: [["profile builder", renderProfileBuilder]],
+    "report-error": [["report error panel", renderReportErrorPanel]],
+    "engagement-score": [["engagement score panel", renderEngagementScorePanel]],
+    directory: [
+      ["directory filters", renderDirectoryChips],
+      ["directory", renderDirectory],
+    ],
+  };
+  const renderers = renderersByTab[state.activeTab] || [];
+  renderers.forEach(([label, renderer]) => safeRender(label, renderer));
+}
+
 function renderAll() {
   safeRender("theme", applyTheme);
   safeRender("panels", renderPanels);
   safeRender("profile", renderProfile);
   safeRender("profile coin bank", renderProfileCoinBank);
-  safeRender("profile builder", renderProfileBuilder);
-  safeRender("I am Acuite panel", renderIamAcuitePanel);
-  safeRender("brochure builder", renderBrochureBuilderPanel);
-  safeRender("brochure presentation", renderBrochurePresentation);
   safeRender("comments modal", renderCommentsModal);
   safeRender("composer access", syncComposerAccess);
-  safeRender("CEO desk message", renderCeoDeskMessage);
-  safeRender("home announcement", renderHomeAnnouncement);
-  safeRender("holiday panel", renderHolidayPanel);
-  safeRender("store panel", renderStorePanel);
-  safeRender("library panel", renderLearningPanel);
-  safeRender("bulletin panel", renderBulletinPanel);
-  safeRender("my posts panel", renderMyPostsPanel);
-  safeRender("community panel", renderCommunityPanel);
-  safeRender("report error panel", renderReportErrorPanel);
-  safeRender("engagement score panel", renderEngagementScorePanel);
-  safeRender("admin panel", renderAdminPanel);
-  if (state.activeTab === "directory") {
-    safeRender("directory filters", renderDirectoryChips);
-    safeRender("directory", renderDirectory);
-  }
+  safeRender("brochure presentation", renderBrochurePresentation);
+  safeRender("active panel", renderActivePanel);
   safeRender("birthdays", renderBirthdays);
   safeRender("anniversaries", renderAnniversaries);
   safeRender("sidebar holidays", renderSidebarHolidays);
   safeRender("sidebar events", renderSidebarEvents);
-  safeRender("CEO desk like button", renderCeoDeskLikeButton);
   safeRender("filter buttons", syncFilterButtons);
 }
 
@@ -3790,6 +3886,12 @@ function renderStoreCatalog() {
     return;
   }
 
+  if (isDataLoading("store") && !appData.storeItems.length) {
+    meta.textContent = "Loading Brand Store...";
+    container.innerHTML = '<div class="empty-state">Loading Brand Store items...</div>';
+    return;
+  }
+
   const items = getFilteredStoreItems();
   meta.textContent = appData.storeItems.length
     ? `${items.length} of ${appData.storeItems.length} brand-store items shown`
@@ -3994,6 +4096,11 @@ function renderBulletinPanel() {
     return;
   }
 
+  if (isDataLoading("bulletin") && !appData.bulletinPosts.length) {
+    container.innerHTML = '<div class="empty-state">Loading the latest Bulletin Board posts...</div>';
+    return;
+  }
+
   const posts = getVisibleBulletinBoardPosts();
   if (!posts.length) {
     container.innerHTML = `
@@ -4027,6 +4134,12 @@ function renderMyPostsPanel() {
     return;
   }
 
+  if (isDataLoading("myPosts") && !appData.myPosts.length) {
+    elements.myPostsResultsMeta.textContent = "Loading submissions...";
+    elements.myPostsList.innerHTML = '<div class="empty-state">Loading your submitted posts...</div>';
+    return;
+  }
+
   if (!appData.myPosts.length) {
     elements.myPostsResultsMeta.textContent = "No submissions yet";
     elements.myPostsList.innerHTML = '<div class="empty-state">Your submitted posts will appear here after your first draft is sent for review.</div>';
@@ -4050,10 +4163,6 @@ function renderMyPostsPanel() {
 function renderCommunityPanel() {
   if (!elements.communityGrid || !elements.communityResultsMeta || !elements.communityWorkspaceBody) {
     return;
-  }
-
-  if (state.activeTab === "community" && !communityLoading && !communityLoadError && !appData.communityClubs.length) {
-    void loadCommunityData();
   }
 
   if (communityLoadError) {
@@ -4164,15 +4273,6 @@ function renderEngagementScorePanel() {
     elements.engagementScoreMeta.textContent = "Admin access required.";
     elements.engagementScoreTableBody.innerHTML = '<tr><td colspan="7">Admin access required.</td></tr>';
     return;
-  }
-
-  if (
-    state.activeTab === "engagement-score"
-    && !engagementScoreLoading
-    && !engagementScoreLoadError
-    && !appData.engagementScores.length
-  ) {
-    void loadEngagementScores();
   }
 
   if (engagementScoreLoading && !appData.engagementScores.length) {
@@ -4777,6 +4877,12 @@ function renderLearningBooks() {
   if (learningLoadError) {
     meta.textContent = "Library load issue";
     container.innerHTML = `<div class="empty-state">${escapeHtml(learningLoadError)}</div>`;
+    return;
+  }
+
+  if (isDataLoading("learning") && !appData.learningBooks.length) {
+    meta.textContent = "Loading library...";
+    container.innerHTML = '<div class="empty-state">Loading library titles...</div>';
     return;
   }
 
@@ -5714,12 +5820,7 @@ function getFilteredStoreItems() {
 function switchTab(tabId) {
   state.activeTab = ENABLED_TABS.has(tabId) ? tabId : "home";
   saveState();
-  if (state.activeTab === "community" && !communityLoading && !appData.communityClubs.length) {
-    void loadCommunityData();
-  }
-  if (state.activeTab === "engagement-score") {
-    void loadEngagementScores();
-  }
+  void loadDataForTab(state.activeTab);
   hideSearchResults();
   renderPanels();
   window.requestAnimationFrame(() => {
@@ -6260,6 +6361,12 @@ function renderDirectory() {
   if (directoryLoadError) {
     resultsMeta.textContent = "Directory load issue";
     grid.innerHTML = `<div class="empty-state">${escapeHtml(directoryLoadError)}</div>`;
+    return;
+  }
+
+  if (isDataLoading("directory") && !appData.directory.length) {
+    resultsMeta.textContent = "Loading directory...";
+    grid.innerHTML = '<div class="empty-state">Loading employee directory...</div>';
     return;
   }
 
