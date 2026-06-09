@@ -51,6 +51,22 @@ class QuizApiTests(TestCase):
         self.assertEqual(QuizMatch.objects.count(), 1)
         self.assertEqual(QuizParticipant.objects.filter(match__host=self.host).count(), 3)
 
+    def test_lobby_returns_incoming_invite_for_invited_player(self):
+        self.client.force_login(self.host)
+        match_id = self.client.post(
+            "/api/quiz/matches/",
+            data=json.dumps({"difficulty": "amateur", "invitee_user_ids": [self.player_two.id]}),
+            content_type="application/json",
+        ).json()["match"]["id"]
+
+        self.client.force_login(self.player_two)
+        response = self.client.get("/api/quiz/lobby/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["incoming_invites"][0]["id"], match_id)
+        self.assertEqual(payload["incoming_invites"][0]["host"]["name"], "Quiz Host")
+
     def test_invited_player_can_accept_and_host_can_start(self):
         self.client.force_login(self.host)
         create_response = self.client.post(

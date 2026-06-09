@@ -25,6 +25,7 @@
     searchQuery: "",
     difficulty: "amateur",
     pollTimer: null,
+    notifiedInviteId: 0,
   };
 
   let elements = {};
@@ -57,10 +58,14 @@
       state.lobby = payload;
       const openMatch = payload.viewer_active_match || payload.incoming_invites?.[0] || payload.outgoing_invites?.[0] || null;
       if (openMatch) {
+        if (payload.incoming_invites?.[0]) {
+          showInvitePrompt(payload.incoming_invites[0]);
+        }
         await loadMatchState(openMatch.id);
       } else {
         state.match = null;
         render();
+        syncPolling();
       }
     } catch (error) {
       showAlert(error.message || "Could not load the Business & Finance Quiz.");
@@ -73,10 +78,14 @@
       state.match = payload.match || null;
       render();
       syncPolling();
+      if (state.match?.viewer?.status === "invited") {
+        showInvitePrompt(state.match);
+      }
     } catch (error) {
       state.match = null;
       showAlert(error.message || "Could not load the quiz match.");
       render();
+      syncPolling();
     }
   }
 
@@ -332,6 +341,15 @@
     if (actionName === "quiz-return-lobby") {
       state.match = null;
       await loadLobby();
+      return;
+    }
+    if (actionName === "quiz-open-invite") {
+      dismissInvitePrompt();
+      openQuizTab();
+      return;
+    }
+    if (actionName === "quiz-dismiss-invite") {
+      dismissInvitePrompt();
     }
   }
 
@@ -395,6 +413,7 @@
       });
       state.match = payload.match || null;
       render();
+      syncPolling();
     } catch (error) {
       showAlert(error.message || "Could not update the invitation.");
     }
@@ -437,13 +456,75 @@
 
   function syncPolling() {
     window.clearInterval(state.pollTimer);
-    if (!state.match || state.match.status !== "active") {
-      state.pollTimer = null;
+    if (state.match?.status === "active") {
+      state.pollTimer = window.setInterval(() => {
+        void loadMatchState(state.match.id);
+      }, 1000);
       return;
     }
+
+    if (state.match?.status === "invited") {
+      state.pollTimer = window.setInterval(() => {
+        void loadMatchState(state.match.id);
+      }, 5000);
+      return;
+    }
+
     state.pollTimer = window.setInterval(() => {
-      void loadMatchState(state.match.id);
-    }, 1000);
+      void pollLobbyForInvite();
+    }, 8000);
+  }
+
+  async function pollLobbyForInvite() {
+    try {
+      const payload = await window.AcuiteConnectAuth.apiRequest("/api/quiz/lobby/");
+      state.lobby = payload;
+      const incomingInvite = payload.incoming_invites?.[0] || null;
+      const openMatch = payload.viewer_active_match || incomingInvite || payload.outgoing_invites?.[0] || null;
+      if (!openMatch) {
+        return;
+      }
+      if (incomingInvite) {
+        showInvitePrompt(incomingInvite);
+      }
+      if (!state.match || state.match.id !== openMatch.id || state.match.status !== openMatch.status) {
+        await loadMatchState(openMatch.id);
+      }
+    } catch (error) {
+      // Background invite checks stay quiet; opening the Quiz panel still reports load errors.
+    }
+  }
+
+  function showInvitePrompt(match) {
+    if (!match || state.notifiedInviteId === match.id) {
+      return;
+    }
+    state.notifiedInviteId = match.id;
+    dismissInvitePrompt();
+
+    const prompt = document.createElement("div");
+    prompt.id = "quiz-invite-prompt";
+    prompt.className = "quiz-invite-prompt";
+    prompt.innerHTML = `
+      <div>
+        <strong>Business &amp; Finance Quiz invite</strong>
+        <span>${escapeHtml(match.host?.name || "A colleague")} invited you to join.</span>
+      </div>
+      <button type="button" class="btn-warm" data-action="quiz-open-invite">Open Quiz</button>
+      <button type="button" class="btn-link" data-action="quiz-dismiss-invite">Dismiss</button>
+    `;
+    document.body.appendChild(prompt);
+  }
+
+  function dismissInvitePrompt() {
+    document.getElementById("quiz-invite-prompt")?.remove();
+  }
+
+  function openQuizTab() {
+    document.querySelector('[data-switch-tab="quiz"]')?.click();
+    window.setTimeout(() => {
+      document.getElementById("panel-quiz")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   }
 
   function showAlert(message, isSuccess = false) {
