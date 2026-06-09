@@ -34,6 +34,30 @@
   white-space: pre-wrap;
 }
 
+.reported-error-attachment {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg3);
+}
+
+.reported-error-attachment a {
+  display: block;
+  width: min(420px, 100%);
+}
+
+.reported-error-attachment img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
 .reported-error-meta {
   display: flex;
   flex-wrap: wrap;

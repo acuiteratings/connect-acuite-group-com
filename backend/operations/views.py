@@ -1,3 +1,5 @@
+import base64
+import binascii
 import json
 from datetime import timedelta
 
@@ -28,6 +30,9 @@ from .serializers import (
 )
 from .services import record_analytics_event, record_audit_event
 
+REPORTED_ERROR_ATTACHMENT_MAX_BYTES = 1_000_000
+REPORTED_ERROR_ATTACHMENT_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+
 
 def _parse_json_body(request):
     if not request.body:
@@ -36,6 +41,54 @@ def _parse_json_body(request):
         return json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError as exc:
         raise ValueError("Request body must be valid JSON.") from exc
+
+
+def _clean_reported_error_attachment(payload):
+    attachment = payload.get("attachment")
+    if not attachment:
+        return {}
+    if not isinstance(attachment, dict):
+        raise ValueError("Attachment must be an image file.")
+
+    content_type = str(attachment.get("content_type", "")).strip().lower()
+    name = str(attachment.get("name", "")).strip()
+    data_url = str(attachment.get("data_url", "")).strip()
+    if content_type not in REPORTED_ERROR_ATTACHMENT_ALLOWED_TYPES:
+        raise ValueError("Attachment must be a PNG, JPG, GIF, or WebP image.")
+    prefix = f"data:{content_type};base64,"
+    if not data_url.startswith(prefix):
+        raise ValueError("Attachment could not be read. Please upload the screenshot again.")
+
+    encoded_payload = data_url[len(prefix):]
+    try:
+        decoded = base64.b64decode(encoded_payload, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("Attachment could not be read. Please upload the screenshot again.") from exc
+
+    size = len(decoded)
+    if size > REPORTED_ERROR_ATTACHMENT_MAX_BYTES:
+        raise ValueError("Attachment must be 1 MB or smaller.")
+    if _detect_image_content_type(decoded) != content_type:
+        raise ValueError("Attachment must be a valid PNG, JPG, GIF, or WebP image.")
+
+    return {
+        "attachment_name": name[:180],
+        "attachment_content_type": content_type,
+        "attachment_size": size,
+        "attachment_data_url": data_url,
+    }
+
+
+def _detect_image_content_type(data):
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if len(data) >= 12 and data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    return ""
 
 
 def _is_ops_user(user):
@@ -312,6 +365,10 @@ def reported_errors_collection(request):
     source_tab = str(payload.get("source_tab", "")).strip().lower()
     page_path = str(payload.get("page_path", "")).strip()
     metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    try:
+        attachment_fields = _clean_reported_error_attachment(payload)
+    except ValueError as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
 
     if not title:
         return JsonResponse({"detail": "A short error title is required."}, status=400)
@@ -325,6 +382,7 @@ def reported_errors_collection(request):
         source_tab=source_tab,
         page_path=page_path[:255],
         metadata=metadata,
+        **attachment_fields,
     )
     record_audit_event(
         action="error.reported",

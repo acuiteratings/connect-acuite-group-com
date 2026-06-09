@@ -191,9 +191,30 @@
           ${actionMarkup}
         </div>
         <p class="reported-error-details">${escapeHtml(item.details || "")}</p>
+        ${item.attachment ? renderReportAttachment(item.attachment) : ""}
         ${item.is_resolved && item.resolution_comment ? `<p class="reported-error-resolution-comment">${escapeHtml(item.resolution_comment)}</p>` : ""}
         ${item.is_resolved && item.resolved_by ? `<div class="reported-error-meta"><span>${escapeHtml(outcomeLabel)} by ${escapeHtml(item.resolved_by)}</span></div>` : ""}
       </article>
+    `;
+  }
+
+  function renderReportAttachment(attachment) {
+    const dataUrl = String(attachment.data_url || "");
+    if (!dataUrl.startsWith("data:image/")) {
+      return "";
+    }
+    const label = attachment.name || "Attached screenshot";
+    return `
+      <div class="reported-error-attachment">
+        <div class="reported-error-meta">
+          <span>Attachment: ${escapeHtml(label)}</span>
+          <span>${escapeHtml(formatBytes(attachment.size))}</span>
+          <span>Auto-deletes when closed</span>
+        </div>
+        <a href="${escapeHtml(dataUrl)}" target="_blank" rel="noopener" aria-label="Open attached screenshot">
+          <img src="${escapeHtml(dataUrl)}" alt="${escapeHtml(label)}">
+        </a>
+      </div>
     `;
   }
 
@@ -360,6 +381,17 @@
       month: "short",
       year: "numeric",
     });
+  }
+
+  function formatBytes(value) {
+    const bytes = Number(value || 0);
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return "0 KB";
+    }
+    if (bytes < 1024 * 1024) {
+      return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   function showToast(message) {

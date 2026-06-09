@@ -1,5 +1,6 @@
 import json
 import os
+from base64 import b64encode
 from io import StringIO
 from datetime import date
 from datetime import timedelta
@@ -116,6 +117,8 @@ class OperationsApiTests(TestCase):
 
     def test_authenticated_employee_can_report_an_error(self):
         self.client.force_login(self.employee)
+        attachment_bytes = b"\x89PNG\r\n\x1a\nconnect screenshot"
+        attachment_data_url = f"data:image/png;base64,{b64encode(attachment_bytes).decode('ascii')}"
 
         response = self.client.post(
             "/api/ops/reported-errors/",
@@ -125,6 +128,12 @@ class OperationsApiTests(TestCase):
                     "details": "The Bulletin Board stayed empty after refresh.",
                     "source_tab": "bulletin",
                     "page_path": "/index.html",
+                    "attachment": {
+                        "name": "blank-bulletin.png",
+                        "content_type": "image/png",
+                        "size": len(attachment_bytes),
+                        "data_url": attachment_data_url,
+                    },
                 }
             ),
             content_type="application/json",
@@ -135,6 +144,53 @@ class OperationsApiTests(TestCase):
         reported_error = ReportedError.objects.get()
         self.assertEqual(reported_error.reporter, self.employee)
         self.assertEqual(reported_error.source_tab, "bulletin")
+        self.assertEqual(reported_error.attachment_name, "blank-bulletin.png")
+        self.assertEqual(reported_error.attachment_content_type, "image/png")
+        self.assertEqual(reported_error.attachment_size, len(attachment_bytes))
+        self.assertEqual(reported_error.attachment_data_url, attachment_data_url)
+        self.assertEqual(response.json()["reported_error"]["attachment"]["name"], "blank-bulletin.png")
+
+    def test_reported_error_attachment_must_be_image_and_within_size_limit(self):
+        self.client.force_login(self.employee)
+
+        invalid_type_response = self.client.post(
+            "/api/ops/reported-errors/",
+            data=json.dumps(
+                {
+                    "title": "Attachment issue",
+                    "details": "Trying to upload a text file.",
+                    "attachment": {
+                        "name": "notes.txt",
+                        "content_type": "text/plain",
+                        "size": 12,
+                        "data_url": "data:text/plain;base64,SGVsbG8=",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(invalid_type_response.status_code, 400)
+        self.assertEqual(ReportedError.objects.count(), 0)
+
+        oversized_bytes = b"\x89PNG\r\n\x1a\n" + (b"x" * 999_993)
+        oversized_response = self.client.post(
+            "/api/ops/reported-errors/",
+            data=json.dumps(
+                {
+                    "title": "Large screenshot",
+                    "details": "Trying to upload a large screenshot.",
+                    "attachment": {
+                        "name": "large.png",
+                        "content_type": "image/png",
+                        "size": len(oversized_bytes),
+                        "data_url": f"data:image/png;base64,{b64encode(oversized_bytes).decode('ascii')}",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(oversized_response.status_code, 400)
+        self.assertEqual(ReportedError.objects.count(), 0)
 
     def test_engagement_score_overview_requires_admin_access(self):
         self.client.force_login(self.staff)

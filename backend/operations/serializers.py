@@ -51,6 +51,15 @@ def serialize_error_event(event):
 
 
 def serialize_reported_error(event):
+    attachment = None
+    if event.attachment_data_url:
+        attachment = {
+            "name": event.attachment_name,
+            "content_type": event.attachment_content_type,
+            "size": event.attachment_size,
+            "data_url": event.attachment_data_url,
+        }
+
     return {
         "id": event.id,
         "title": event.title,
@@ -58,6 +67,7 @@ def serialize_reported_error(event):
         "source_tab": event.source_tab,
         "page_path": event.page_path,
         "metadata": event.metadata,
+        "attachment": attachment,
         "is_resolved": event.is_resolved,
         "resolution_outcome": event.resolution_outcome,
         "resolution_outcome_label": event.get_resolution_outcome_display() if event.resolution_outcome else "",

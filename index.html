@@ -1247,6 +1247,11 @@
               <span>What happened?</span>
               <textarea id="report-error-details" name="details" rows="6" maxlength="3000" placeholder="Describe what you were doing, what you expected, and what happened instead." required></textarea>
             </label>
+            <label class="field">
+              <span>Attachment (optional screenshot)</span>
+              <input type="file" id="report-error-attachment" name="attachment" accept="image/png,image/jpeg,image/gif,image/webp">
+              <div class="mini-item-meta">Image files only. Maximum size 1 MB. The screenshot is deleted when admin closes the issue.</div>
+            </label>
             <div class="form-actions">
               <p>Only admins can see the submitted error reports.</p>
               <button type="submit" class="btn-warm">Send report</button>

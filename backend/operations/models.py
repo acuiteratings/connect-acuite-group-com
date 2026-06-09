@@ -103,6 +103,10 @@ class ReportedError(models.Model):
     source_tab = models.CharField(max_length=64, blank=True)
     page_path = models.CharField(max_length=255, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
+    attachment_name = models.CharField(max_length=180, blank=True)
+    attachment_content_type = models.CharField(max_length=64, blank=True)
+    attachment_size = models.PositiveIntegerField(default=0)
+    attachment_data_url = models.TextField(blank=True)
     is_resolved = models.BooleanField(default=False)
     resolution_outcome = models.CharField(
         max_length=24,

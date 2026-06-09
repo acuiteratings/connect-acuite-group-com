@@ -59,6 +59,7 @@ def reported_error_admin_resolve(request, reported_error_id):
     if outcome not in {ReportedError.ResolutionOutcome.RESOLVED, ReportedError.ResolutionOutcome.NOT_AN_ERROR}:
         return JsonResponse({"detail": "Choose Resolved or Not an error."}, status=400)
     resolution_comment = str(payload.get("resolution_comment") or "").strip()
+    attachment_deleted = bool(event.attachment_data_url)
     if not event.is_resolved:
         event.is_resolved = True
         event.resolved_at = timezone.now()
@@ -66,6 +67,10 @@ def reported_error_admin_resolve(request, reported_error_id):
     event.resolution_outcome = outcome
     event.resolution_comment = resolution_comment
     event.reporter_seen_at = None
+    event.attachment_name = ""
+    event.attachment_content_type = ""
+    event.attachment_size = 0
+    event.attachment_data_url = ""
     event.save(
         update_fields=[
             "is_resolved",
@@ -74,6 +79,10 @@ def reported_error_admin_resolve(request, reported_error_id):
             "resolution_outcome",
             "resolution_comment",
             "reporter_seen_at",
+            "attachment_name",
+            "attachment_content_type",
+            "attachment_size",
+            "attachment_data_url",
         ]
     )
     record_audit_event(
@@ -85,6 +94,7 @@ def reported_error_admin_resolve(request, reported_error_id):
             "reporter_email": event.reporter.email if event.reporter else "",
             "resolution_outcome": event.resolution_outcome,
             "comment_present": bool(event.resolution_comment),
+            "attachment_deleted": attachment_deleted,
         },
         request=request,
     )

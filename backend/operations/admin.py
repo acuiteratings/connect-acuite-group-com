@@ -98,6 +98,10 @@ def mark_reported_errors_resolved(_modeladmin, request, queryset):
         is_resolved=True,
         resolved_at=timezone.now(),
         resolved_by=request.user,
+        attachment_name="",
+        attachment_content_type="",
+        attachment_size=0,
+        attachment_data_url="",
     )
 
 
@@ -121,6 +125,9 @@ class ReportedErrorAdmin(admin.ModelAdmin):
         "source_tab",
         "page_path",
         "metadata",
+        "attachment_name",
+        "attachment_content_type",
+        "attachment_size",
         "created_at",
         "resolved_at",
         "resolved_by",

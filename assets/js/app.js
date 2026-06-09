@@ -3,6 +3,8 @@ const DIRECTORY_CACHE_KEY = "acuite-connect-directory-cache-v1";
 const CEO_DESK_CACHE_KEY = "acuite-connect-ceo-desk-cache-v1";
 const LEARNING_CACHE_KEY = "acuite-connect-library-cache-v1";
 const ANNOUNCEMENT_REMINDER_KEY = "acuite-connect-announcement-reminder-v1";
+const REPORT_ERROR_ATTACHMENT_MAX_BYTES = 1_000_000;
+const REPORT_ERROR_ATTACHMENT_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
 const gradients = {
   warm: "var(--grad-warm)",
@@ -1122,6 +1124,7 @@ async function init() {
     reportErrorSourceMeta: document.getElementById("report-error-source-meta"),
     reportErrorTitleInput: document.getElementById("report-error-title"),
     reportErrorDetailsInput: document.getElementById("report-error-details"),
+    reportErrorAttachmentInput: document.getElementById("report-error-attachment"),
     engagementScoreSidebarTab: document.getElementById("engagement-score-sidebar-tab"),
     engagementScoreMeta: document.getElementById("engagement-score-meta"),
     engagementScoreTableBody: document.getElementById("engagement-score-table-body"),
@@ -4332,6 +4335,25 @@ async function submitReportedError() {
   }
 
   try {
+    const attachmentFile = elements.reportErrorAttachmentInput?.files?.[0] || null;
+    let attachment = null;
+    if (attachmentFile) {
+      if (!REPORT_ERROR_ATTACHMENT_TYPES.has(attachmentFile.type)) {
+        showToast("Please upload only PNG, JPG, GIF, or WebP screenshots.");
+        return;
+      }
+      if (attachmentFile.size > REPORT_ERROR_ATTACHMENT_MAX_BYTES) {
+        showToast("Screenshot attachment must be 1 MB or smaller.");
+        return;
+      }
+      attachment = {
+        name: attachmentFile.name,
+        content_type: attachmentFile.type,
+        size: attachmentFile.size,
+        data_url: await readFileAsDataUrl(attachmentFile),
+      };
+    }
+
     await window.AcuiteConnectAuth.apiRequest("/api/ops/reported-errors/", {
       method: "POST",
       body: {
@@ -4339,6 +4361,7 @@ async function submitReportedError() {
         details,
         source_tab: sourceTab,
         page_path: window.location.pathname,
+        attachment,
         metadata: {
           build: getCurrentBuildNumber(),
           source_label: reportErrorSourceLabel(sourceTab),

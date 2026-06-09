@@ -41,6 +41,10 @@ class ReportedErrorAdminInboxTests(TestCase):
                     title=f"Reported issue {index}",
                     details="Something went wrong.",
                     source_tab="report-error",
+                    attachment_name="error.png",
+                    attachment_content_type="image/png",
+                    attachment_size=12,
+                    attachment_data_url="data:image/png;base64,ZXJyb3ItaW1hZ2U=",
                 )
                 for index in range(101)
             ]
@@ -60,6 +64,7 @@ class ReportedErrorAdminInboxTests(TestCase):
         payload = admin_response.json()
         self.assertEqual(payload["count"], 101)
         self.assertFalse(payload["results"][0]["is_resolved"])
+        self.assertEqual(payload["results"][0]["attachment"]["name"], "error.png")
 
         reported_error_id = payload["results"][0]["id"]
         resolve_response = self.client.patch(
@@ -73,6 +78,7 @@ class ReportedErrorAdminInboxTests(TestCase):
         self.assertEqual(resolved_payload["resolution_outcome"], "not_an_error")
         self.assertEqual(resolved_payload["resolution_comment"], "This was expected behavior.")
         self.assertEqual(resolved_payload["resolved_by_email"], self.admin.email)
+        self.assertIsNone(resolved_payload["attachment"])
 
         reported_error = ReportedError.objects.get(pk=reported_error_id)
         self.assertTrue(reported_error.is_resolved)
@@ -80,6 +86,10 @@ class ReportedErrorAdminInboxTests(TestCase):
         self.assertEqual(reported_error.resolution_comment, "This was expected behavior.")
         self.assertEqual(reported_error.resolved_by, self.admin)
         self.assertIsNotNone(reported_error.resolved_at)
+        self.assertEqual(reported_error.attachment_name, "")
+        self.assertEqual(reported_error.attachment_content_type, "")
+        self.assertEqual(reported_error.attachment_size, 0)
+        self.assertEqual(reported_error.attachment_data_url, "")
         self.assertEqual(AuditLog.objects.filter(action="error.report.resolved").count(), 1)
 
     def test_reporter_sees_resolution_notification_once(self):
