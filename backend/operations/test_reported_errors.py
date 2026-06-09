@@ -64,16 +64,51 @@ class ReportedErrorAdminInboxTests(TestCase):
         reported_error_id = payload["results"][0]["id"]
         resolve_response = self.client.patch(
             f"/api/ops/reported-errors/admin/{reported_error_id}/resolve/",
-            data=json.dumps({"is_resolved": True}),
+            data=json.dumps({"resolution_outcome": "not_an_error", "resolution_comment": "This was expected behavior."}),
             content_type="application/json",
         )
         self.assertEqual(resolve_response.status_code, 200)
         resolved_payload = resolve_response.json()["reported_error"]
         self.assertTrue(resolved_payload["is_resolved"])
+        self.assertEqual(resolved_payload["resolution_outcome"], "not_an_error")
+        self.assertEqual(resolved_payload["resolution_comment"], "This was expected behavior.")
         self.assertEqual(resolved_payload["resolved_by_email"], self.admin.email)
 
         reported_error = ReportedError.objects.get(pk=reported_error_id)
         self.assertTrue(reported_error.is_resolved)
+        self.assertEqual(reported_error.resolution_outcome, ReportedError.ResolutionOutcome.NOT_AN_ERROR)
+        self.assertEqual(reported_error.resolution_comment, "This was expected behavior.")
         self.assertEqual(reported_error.resolved_by, self.admin)
         self.assertIsNotNone(reported_error.resolved_at)
         self.assertEqual(AuditLog.objects.filter(action="error.report.resolved").count(), 1)
+
+    def test_reporter_sees_resolution_notification_once(self):
+        reported_error = ReportedError.objects.create(
+            reporter=self.employee,
+            title="Directory issue",
+            details="The location filter was wrong.",
+            source_tab="directory",
+            is_resolved=True,
+            resolution_outcome=ReportedError.ResolutionOutcome.RESOLVED,
+            resolution_comment="The location filter has been corrected.",
+            resolved_by=self.admin,
+        )
+
+        self.client.force_login(self.employee)
+        notification_response = self.client.get("/api/ops/reported-errors/notifications/")
+
+        self.assertEqual(notification_response.status_code, 200)
+        payload = notification_response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["id"], reported_error.id)
+        self.assertEqual(payload["results"][0]["resolution_comment"], "The location filter has been corrected.")
+
+        acknowledge_response = self.client.patch(
+            f"/api/ops/reported-errors/notifications/{reported_error.id}/acknowledge/"
+        )
+        self.assertEqual(acknowledge_response.status_code, 200)
+        reported_error.refresh_from_db()
+        self.assertIsNotNone(reported_error.reporter_seen_at)
+
+        second_response = self.client.get("/api/ops/reported-errors/notifications/")
+        self.assertEqual(second_response.json()["count"], 0)

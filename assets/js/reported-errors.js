@@ -1,6 +1,8 @@
 (function attachReportedErrorsInbox() {
   const ENDPOINT = "/api/ops/reported-errors/admin/";
+  const NOTIFICATIONS_ENDPOINT = "/api/ops/reported-errors/notifications/";
   let reports = [];
+  let reporterNotifications = [];
   let loading = false;
   let canViewInbox = false;
 
@@ -22,10 +24,6 @@
       toast: document.getElementById("toast"),
     };
 
-    if (!elements.adminCard || !elements.list || !elements.meta) {
-      return;
-    }
-
     document.addEventListener("click", handleDocumentClick);
     if (elements.form) {
       elements.form.addEventListener("submit", () => {
@@ -36,6 +34,11 @@
           void loadReportedErrors({ force: true });
         }, 1800);
       });
+    }
+
+    void loadReporterNotifications();
+    if (!elements.adminCard || !elements.list || !elements.meta) {
+      return;
     }
 
     void initInbox();
@@ -157,9 +160,21 @@
     const sourceLabel = item.metadata?.source_label || item.source_tab || "Unknown page";
     const submittedAt = formatRelativeTime(item.created_at);
     const resolvedAt = item.resolved_at ? formatRelativeTime(item.resolved_at) : "";
+    const outcomeLabel = item.resolution_outcome_label || (item.resolution_outcome === "not_an_error" ? "Not an error" : "Resolved");
     const actionMarkup = item.is_resolved
-      ? `<span class="reported-error-status resolved">${escapeHtml(resolvedAt ? `Resolved ${resolvedAt}` : "Resolved")}</span>`
-      : `<button type="button" class="btn-ghost" data-reported-error-id="${escapeHtml(item.id)}">Resolved</button>`;
+      ? `<span class="reported-error-status resolved">${escapeHtml(resolvedAt ? `${outcomeLabel} ${resolvedAt}` : outcomeLabel)}</span>`
+      : `
+        <div class="reported-error-resolution-box">
+          <label class="field">
+            <span>Admin comments, if any</span>
+            <textarea data-reported-error-comment="${escapeHtml(item.id)}" rows="2" maxlength="1000" placeholder="Optional comment to show the reporter"></textarea>
+          </label>
+          <div class="reported-error-actions">
+            <button type="button" class="btn-ghost" data-reported-error-action="resolved" data-reported-error-id="${escapeHtml(item.id)}">Resolved</button>
+            <button type="button" class="btn-outline" data-reported-error-action="not_an_error" data-reported-error-id="${escapeHtml(item.id)}">Not an error</button>
+          </div>
+        </div>
+      `;
 
     return `
       <article class="reported-error-item">
@@ -176,13 +191,26 @@
           ${actionMarkup}
         </div>
         <p class="reported-error-details">${escapeHtml(item.details || "")}</p>
-        ${item.is_resolved && item.resolved_by ? `<div class="reported-error-meta"><span>Resolved by ${escapeHtml(item.resolved_by)}</span></div>` : ""}
+        ${item.is_resolved && item.resolution_comment ? `<p class="reported-error-resolution-comment">${escapeHtml(item.resolution_comment)}</p>` : ""}
+        ${item.is_resolved && item.resolved_by ? `<div class="reported-error-meta"><span>${escapeHtml(outcomeLabel)} by ${escapeHtml(item.resolved_by)}</span></div>` : ""}
       </article>
     `;
   }
 
   async function handleDocumentClick(event) {
-    const button = event.target.closest("[data-reported-error-id]");
+    const acknowledgeButton = event.target.closest("[data-reported-error-ack]");
+    if (acknowledgeButton) {
+      await acknowledgeReporterNotification(Number(acknowledgeButton.dataset.reportedErrorAck || 0));
+      return;
+    }
+
+    const closeButton = event.target.closest("[data-reported-error-close-notice]");
+    if (closeButton) {
+      closeReporterNotificationModal();
+      return;
+    }
+
+    const button = event.target.closest("[data-reported-error-action]");
     if (!button) {
       return;
     }
@@ -190,12 +218,18 @@
     if (!reportId) {
       return;
     }
+    const outcome = button.dataset.reportedErrorAction === "not_an_error" ? "not_an_error" : "resolved";
+    const commentInput = document.querySelector(`[data-reported-error-comment="${reportId}"]`);
+    const resolutionComment = String(commentInput?.value || "").trim();
 
     button.disabled = true;
     try {
       const payload = await window.AcuiteConnectAuth.apiRequest(`${ENDPOINT}${reportId}/resolve/`, {
         method: "PATCH",
-        body: { is_resolved: true },
+        body: {
+          resolution_outcome: outcome,
+          resolution_comment: resolutionComment,
+        },
       });
       const updatedReport = payload.reported_error;
       if (updatedReport) {
@@ -206,10 +240,98 @@
       } else {
         await loadReportedErrors({ force: true });
       }
-      showToast("Reported error marked as resolved.");
+      showToast(outcome === "not_an_error" ? "Reported error marked as not an error." : "Reported error marked as resolved.");
     } catch (error) {
       button.disabled = false;
       showToast(error.message || "Could not resolve the reported error.");
+    }
+  }
+
+  async function loadReporterNotifications() {
+    if (!window.AcuiteConnectAuth?.apiRequest) {
+      return;
+    }
+    try {
+      const payload = await window.AcuiteConnectAuth.apiRequest(NOTIFICATIONS_ENDPOINT);
+      reporterNotifications = Array.isArray(payload.results) ? payload.results : [];
+      showNextReporterNotification();
+    } catch (error) {
+      // Non-admin users still use this quietly; auth/session failures should not interrupt Connect.
+    }
+  }
+
+  function showNextReporterNotification() {
+    const report = reporterNotifications[0];
+    if (!report) {
+      return;
+    }
+    closeReporterNotificationModal();
+    const outcomeLabel = report.resolution_outcome_label || (report.resolution_outcome === "not_an_error" ? "Not an error" : "Resolved");
+    const sourceLabel = report.metadata?.source_label || report.source_tab || "Unknown page";
+    const modal = document.createElement("div");
+    modal.className = "reported-error-notice-backdrop";
+    modal.id = "reported-error-resolution-notice";
+    modal.innerHTML = `
+      <section class="reported-error-notice" role="dialog" aria-modal="true" aria-labelledby="reported-error-notice-title">
+        <button type="button" class="reported-error-notice-close" data-reported-error-ack="${escapeHtml(report.id)}" aria-label="Close">&times;</button>
+        <p class="widget-kicker">Reported issue update</p>
+        <h2 id="reported-error-notice-title">Your reported issue has been ${escapeHtml(outcomeLabel.toLowerCase())}</h2>
+        <div class="reported-error-notice-grid">
+          <div>
+            <span>Issue</span>
+            <strong>${escapeHtml(report.title || "Untitled report")}</strong>
+          </div>
+          <div>
+            <span>Page</span>
+            <strong>${escapeHtml(sourceLabel)}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>${escapeHtml(outcomeLabel)}</strong>
+          </div>
+          <div>
+            <span>Resolved by</span>
+            <strong>${escapeHtml(report.resolved_by || "Connect admin")}</strong>
+          </div>
+        </div>
+        <div class="reported-error-notice-detail">
+          <span>Your report</span>
+          <p>${escapeHtml(report.details || "")}</p>
+        </div>
+        ${
+          report.resolution_comment
+            ? `<div class="reported-error-notice-detail">
+                <span>Admin comments</span>
+                <p>${escapeHtml(report.resolution_comment)}</p>
+              </div>`
+            : ""
+        }
+        <div class="form-actions">
+          <button type="button" class="btn-warm" data-reported-error-ack="${escapeHtml(report.id)}">Understood</button>
+        </div>
+      </section>
+    `;
+    document.body.append(modal);
+  }
+
+  function closeReporterNotificationModal() {
+    document.getElementById("reported-error-resolution-notice")?.remove();
+  }
+
+  async function acknowledgeReporterNotification(reportId) {
+    if (!reportId || !window.AcuiteConnectAuth?.apiRequest) {
+      closeReporterNotificationModal();
+      return;
+    }
+    try {
+      await window.AcuiteConnectAuth.apiRequest(`${NOTIFICATIONS_ENDPOINT}${reportId}/acknowledge/`, {
+        method: "PATCH",
+      });
+      reporterNotifications = reporterNotifications.filter((item) => Number(item.id) !== Number(reportId));
+      closeReporterNotificationModal();
+      showNextReporterNotification();
+    } catch (error) {
+      showToast(error.message || "Could not close the reported issue notice.");
     }
   }
 

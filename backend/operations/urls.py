@@ -1,6 +1,11 @@
 from django.urls import path
 
-from .reported_errors import reported_error_admin_resolve, reported_errors_admin_collection
+from .reported_errors import (
+    reported_error_admin_resolve,
+    reported_error_notification_acknowledge,
+    reported_error_notifications,
+    reported_errors_admin_collection,
+)
 from .views import (
     analytics_ingest,
     analytics_recent,
@@ -39,6 +44,16 @@ urlpatterns = [
         "reported-errors/admin/<int:reported_error_id>/resolve/",
         reported_error_admin_resolve,
         name="reported-error-admin-resolve",
+    ),
+    path(
+        "reported-errors/notifications/",
+        reported_error_notifications,
+        name="reported-error-notifications",
+    ),
+    path(
+        "reported-errors/notifications/<int:reported_error_id>/acknowledge/",
+        reported_error_notification_acknowledge,
+        name="reported-error-notification-acknowledge",
     ),
     path("reported-errors/<int:reported_error_id>/", reported_error_detail, name="reported-error-detail"),
     path("engagement-score/", engagement_score_overview, name="engagement-score-overview"),

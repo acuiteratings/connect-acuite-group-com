@@ -87,6 +87,10 @@ class ErrorEvent(models.Model):
 
 
 class ReportedError(models.Model):
+    class ResolutionOutcome(models.TextChoices):
+        RESOLVED = "resolved", "Resolved"
+        NOT_AN_ERROR = "not_an_error", "Not an error"
+
     reporter = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -100,6 +104,12 @@ class ReportedError(models.Model):
     page_path = models.CharField(max_length=255, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     is_resolved = models.BooleanField(default=False)
+    resolution_outcome = models.CharField(
+        max_length=24,
+        choices=ResolutionOutcome.choices,
+        blank=True,
+    )
+    resolution_comment = models.TextField(blank=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
     resolved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -108,6 +118,7 @@ class ReportedError(models.Model):
         blank=True,
         null=True,
     )
+    reporter_seen_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

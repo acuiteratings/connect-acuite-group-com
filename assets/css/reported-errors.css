@@ -63,3 +63,124 @@
   border-color: rgba(32, 164, 126, 0.32);
   color: var(--green);
 }
+
+.reported-error-resolution-box {
+  display: grid;
+  gap: 10px;
+  min-width: min(360px, 100%);
+}
+
+.reported-error-resolution-box .field {
+  gap: 6px;
+}
+
+.reported-error-resolution-box textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.reported-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reported-error-resolution-comment {
+  margin: 0;
+  padding: 12px;
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  background: var(--bg3);
+  color: var(--text2);
+  white-space: pre-wrap;
+}
+
+.reported-error-notice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 17, 17, 0.42);
+}
+
+.reported-error-notice {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg2);
+  box-shadow: var(--shadow-lg);
+}
+
+.reported-error-notice h2 {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 38px);
+  line-height: 1.08;
+}
+
+.reported-error-notice-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text2);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.reported-error-notice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reported-error-notice-grid div,
+.reported-error-notice-detail {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.reported-error-notice-grid span,
+.reported-error-notice-detail span {
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reported-error-notice-detail p {
+  margin: 0;
+  color: var(--text2);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .reported-error-item-head,
+  .reported-error-notice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reported-error-item-head {
+    display: grid;
+  }
+
+  .reported-error-actions {
+    justify-content: flex-start;
+  }
+}
