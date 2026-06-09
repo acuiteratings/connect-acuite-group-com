@@ -3347,6 +3347,7 @@ function renderHomeAnnouncement() {
   if (!container) {
     return;
   }
+  container.classList.remove("announcement-layout-story-winners");
 
   if (state.homeAnnouncementFilter === "opinion_poll" && appData.activeOpinionPoll) {
     applyAnnouncementTheme(
@@ -3389,6 +3390,7 @@ function renderHomeAnnouncement() {
     : Number(announcement.baseMetrics?.likes || 0) + (liked ? 1 : 0);
   const likeAction = announcement.isLive ? "toggle-live-reaction" : "toggle-like";
   const likeTarget = announcement.isLive ? announcement.sourceId : announcement.id;
+  container.classList.toggle("announcement-layout-story-winners", announcement.layoutVariant === "story_winners");
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -3404,9 +3406,7 @@ function renderHomeAnnouncement() {
       <p class="announcement-summary">${escapeHtml(announcement.summary)}</p>
       ${
         (announcement.details || []).length
-          ? `<div class="announcement-details">
-              ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
-            </div>`
+          ? renderAnnouncementDetails(announcement)
           : ""
       }
       ${
@@ -3461,6 +3461,41 @@ function renderHomeAnnouncement() {
         </button>
         <span class="announcement-like-count">${escapeHtml(String(totalLikes))} like${totalLikes === 1 ? "" : "s"}</span>
       </div>
+    </div>
+  `;
+}
+
+function renderAnnouncementDetails(announcement) {
+  if (announcement.layoutVariant === "story_winners" && Array.isArray(announcement.winners) && announcement.winners.length) {
+    return `
+      <div class="announcement-details announcement-details-winners">
+        <div class="announcement-story-intro">
+          ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
+        </div>
+        <div class="announcement-winner-grid">
+          ${announcement.winners.map((winner) => `
+            <article class="announcement-winner-card">
+              <div class="announcement-winner-rank">${escapeHtml(winner.place || "")}</div>
+              <h3>${escapeHtml(winner.name || "")}</h3>
+              <section>
+                <span>The Story</span>
+                <p>${escapeHtml(winner.story || "")}</p>
+              </section>
+              <section>
+                <span>The Lesson</span>
+                <p>${escapeHtml(winner.lesson || "")}</p>
+              </section>
+            </article>
+          `).join("")}
+        </div>
+        ${announcement.closingNote ? `<p class="announcement-story-closing">${escapeHtml(announcement.closingNote)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="announcement-details">
+      ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
     </div>
   `;
 }
@@ -5479,6 +5514,16 @@ function mapHomeAnnouncementPost(post) {
     hostLabel: String(display.hostLabel || post.authorName || "Acuité Ratings & Research").trim(),
     audienceLabel: String(display.audienceLabel || "Visible to all employees").trim(),
     countdownLabel: String(display.countdownLabel || post.postedAtLabel || "").trim(),
+    closingNote: String(display.closingNote || "").trim(),
+    layoutVariant: String(display.layoutVariant || "").trim(),
+    winners: Array.isArray(display.winners)
+      ? display.winners.map((winner) => ({
+          place: String(winner?.place || "").trim(),
+          name: String(winner?.name || "").trim(),
+          story: String(winner?.story || "").trim(),
+          lesson: String(winner?.lesson || "").trim(),
+        })).filter((winner) => winner.place || winner.name || winner.story || winner.lesson)
+      : [],
     details: Array.isArray(display.details)
       ? display.details.map((item) => String(item || "").trim()).filter(Boolean)
       : [],

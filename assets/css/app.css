@@ -973,6 +973,111 @@ select {
   margin: 0;
 }
 
+.announcement-layout-story-winners {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.announcement-layout-story-winners .announcement-main {
+  max-width: none;
+}
+
+.announcement-layout-story-winners .announcement-title {
+  max-width: 16ch;
+}
+
+.announcement-layout-story-winners .announcement-summary {
+  max-width: 1040px;
+}
+
+.announcement-layout-story-winners .announcement-side {
+  align-items: flex-start;
+}
+
+.announcement-details-winners {
+  max-width: none;
+  gap: 16px;
+}
+
+.announcement-story-intro {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.announcement-story-intro p {
+  padding: 14px 16px;
+  border: 1px solid var(--announcement-surface-border);
+  border-radius: 14px;
+  background: var(--announcement-surface-bg);
+}
+
+.announcement-winner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.announcement-winner-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--announcement-surface-border);
+  border-radius: 18px;
+  background: var(--announcement-surface-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.announcement-winner-rank {
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid var(--announcement-badge-strong-border);
+  border-radius: 999px;
+  background: var(--announcement-badge-strong-bg);
+  color: var(--announcement-badge-strong-text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.announcement-winner-card h3 {
+  margin: 0;
+  color: var(--announcement-text);
+  font-size: 24px;
+}
+
+.announcement-winner-card section {
+  display: grid;
+  gap: 6px;
+}
+
+.announcement-winner-card section span {
+  color: var(--announcement-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.announcement-winner-card p {
+  margin: 0;
+  color: var(--announcement-muted);
+  font-size: 14px;
+  line-height: 1.48;
+}
+
+.announcement-story-closing {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--announcement-badge-strong-border);
+  border-radius: 14px;
+  background: var(--announcement-badge-strong-bg);
+  color: var(--announcement-badge-strong-text);
+  font-weight: 800;
+}
+
 .announcement-cta {
   width: fit-content;
   margin-top: 18px;
@@ -5599,6 +5704,8 @@ select {
   }
 
   .announcement-meta-grid,
+  .announcement-story-intro,
+  .announcement-winner-grid,
   .announcement-metrics {
     grid-template-columns: 1fr;
   }
