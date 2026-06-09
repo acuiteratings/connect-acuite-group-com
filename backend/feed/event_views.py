@@ -5,6 +5,8 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
+from operations.models import OrgNotification
+from operations.notifications import create_org_notification
 from operations.services import record_analytics_event, record_audit_event
 
 from .models import Comment, Post, PostReaction
@@ -95,6 +97,23 @@ def _validate_visibility(payload):
     return visibility
 
 
+def _notify_org_for_event(post, actor, *, action="created"):
+    if post.moderation_status != Post.ModerationStatus.PUBLISHED:
+        return None
+    return create_org_notification(
+        title=f"{'New event' if action == 'created' else 'Event updated'}: {post.title}",
+        message=(post.body or "")[:220],
+        category=OrgNotification.Category.EVENT,
+        target_tab="home",
+        metadata={
+            "post_id": post.id,
+            "event_date": (post.metadata or {}).get("event_date", ""),
+            "focus_sidebar": "events",
+        },
+        actor=actor,
+    )
+
+
 def events_collection(request):
     if request.method == "GET":
         queryset = _events_queryset()
@@ -164,6 +183,8 @@ def events_collection(request):
         metadata={"post_id": post.id, "moderation_status": post.moderation_status},
         request=request,
     )
+    if post.moderation_status == Post.ModerationStatus.PUBLISHED:
+        _notify_org_for_event(post, request.user, action="created")
     return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
@@ -201,6 +222,7 @@ def event_detail(request, post_id):
     except ValueError as exc:
         return JsonResponse({"detail": str(exc)}, status=400)
 
+    was_published = post.moderation_status == Post.ModerationStatus.PUBLISHED
     update_fields = ["updated_at"]
     if "title" in payload:
         title = str(payload.get("title", "")).strip()
@@ -274,4 +296,10 @@ def event_detail(request, post_id):
         request=request,
     )
     post = get_object_or_404(_events_queryset(), pk=post_id)
+    if post.moderation_status == Post.ModerationStatus.PUBLISHED:
+        _notify_org_for_event(
+            post,
+            request.user,
+            action="updated" if was_published else "created",
+        )
     return JsonResponse({"post": serialize_post(post, viewer=request.user)})

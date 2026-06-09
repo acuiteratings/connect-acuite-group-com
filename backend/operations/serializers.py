@@ -1,4 +1,4 @@
-from .models import AnalyticsEvent, ErrorEvent, ReportedError
+from .models import AnalyticsEvent, ErrorEvent, OrgNotification, ReportedError
 
 
 def serialize_audit_log(log):
@@ -79,6 +79,24 @@ def serialize_reported_error(event):
         "reporter": event.reporter.full_name if event.reporter else None,
         "reporter_email": event.reporter.email if event.reporter else None,
         "created_at": event.created_at.isoformat(),
+    }
+
+
+def serialize_org_notification(notification, *, read_ids=None):
+    read_ids = read_ids or set()
+    return {
+        "id": notification.id,
+        "title": notification.title,
+        "message": notification.message,
+        "category": notification.category,
+        "category_label": notification.get_category_display(),
+        "target_tab": notification.target_tab,
+        "target_url": notification.target_url,
+        "metadata": notification.metadata,
+        "is_read": notification.id in read_ids,
+        "created_by": notification.created_by.full_name if notification.created_by else None,
+        "created_by_email": notification.created_by.email if notification.created_by else None,
+        "created_at": notification.created_at.isoformat(),
     }
 
 

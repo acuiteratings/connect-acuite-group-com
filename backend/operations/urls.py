@@ -6,6 +6,11 @@ from .reported_errors import (
     reported_error_notifications,
     reported_errors_admin_collection,
 )
+from .notifications import (
+    notification_mark_read,
+    notifications_collection,
+    notifications_mark_all_read,
+)
 from .views import (
     analytics_ingest,
     analytics_recent,
@@ -56,6 +61,9 @@ urlpatterns = [
         name="reported-error-notification-acknowledge",
     ),
     path("reported-errors/<int:reported_error_id>/", reported_error_detail, name="reported-error-detail"),
+    path("notifications/", notifications_collection, name="notifications-collection"),
+    path("notifications/read-all/", notifications_mark_all_read, name="notifications-mark-all-read"),
+    path("notifications/<int:notification_id>/read/", notification_mark_read, name="notification-mark-read"),
     path("engagement-score/", engagement_score_overview, name="engagement-score-overview"),
     path("celebrations/today/", celebration_candidates_today, name="celebration-candidates-today"),
     path("celebrations/preview/", celebration_preview, name="celebration-preview"),

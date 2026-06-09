@@ -132,6 +132,65 @@ class ReportedError(models.Model):
         return f"{self.title} at {self.created_at:%Y-%m-%d %H:%M:%S}"
 
 
+class OrgNotification(models.Model):
+    class Category(models.TextChoices):
+        ANNOUNCEMENT = "announcement", "Announcement"
+        BULLETIN = "bulletin", "Bulletin"
+        EVENT = "event", "Event"
+        RESOURCE = "resource", "Resource"
+        GENERAL = "general", "General"
+
+    title = models.CharField(max_length=180)
+    message = models.TextField(blank=True)
+    category = models.CharField(max_length=32, choices=Category.choices, default=Category.GENERAL)
+    target_tab = models.CharField(max_length=64, blank=True)
+    target_url = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="created_org_notifications",
+        blank=True,
+        null=True,
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["is_active", "-created_at"]),
+            models.Index(fields=["category", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} at {self.created_at:%Y-%m-%d %H:%M:%S}"
+
+
+class OrgNotificationRead(models.Model):
+    notification = models.ForeignKey(
+        OrgNotification,
+        on_delete=models.CASCADE,
+        related_name="reads",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="org_notification_reads",
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("notification", "user")
+        ordering = ("-read_at",)
+        indexes = [
+            models.Index(fields=["user", "-read_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} read {self.notification_id}"
+
+
 class BuildState(models.Model):
     singleton_key = models.CharField(max_length=32, unique=True, default="primary")
     counter = models.PositiveIntegerField(default=1)

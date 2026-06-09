@@ -30,6 +30,32 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
         </svg>
       </button>
+      <div class="notification-shell">
+        <button
+          type="button"
+          class="icon-btn notification-trigger"
+          data-action="toggle-notifications"
+          id="notification-trigger"
+          title="Notifications"
+          aria-expanded="false"
+          aria-haspopup="true"
+        >
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"></path>
+          </svg>
+          <span class="notification-count" id="notification-count" hidden>0</span>
+        </button>
+        <div class="notification-panel" id="notification-panel" hidden>
+          <div class="notification-panel-head">
+            <div>
+              <p class="widget-kicker">Notifications</p>
+              <h2>Latest updates</h2>
+            </div>
+            <button type="button" class="btn-ghost notification-mark-all" data-action="mark-all-notifications-read">Mark all read</button>
+          </div>
+          <div class="notification-list" id="notification-list"></div>
+        </div>
+      </div>
       <button type="button" class="icon-btn" data-switch-tab="resources" title="Resources">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path>

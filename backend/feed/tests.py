@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from directory.models import CommunityMembership
-from operations.models import AnalyticsEvent, AuditLog
+from operations.models import AnalyticsEvent, AuditLog, OrgNotification
 from store.models import CoinLedgerEntry
 
 from .models import Comment, Post, PostReaction
@@ -426,6 +426,38 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["moderation_status"], Post.ModerationStatus.PUBLISHED)
         self.assertTrue(payload["posted_as_company"])
         self.assertEqual(payload["author"]["name"], "Acuité Ratings & Research")
+        notification = OrgNotification.objects.get()
+        self.assertEqual(notification.category, OrgNotification.Category.BULLETIN)
+        self.assertEqual(notification.target_tab, "bulletin")
+        self.assertIn("Leadership note", notification.title)
+
+    def test_admin_announcement_publish_creates_org_notification_for_selected_tab(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/feed/posts/",
+            data=json.dumps(
+                {
+                    "title": "Cybersecurity winners",
+                    "body": "Winners have been announced.",
+                    "module": "bulletin",
+                    "topic": "announcements",
+                    "post_as_company": True,
+                    "metadata": {
+                        "bulletin_category": "announcements",
+                        "bulletin_channel": "announcements",
+                        "home_announcement_tag": "cybersecurity",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        notification = OrgNotification.objects.get()
+        self.assertEqual(notification.category, OrgNotification.Category.ANNOUNCEMENT)
+        self.assertEqual(notification.target_tab, "home")
+        self.assertEqual(notification.metadata["home_announcement_filter"], "cybersecurity")
 
     def test_user_with_posting_disabled_can_still_comment_and_like(self):
         post = Post.objects.create(

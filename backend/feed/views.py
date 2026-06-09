@@ -11,12 +11,25 @@ from django.utils import timezone
 
 from directory.community_utils import get_community_club_definition
 from directory.models import CommunityMembership
+from operations.models import OrgNotification
+from operations.notifications import create_org_notification
 from operations.services import record_analytics_event, record_audit_event
 
 from .models import Comment, Post, PostReaction
 from .serializers import is_mediclaim_notice_active, serialize_comment, serialize_post
 
 logger = logging.getLogger(__name__)
+
+ANNOUNCEMENT_TAG_LABELS = {
+    "leadership": "Leadership",
+    "people_culture": "People & Culture",
+    "cybersecurity": "Cybersecurity",
+    "compliance": "Compliance",
+    "regulations": "Regulations",
+    "new_initiatives": "New Initiatives",
+    "giving": "Giving",
+    "opinion_poll": "Opinion Poll",
+}
 
 
 def _parse_json_body(request):
@@ -180,6 +193,57 @@ def _send_ceo_request_approval_email(post):
         _build_ceo_request_approval_email(post).send(fail_silently=False)
     except Exception:
         logger.exception("Could not send MD & CEO request approval email.", extra={"post_id": post.id})
+
+
+def _maybe_notify_org_for_published_post(post, actor, *, action="created"):
+    if (
+        post.module != Post.Module.BULLETIN
+        or post.visibility != Post.Visibility.COMPANY
+        or post.moderation_status != Post.ModerationStatus.PUBLISHED
+    ):
+        return None
+
+    metadata = post.metadata if isinstance(post.metadata, dict) else {}
+    if metadata.get("event_post") or post.topic == "connect_events":
+        return None
+    if not metadata.get("post_as_company"):
+        return None
+
+    announcement_tag = str(metadata.get("home_announcement_tag", "")).strip().lower()
+    if announcement_tag:
+        label = ANNOUNCEMENT_TAG_LABELS.get(announcement_tag, announcement_tag.replace("_", " ").title())
+        verb = "published" if action == "created" else "updated"
+        return create_org_notification(
+            title=f"{label} announcement {verb}",
+            message=post.title,
+            category=OrgNotification.Category.ANNOUNCEMENT,
+            target_tab="home",
+            metadata={
+                "home_announcement_filter": announcement_tag,
+                "post_id": post.id,
+            },
+            actor=actor,
+        )
+
+    bulletin_channel = str(metadata.get("bulletin_channel", "")).strip().lower()
+    if bulletin_channel == "ceo_desk":
+        return create_org_notification(
+            title="MD & CEO's Desk updated",
+            message=post.title,
+            category=OrgNotification.Category.BULLETIN,
+            target_tab="ceo-desk",
+            metadata={"post_id": post.id, "bulletin_channel": bulletin_channel},
+            actor=actor,
+        )
+
+    return create_org_notification(
+        title=f"New company bulletin: {post.title}",
+        message=(post.body or "")[:220],
+        category=OrgNotification.Category.BULLETIN,
+        target_tab="bulletin",
+        metadata={"post_id": post.id, "topic": post.topic},
+        actor=actor,
+    )
 
 
 def posts_collection(request):
@@ -396,6 +460,8 @@ def posts_collection(request):
         },
         request=request,
     )
+    if post.moderation_status == Post.ModerationStatus.PUBLISHED:
+        _maybe_notify_org_for_published_post(post, request.user, action="created")
     return JsonResponse({"post": serialize_post(post, viewer=request.user)}, status=201)
 
 
@@ -553,6 +619,8 @@ def post_detail(request, post_id):
 
         if status == Post.ModerationStatus.PUBLISHED and bool((post.metadata or {}).get("ceo_desk_request")):
             _send_ceo_request_approval_email(post)
+        if status == Post.ModerationStatus.PUBLISHED:
+            _maybe_notify_org_for_published_post(post, request.user, action="updated")
 
         action_name = "post.published" if status == Post.ModerationStatus.PUBLISHED else "post.rejected"
         record_audit_event(

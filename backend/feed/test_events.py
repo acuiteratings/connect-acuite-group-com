@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import User
+from operations.models import OrgNotification
 
 from .models import Post
 
@@ -54,6 +55,29 @@ class EventApiTests(TestCase):
         self.assertFalse(post.allow_comments)
         self.assertTrue(post.metadata["event_post"])
         self.assertEqual(post.metadata["event_media_links"][0]["label"], "Open Album")
+        self.assertFalse(OrgNotification.objects.exists())
+
+    def test_published_event_creates_org_notification(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/api/feed/events/",
+            data=json.dumps(
+                {
+                    "title": "Townhall Photos",
+                    "body": "Photos from the townhall are now available.",
+                    "moderation_status": Post.ModerationStatus.PUBLISHED,
+                    "metadata": {"event_date": "2026-06-15"},
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        notification = OrgNotification.objects.get()
+        self.assertEqual(notification.category, OrgNotification.Category.EVENT)
+        self.assertEqual(notification.target_tab, "home")
+        self.assertEqual(notification.metadata["focus_sidebar"], "events")
 
     def test_employee_only_sees_published_events(self):
         published_post = Post.objects.create(
@@ -121,6 +145,7 @@ class EventApiTests(TestCase):
         self.assertEqual(post.moderation_status, Post.ModerationStatus.DRAFT)
         self.assertIsNone(post.published_at)
         self.assertEqual(post.metadata["event_date"], "2026-05-06")
+        self.assertFalse(OrgNotification.objects.exists())
 
         delete_response = self.client.delete(f"/api/feed/events/{post.id}/")
 

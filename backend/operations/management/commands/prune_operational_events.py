@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
-from operations.models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
+from operations.models import AnalyticsEvent, AuditLog, ErrorEvent, OrgNotification, OrgNotificationRead, ReportedError
 
 
 class Command(BaseCommand):
@@ -18,6 +18,7 @@ class Command(BaseCommand):
         parser.add_argument("--unresolved-errors-days", type=int, default=365)
         parser.add_argument("--resolved-reports-days", type=int, default=180)
         parser.add_argument("--unresolved-reports-days", type=int, default=365)
+        parser.add_argument("--notifications-days", type=int, default=60)
 
     def handle(self, *args, **options):
         now = timezone.now()
@@ -68,6 +69,18 @@ class Command(BaseCommand):
                 ReportedError.objects.filter(
                     is_resolved=False,
                     created_at__lt=now - timedelta(days=max(options["unresolved_reports_days"], 1)),
+                ),
+            ),
+            (
+                "notification_reads",
+                OrgNotificationRead.objects.filter(
+                    notification__created_at__lt=now - timedelta(days=max(options["notifications_days"], 1))
+                ),
+            ),
+            (
+                "org_notifications",
+                OrgNotification.objects.filter(
+                    created_at__lt=now - timedelta(days=max(options["notifications_days"], 1))
                 ),
             ),
         ]

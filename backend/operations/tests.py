@@ -17,7 +17,7 @@ from feed.models import Comment, Post, PostReaction
 
 from .builds import get_current_build_number
 from .celebrations import publish_daily_celebration_posts
-from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent, ReportedError
+from .models import AnalyticsEvent, AuditLog, BuildState, ErrorEvent, OrgNotification, OrgNotificationRead, ReportedError
 
 
 class OperationsApiTests(TestCase):
@@ -149,6 +149,34 @@ class OperationsApiTests(TestCase):
         self.assertEqual(reported_error.attachment_size, len(attachment_bytes))
         self.assertEqual(reported_error.attachment_data_url, attachment_data_url)
         self.assertEqual(response.json()["reported_error"]["attachment"]["name"], "blank-bulletin.png")
+
+    def test_employee_can_list_and_mark_org_notifications_read(self):
+        notification = OrgNotification.objects.create(
+            title="Cybersecurity announcement updated",
+            message="A new announcement is live.",
+            category=OrgNotification.Category.ANNOUNCEMENT,
+            target_tab="home",
+            metadata={"home_announcement_filter": "cybersecurity"},
+            created_by=self.admin,
+        )
+        self.client.force_login(self.employee)
+
+        list_response = self.client.get("/api/ops/notifications/")
+
+        self.assertEqual(list_response.status_code, 200)
+        payload = list_response.json()
+        self.assertEqual(payload["unread_count"], 1)
+        self.assertFalse(payload["results"][0]["is_read"])
+        self.assertEqual(payload["results"][0]["metadata"]["home_announcement_filter"], "cybersecurity")
+
+        read_response = self.client.patch(f"/api/ops/notifications/{notification.id}/read/")
+
+        self.assertEqual(read_response.status_code, 200)
+        self.assertTrue(OrgNotificationRead.objects.filter(notification=notification, user=self.employee).exists())
+
+        second_response = self.client.get("/api/ops/notifications/")
+        self.assertEqual(second_response.json()["unread_count"], 0)
+        self.assertTrue(second_response.json()["results"][0]["is_read"])
 
     def test_reported_error_attachment_must_be_image_and_within_size_limit(self):
         self.client.force_login(self.employee)

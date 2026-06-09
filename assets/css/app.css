@@ -286,6 +286,121 @@ select {
   position: relative;
 }
 
+.notification-shell {
+  position: relative;
+}
+
+.notification-trigger {
+  position: relative;
+}
+
+.notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg2);
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - var(--nav-h) - 28px));
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg2);
+  box-shadow: var(--shadow-lg);
+  z-index: 150;
+}
+
+.notification-panel[hidden] {
+  display: none;
+}
+
+.notification-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 12px;
+}
+
+.notification-panel-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.notification-mark-all {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.notification-list {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-item {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text2);
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.notification-item:hover {
+  border-color: rgba(247, 148, 29, 0.42);
+  background: var(--bg3);
+  transform: translateY(-1px);
+}
+
+.notification-item.unread {
+  border-color: rgba(247, 148, 29, 0.38);
+  background: linear-gradient(180deg, rgba(247, 148, 29, 0.08), transparent 72%), var(--bg);
+}
+
+.notification-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.notification-item strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.notification-item p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .avatar-trigger {
   border: 0;
 }

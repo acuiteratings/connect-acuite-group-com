@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from django.contrib import admin
 
-from .models import AnalyticsEvent, AuditLog, ErrorEvent, ReportedError
+from .models import AnalyticsEvent, AuditLog, ErrorEvent, OrgNotification, OrgNotificationRead, ReportedError
 
 
 @admin.register(AuditLog)
@@ -133,6 +133,25 @@ class ReportedErrorAdmin(admin.ModelAdmin):
         "resolved_by",
     )
     actions = (mark_reported_errors_resolved,)
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(OrgNotification)
+class OrgNotificationAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "category", "title", "target_tab", "created_by", "is_active")
+    list_filter = ("category", "is_active", "created_at")
+    search_fields = ("title", "message", "created_by__email")
+    readonly_fields = ("created_by", "created_at")
+
+
+@admin.register(OrgNotificationRead)
+class OrgNotificationReadAdmin(admin.ModelAdmin):
+    list_display = ("read_at", "notification", "user")
+    list_filter = ("read_at",)
+    search_fields = ("notification__title", "user__email", "user__first_name", "user__last_name")
+    readonly_fields = ("notification", "user", "read_at")
 
     def has_add_permission(self, request):
         return False

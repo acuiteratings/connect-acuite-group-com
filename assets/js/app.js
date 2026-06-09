@@ -789,6 +789,8 @@ Object.assign(appData, {
   homePosts: [],
   bulletinPosts: [],
   eventPosts: [],
+  orgNotifications: [],
+  orgNotificationUnreadCount: 0,
   ceoDeskPosts: [],
   myPosts: [],
   communityClubs: [],
@@ -868,6 +870,8 @@ let brochurePresentationHudTimer = null;
 let brochurePresentationHintTimer = null;
 let selectedAdminUserId = null;
 let selectedBulletinTemplateKey = BULLETIN_TEMPLATE_LIBRARY[0].key;
+let notificationsOpen = false;
+let notificationsPollTimer = null;
 const dataLoadPromises = {};
 const dataLoadComplete = {};
 
@@ -950,6 +954,7 @@ function renderShell() {
   safeRender("sidebar events", renderSidebarEvents);
   safeRender("CEO desk like button", renderCeoDeskLikeButton);
   safeRender("filter buttons", syncFilterButtons);
+  safeRender("notifications", renderNotifications);
 }
 
 function isDataLoading(key) {
@@ -1068,6 +1073,10 @@ async function init() {
   elements = {
     searchInput: document.getElementById("global-search"),
     searchResults: document.getElementById("search-results"),
+    notificationTrigger: document.getElementById("notification-trigger"),
+    notificationCount: document.getElementById("notification-count"),
+    notificationPanel: document.getElementById("notification-panel"),
+    notificationList: document.getElementById("notification-list"),
     directorySearchInput: document.getElementById("directory-search"),
     learningBookSearchInput: document.getElementById("learning-book-search"),
     adminSidebarTab: document.getElementById("admin-sidebar-tab"),
@@ -1182,6 +1191,9 @@ async function init() {
   if (state.activeTab === "library" && hydratedLearningCache) {
     renderAll();
   }
+
+  void loadOrgNotifications();
+  startNotificationsPolling();
 
   try {
     await Promise.allSettled([
@@ -1413,6 +1425,32 @@ async function loadEventPosts() {
   } catch (error) {
     appData.eventPosts = [];
   }
+}
+
+async function loadOrgNotifications() {
+  if (!window.AcuiteConnectAuth || !window.AcuiteConnectAuth.apiRequest) {
+    return;
+  }
+
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/notifications/?limit=20");
+    appData.orgNotifications = Array.isArray(payload.results) ? payload.results : [];
+    appData.orgNotificationUnreadCount = Number(payload.unread_count || 0);
+    renderNotifications();
+  } catch (error) {
+    appData.orgNotifications = [];
+    appData.orgNotificationUnreadCount = 0;
+    renderNotifications();
+  }
+}
+
+function startNotificationsPolling() {
+  if (notificationsPollTimer) {
+    return;
+  }
+  notificationsPollTimer = window.setInterval(() => {
+    void loadOrgNotifications();
+  }, 180000);
 }
 
 async function loadHomeAnnouncementPosts() {
@@ -1760,6 +1798,26 @@ async function handleDocumentClick(event) {
       return;
     }
 
+    if (actionName === "toggle-notifications") {
+      notificationsOpen = !notificationsOpen;
+      renderNotifications();
+      return;
+    }
+
+    if (actionName === "mark-all-notifications-read") {
+      await markAllOrgNotificationsRead();
+      return;
+    }
+
+    if (actionName === "open-notification") {
+      const notificationId = Number(action.dataset.notificationId || 0);
+      const notification = appData.orgNotifications.find((item) => Number(item.id) === notificationId);
+      if (notification) {
+        await openOrgNotification(notification);
+      }
+      return;
+    }
+
     if (actionName === "set-home-announcement-filter") {
       state.homeAnnouncementFilter = action.dataset.filter || "leadership";
       saveState();
@@ -2049,6 +2107,11 @@ async function handleDocumentClick(event) {
     closeProfileMenu();
   }
 
+  if (!event.target.closest(".notification-shell")) {
+    notificationsOpen = false;
+    renderNotifications();
+  }
+
   if (!event.target.closest(".topnav-search") || !elements.searchResults) {
     hideSearchResults();
   }
@@ -2272,6 +2335,7 @@ function renderAll() {
   safeRender("sidebar holidays", renderSidebarHolidays);
   safeRender("sidebar events", renderSidebarEvents);
   safeRender("filter buttons", syncFilterButtons);
+  safeRender("notifications", renderNotifications);
 }
 
 function renderBrochureBuilderPanel() {
@@ -3017,6 +3081,110 @@ function renderPanels() {
   document.querySelectorAll(".topnav-right [data-switch-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.switchTab === state.activeTab);
   });
+}
+
+function renderNotifications() {
+  if (!elements.notificationTrigger || !elements.notificationPanel || !elements.notificationList) {
+    return;
+  }
+
+  const unreadCount = Number(appData.orgNotificationUnreadCount || 0);
+  elements.notificationTrigger.setAttribute("aria-expanded", notificationsOpen ? "true" : "false");
+  elements.notificationPanel.hidden = !notificationsOpen;
+  if (elements.notificationCount) {
+    elements.notificationCount.hidden = unreadCount <= 0;
+    elements.notificationCount.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+  }
+
+  if (!appData.orgNotifications.length) {
+    elements.notificationList.innerHTML = '<div class="empty-state">No org-wide updates yet.</div>';
+    return;
+  }
+
+  elements.notificationList.innerHTML = appData.orgNotifications.map((notification) => {
+    const unreadClass = notification.is_read ? "" : "unread";
+    const meta = [
+      notification.category_label || notification.category || "Update",
+      formatRelativeTime(notification.created_at),
+    ].filter(Boolean).join(" | ");
+    return `
+      <button type="button" class="notification-item ${unreadClass}" data-action="open-notification" data-notification-id="${escapeHtml(String(notification.id))}">
+        <span class="notification-item-top">
+          <span>${escapeHtml(meta)}</span>
+          ${notification.is_read ? "" : "<span>New</span>"}
+        </span>
+        <strong>${escapeHtml(notification.title || "Connect update")}</strong>
+        ${notification.message ? `<p>${escapeHtml(notification.message)}</p>` : ""}
+      </button>
+    `;
+  }).join("");
+}
+
+async function markOrgNotificationRead(notificationId) {
+  if (!notificationId || !window.AcuiteConnectAuth?.apiRequest) {
+    return;
+  }
+  const wasUnread = appData.orgNotifications.some((notification) => (
+    Number(notification.id) === Number(notificationId) && !notification.is_read
+  ));
+  try {
+    await window.AcuiteConnectAuth.apiRequest(`/api/ops/notifications/${notificationId}/read/`, {
+      method: "PATCH",
+    });
+    appData.orgNotifications = appData.orgNotifications.map((notification) => (
+      Number(notification.id) === Number(notificationId)
+        ? { ...notification, is_read: true }
+        : notification
+    ));
+    if (wasUnread) {
+      appData.orgNotificationUnreadCount = Math.max(0, Number(appData.orgNotificationUnreadCount || 0) - 1);
+    }
+    renderNotifications();
+  } catch (error) {
+    showToast(error.message || "Could not mark the notification as read.");
+  }
+}
+
+async function markAllOrgNotificationsRead() {
+  if (!window.AcuiteConnectAuth?.apiRequest) {
+    return;
+  }
+  const ids = appData.orgNotifications.map((notification) => notification.id).filter(Boolean);
+  try {
+    const payload = await window.AcuiteConnectAuth.apiRequest("/api/ops/notifications/read-all/", {
+      method: "PATCH",
+      body: { ids },
+    });
+    appData.orgNotifications = appData.orgNotifications.map((notification) => ({
+      ...notification,
+      is_read: true,
+    }));
+    appData.orgNotificationUnreadCount = Number(payload.unread_count || 0);
+    renderNotifications();
+  } catch (error) {
+    showToast(error.message || "Could not mark notifications as read.");
+  }
+}
+
+async function openOrgNotification(notification) {
+  await markOrgNotificationRead(notification.id);
+  notificationsOpen = false;
+  renderNotifications();
+
+  const metadata = notification.metadata && typeof notification.metadata === "object"
+    ? notification.metadata
+    : {};
+  const announcementFilter = String(metadata.home_announcement_filter || "").trim();
+  if (announcementFilter && HOME_ANNOUNCEMENT_FILTERS.some(([value]) => value === announcementFilter)) {
+    state.homeAnnouncementFilter = announcementFilter;
+    saveState();
+  }
+
+  const targetTab = ENABLED_TABS.has(notification.target_tab) ? notification.target_tab : "home";
+  switchTab(targetTab);
+  if (metadata.focus_sidebar === "events") {
+    showToast("Opened Connect. Check Upcoming Events for this update.");
+  }
 }
 
 function renderProfile() {
