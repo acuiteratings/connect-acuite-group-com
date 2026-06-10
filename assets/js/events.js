@@ -354,6 +354,7 @@
 
   function renderEventCard(eventPost) {
     const isPublished = eventPost.moderationStatus === "published";
+    const coverDate = eventCoverDateParts(eventPost);
     const statusChip = state.canAdminister
       ? `<span class="mini-chip ${isPublished ? "success" : ""}">${isPublished ? "Published" : "Unpublished"}</span>`
       : "";
@@ -376,12 +377,16 @@
 
     return `
       <article class="section-card event-card" id="event-${escapeHtml(eventPost.sourceId)}">
-        <div class="event-cover">
-          ${
-            eventPost.coverImageUrl
-              ? `<img src="${escapeHtml(eventPost.coverImageUrl)}" alt="${escapeHtml(eventPost.title)} cover" loading="lazy">`
-              : `<span>${escapeHtml(initialsFromName(eventPost.title || "Event"))}</span>`
-          }
+        <div class="event-cover ${eventPost.coverImageUrl ? "has-image" : "event-cover-designed"}">
+          ${eventPost.coverImageUrl ? `<img src="${escapeHtml(eventPost.coverImageUrl)}" alt="${escapeHtml(eventPost.title)} cover" loading="lazy">` : ""}
+          <div class="event-cover-content">
+            <span class="event-cover-kicker">Acuité Events</span>
+            <span class="event-cover-rule" aria-hidden="true"></span>
+            <span class="event-cover-date">
+              <strong>${escapeHtml(coverDate.day)}</strong>
+              <span>${escapeHtml(coverDate.monthYear)}</span>
+            </span>
+          </div>
         </div>
         <div class="event-card-body">
           <div class="resource-card-head">
@@ -412,6 +417,25 @@
       moderationStatus: String(post.moderation_status || "draft"),
       createdAt: String(post.created_at || ""),
       publishedAt: String(post.published_at || ""),
+    };
+  }
+
+  function eventCoverDateParts(eventPost) {
+    const timestamp = parseEventDate(eventPost.eventDate);
+    if (!timestamp) {
+      return { day: "EV", monthYear: "Event" };
+    }
+    const date = new Date(timestamp);
+    return {
+      day: new Intl.DateTimeFormat("en-IN", {
+        day: "2-digit",
+        timeZone: "UTC",
+      }).format(date),
+      monthYear: new Intl.DateTimeFormat("en-IN", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(date).toUpperCase(),
     };
   }
 
@@ -721,15 +745,6 @@
       return 0;
     }
     return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  }
-
-  function initialsFromName(value) {
-    const words = String(value || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    const initials = words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join("");
-    return initials || "EV";
   }
 
   function escapeHtml(value) {
