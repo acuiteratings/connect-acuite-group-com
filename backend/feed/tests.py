@@ -235,7 +235,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
 
-    def test_people_culture_announcement_shows_mediclaim_notice_until_june_5(self):
+    def test_people_culture_announcement_shows_epfo_advisory_until_june_20(self):
         Post.objects.create(
             author=self.admin_user,
             title="Wellness at Work: Healthy Habits for a Productive Day",
@@ -253,67 +253,57 @@ class FeedApiTests(TestCase):
             },
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 3)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 10)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_3_post = response.json()["results"][0]
-        self.assertEqual(june_3_post["title"], "Mediclaim Policy Orientation Session")
-        self.assertIn("teams.microsoft.com/meet/47123779931799", june_3_post["body"])
-        self.assertIn("Meeting ID: 471 237 799 317 99", june_3_post["body"])
-        self.assertNotIn("When: 4th June 2026", june_3_post["body"])
-        self.assertNotIn("Where: Microsoft Teams", june_3_post["body"])
-        self.assertNotIn("Hosted by: HR", june_3_post["body"])
-        self.assertNotIn("Session Details:", june_3_post["body"])
-        self.assertNotIn("- Date: 4 June 2026", june_3_post["body"])
-
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
-            response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
-
-        self.assertEqual(response.status_code, 200)
-        june_4_post = response.json()["results"][0]
-        self.assertEqual(june_4_post["title"], "Mediclaim Policy Orientation Session")
-        self.assertIn("teams.microsoft.com/meet/47123779931799", june_4_post["body"])
+        june_10_post = response.json()["results"][0]
+        self.assertEqual(june_10_post["title"], "HR Advisory - EPFO Account Details")
+        self.assertIn("unifiedportal-mem.epfindia.gov.in/memberinterface/", june_10_post["body"])
+        self.assertIn("Your mandatory e-nomination is submitted.", june_10_post["body"])
         self.assertEqual(
-            june_4_post["metadata"]["home_announcement_display"]["dateLabel"],
-            "4th June 2026",
+            june_10_post["metadata"]["home_announcement_display"]["layoutVariant"],
+            "advisory_checklist",
         )
         self.assertEqual(
-            june_4_post["metadata"]["home_announcement_display"]["hostLabel"],
-            "HR",
-        )
-        self.assertEqual(
-            june_4_post["metadata"]["home_announcement_display"]["ctaLabel"],
-            "Join on Microsoft Teams",
+            june_10_post["metadata"]["home_announcement_display"]["ctaLabel"],
+            "Open EPFO website",
         )
         self.assertIn(
-            "teams.microsoft.com/meet/47123779931799",
-            june_4_post["metadata"]["home_announcement_display"]["ctaTarget"],
+            "unifiedportal-mem.epfindia.gov.in/memberinterface/",
+            june_10_post["metadata"]["home_announcement_display"]["ctaTarget"],
         )
-        self.assertNotIn(
-            "Session Details:",
-            june_4_post["metadata"]["home_announcement_display"]["details"],
-        )
-        self.assertNotIn(
-            "When: 4th June 2026",
-            june_4_post["metadata"]["home_announcement_display"]["details"],
-        )
-        self.assertNotIn(
-            "Where: Microsoft Teams",
-            june_4_post["metadata"]["home_announcement_display"]["details"],
-        )
-        self.assertNotIn(
-            "Hosted by: HR",
-            june_4_post["metadata"]["home_announcement_display"]["details"],
+        self.assertIn(
+            "Your UAN is active (UAN is available on your salary slips)",
+            june_10_post["metadata"]["home_announcement_display"]["checklistItems"],
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 5)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 20)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_5_post = response.json()["results"][0]
-        self.assertEqual(june_5_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
-        self.assertEqual(june_5_post["body"], "Wellness content")
+        june_20_post = response.json()["results"][0]
+        self.assertEqual(june_20_post["title"], "HR Advisory - EPFO Account Details")
+        self.assertEqual(
+            june_20_post["metadata"]["home_announcement_display"]["dateLabel"],
+            "Until 20 June 2026",
+        )
+        self.assertEqual(
+            june_20_post["metadata"]["home_announcement_display"]["hostLabel"],
+            "HR Team",
+        )
+        self.assertEqual(
+            june_20_post["metadata"]["home_announcement_display"]["venueLabel"],
+            "EPFO Member Portal",
+        )
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 21)):
+            response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
+
+        self.assertEqual(response.status_code, 200)
+        june_21_post = response.json()["results"][0]
+        self.assertEqual(june_21_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
+        self.assertEqual(june_21_post["body"], "Wellness content")
 
     def test_feed_can_exclude_ceo_and_home_announcements_from_bulletin_board(self):
         Post.objects.create(
@@ -538,7 +528,7 @@ class FeedApiTests(TestCase):
             1,
         )
 
-    def test_mediclaim_notice_like_does_not_persist_to_wellness_post(self):
+    def test_people_culture_advisory_like_does_not_persist_to_saved_post(self):
         post = Post.objects.create(
             author=self.admin_user,
             title="Wellness at Work: Healthy Habits for a Productive Day",
@@ -553,12 +543,12 @@ class FeedApiTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 4)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 10)):
             response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["reacted"])
-        self.assertEqual(response.json()["post"]["title"], "Mediclaim Policy Orientation Session")
+        self.assertEqual(response.json()["post"]["title"], "HR Advisory - EPFO Account Details")
         self.assertEqual(response.json()["post"]["reaction_count"], 0)
         self.assertEqual(PostReaction.objects.count(), 0)
 

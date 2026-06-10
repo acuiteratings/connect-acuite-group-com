@@ -16,7 +16,7 @@ from operations.notifications import create_org_notification
 from operations.services import record_analytics_event, record_audit_event
 
 from .models import Comment, Post, PostReaction
-from .serializers import is_mediclaim_notice_active, serialize_comment, serialize_post
+from .serializers import is_people_culture_advisory_active, serialize_comment, serialize_post
 
 logger = logging.getLogger(__name__)
 
@@ -537,7 +537,7 @@ def toggle_post_reaction(request, post_id):
         return JsonResponse({"detail": "Post not available."}, status=404)
     if _community_post_access_denied(request.user, post):
         return _community_access_error()
-    if is_mediclaim_notice_active(post):
+    if is_people_culture_advisory_active(post):
         return JsonResponse(
             {"post": serialize_post(post, viewer=request.user), "reacted": False}
         )

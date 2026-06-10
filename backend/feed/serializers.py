@@ -7,41 +7,38 @@ from accounts.serializers import serialize_user
 from .models import Comment, PostReaction
 
 
-MEDICLAIM_NOTICE_START_DATE = date(2026, 6, 3)
-MEDICLAIM_NOTICE_REVERT_DATE = date(2026, 6, 5)
-MEDICLAIM_NOTICE_TITLE = "Mediclaim Policy Orientation Session"
-MEDICLAIM_NOTICE_TEAMS_LINK = (
-    "https://teams.microsoft.com/meet/47123779931799?p=ofNdg3rsrsalS0dj1O"
+PEOPLE_CULTURE_ADVISORY_START_DATE = date(2026, 6, 10)
+PEOPLE_CULTURE_ADVISORY_REVERT_DATE = date(2026, 6, 21)
+PEOPLE_CULTURE_ADVISORY_TITLE = "HR Advisory - EPFO Account Details"
+PEOPLE_CULTURE_ADVISORY_LINK = "https://unifiedportal-mem.epfindia.gov.in/memberinterface/"
+PEOPLE_CULTURE_ADVISORY_BODY = (
+    "Are your EPFO details updated?\n\n"
+    f"Please log in to the EPFO website {PEOPLE_CULTURE_ADVISORY_LINK} to check if:\n"
+    "- Your UAN is active (UAN is available on your salary slips)\n"
+    "- Your KYC is updated\n"
+    "- Your mobile number is correct and updated so that you get the OTP and other details on your phone.\n"
+    "- Your mandatory e-nomination is submitted.\n\n"
+    "Please ensure to activate your UAN and update your KYC online to have hassle free PF transfers/claim processing. "
+    "Also please ensure that your e-nomination details are up to date. This is essential to safeguard the financial "
+    "interests of your loved ones and ensure a seamless process in case of unforeseen circumstances.\n\n"
+    "Should you need any assistance, please feel free to reach out to the HR team."
 )
-MEDICLAIM_NOTICE_BODY = (
-    "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
-    "policy period 18 April 2026 to 17 April 2027.\n\n"
-    "During this session, a comprehensive overview of the Mediclaim policy will be given and "
-    "any questions you may have will be addressed.\n\n"
-    "Please download the Loop Health mobile application prior to the session to access "
-    "policy-related services conveniently.\n\n"
-    f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}\n"
-    "\n"
-    "Meeting ID: 471 237 799 317 99\n"
-    "\n"
-    "Passcode: ry92FY6P"
-)
-MEDICLAIM_NOTICE_SUMMARY = (
-    "A Mediclaim Policy Orientation Session is scheduled with our insurance brokers for the "
-    "policy period 18 April 2026 to 17 April 2027."
-)
-MEDICLAIM_NOTICE_DETAILS = [
+PEOPLE_CULTURE_ADVISORY_SUMMARY = "Are your EPFO details updated?"
+PEOPLE_CULTURE_ADVISORY_DETAILS = [
+    f"Please log in to the EPFO website to review the items below: {PEOPLE_CULTURE_ADVISORY_LINK}",
     (
-        "During this session, a comprehensive overview of the Mediclaim policy will be given "
-        "and any questions you may have will be addressed."
+        "Please ensure to activate your UAN and update your KYC online to have hassle free PF transfers/claim processing."
     ),
     (
-        "Please download the Loop Health mobile application prior to the session to access "
-        "policy-related services conveniently."
+        "Please also ensure that your e-nomination details are up to date. This is essential to safeguard the financial "
+        "interests of your loved ones and ensure a seamless process in case of unforeseen circumstances."
     ),
-    f"Join: {MEDICLAIM_NOTICE_TEAMS_LINK}",
-    "Meeting ID: 471 237 799 317 99",
-    "Passcode: ry92FY6P",
+]
+PEOPLE_CULTURE_ADVISORY_CHECKLIST = [
+    "Your UAN is active (UAN is available on your salary slips)",
+    "Your KYC is updated",
+    "Your mobile number is correct and updated so that you get the OTP and other details on your phone.",
+    "Your mandatory e-nomination is submitted.",
 ]
 
 
@@ -54,33 +51,36 @@ def _is_people_culture_announcement(post):
     )
 
 
-def is_mediclaim_notice_active(post, *, today=None):
+def is_people_culture_advisory_active(post, *, today=None):
     today = today or timezone.localdate()
     return (
         _is_people_culture_announcement(post)
-        and MEDICLAIM_NOTICE_START_DATE <= today < MEDICLAIM_NOTICE_REVERT_DATE
+        and PEOPLE_CULTURE_ADVISORY_START_DATE <= today < PEOPLE_CULTURE_ADVISORY_REVERT_DATE
     )
 
 
-def _mediclaim_notice_metadata(metadata):
+def _people_culture_advisory_metadata(metadata):
     return {
         **metadata,
-        "bulletin_meta_lines": ["4th June 2026 | Microsoft Teams | HR"],
+        "bulletin_meta_lines": ["Until 20 June 2026 | EPFO Member Portal | HR Team"],
         "home_announcement_display": {
-            "formatLabel": "Orientation",
-            "dateLabel": "4th June 2026",
-            "timeLabel": "4th June 2026",
-            "venueLabel": "Microsoft Teams",
-            "hostLabel": "HR",
+            "formatLabel": "HR Advisory",
+            "dateLabel": "Until 20 June 2026",
+            "timeLabel": "Action this week",
+            "venueLabel": "EPFO Member Portal",
+            "hostLabel": "HR Team",
             "audienceLabel": "For all employees",
-            "countdownLabel": "Policy period: 18 April 2026 to 17 April 2027",
-            "summary": MEDICLAIM_NOTICE_SUMMARY,
-            "details": MEDICLAIM_NOTICE_DETAILS,
-            "ctaLabel": "Join on Microsoft Teams",
-            "ctaTarget": MEDICLAIM_NOTICE_TEAMS_LINK,
+            "countdownLabel": "Please verify UAN, KYC, mobile number, and e-nomination",
+            "summary": PEOPLE_CULTURE_ADVISORY_SUMMARY,
+            "details": PEOPLE_CULTURE_ADVISORY_DETAILS,
+            "layoutVariant": "advisory_checklist",
+            "checklistItems": PEOPLE_CULTURE_ADVISORY_CHECKLIST,
+            "closingNote": "Should you need any assistance, please feel free to reach out to the HR team.",
+            "ctaLabel": "Open EPFO website",
+            "ctaTarget": PEOPLE_CULTURE_ADVISORY_LINK,
         },
-        "bulletin_cta_label": "Join on Microsoft Teams",
-        "bulletin_cta_target": MEDICLAIM_NOTICE_TEAMS_LINK,
+        "bulletin_cta_label": "Open EPFO website",
+        "bulletin_cta_target": PEOPLE_CULTURE_ADVISORY_LINK,
         "post_as_company": True,
         "company_author_name": "HR",
         "company_author_title": "Official company post",
@@ -90,9 +90,9 @@ def _mediclaim_notice_metadata(metadata):
 
 def serialize_post(post, *, viewer=None):
     metadata = post.metadata or {}
-    mediclaim_notice_active = is_mediclaim_notice_active(post)
-    if mediclaim_notice_active:
-        metadata = _mediclaim_notice_metadata(metadata)
+    people_culture_advisory_active = is_people_culture_advisory_active(post)
+    if people_culture_advisory_active:
+        metadata = _people_culture_advisory_metadata(metadata)
     author = serialize_user(post.author)
     if metadata.get("post_as_company"):
         author = {
@@ -129,13 +129,13 @@ def serialize_post(post, *, viewer=None):
             or viewer.has_perm("feed.moderate_post")
             or viewer.has_perm("feed.moderate_comment")
         )
-    if mediclaim_notice_active:
+    if people_culture_advisory_active:
         reaction_count = 0
         current_user_has_reacted = False
     return {
         "id": post.id,
-        "title": MEDICLAIM_NOTICE_TITLE if mediclaim_notice_active else post.title,
-        "body": MEDICLAIM_NOTICE_BODY if mediclaim_notice_active else post.body,
+        "title": PEOPLE_CULTURE_ADVISORY_TITLE if people_culture_advisory_active else post.title,
+        "body": PEOPLE_CULTURE_ADVISORY_BODY if people_culture_advisory_active else post.body,
         "kind": post.kind,
         "module": post.module,
         "topic": post.topic,

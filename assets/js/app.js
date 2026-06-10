@@ -3515,7 +3515,7 @@ function renderHomeAnnouncement() {
   if (!container) {
     return;
   }
-  container.classList.remove("announcement-layout-story-winners");
+  container.classList.remove("announcement-layout-story-winners", "announcement-layout-advisory");
 
   if (state.homeAnnouncementFilter === "opinion_poll" && appData.activeOpinionPoll) {
     applyAnnouncementTheme(
@@ -3559,6 +3559,7 @@ function renderHomeAnnouncement() {
   const likeAction = announcement.isLive ? "toggle-live-reaction" : "toggle-like";
   const likeTarget = announcement.isLive ? announcement.sourceId : announcement.id;
   container.classList.toggle("announcement-layout-story-winners", announcement.layoutVariant === "story_winners");
+  container.classList.toggle("announcement-layout-advisory", announcement.layoutVariant === "advisory_checklist");
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -3653,6 +3654,29 @@ function renderAnnouncementDetails(announcement) {
                 <span>The Lesson</span>
                 <p>${escapeHtml(winner.lesson || "")}</p>
               </section>
+            </article>
+          `).join("")}
+        </div>
+        ${announcement.closingNote ? `<p class="announcement-story-closing">${escapeHtml(announcement.closingNote)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  if (
+    announcement.layoutVariant === "advisory_checklist"
+    && Array.isArray(announcement.checklistItems)
+    && announcement.checklistItems.length
+  ) {
+    return `
+      <div class="announcement-details announcement-details-advisory">
+        <div class="announcement-advisory-intro">
+          ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
+        </div>
+        <div class="announcement-advisory-grid">
+          ${announcement.checklistItems.map((item, index) => `
+            <article class="announcement-advisory-card">
+              <span class="announcement-advisory-step">Check ${index + 1}</span>
+              <p>${escapeHtml(item)}</p>
             </article>
           `).join("")}
         </div>
@@ -5691,6 +5715,9 @@ function mapHomeAnnouncementPost(post) {
           story: String(winner?.story || "").trim(),
           lesson: String(winner?.lesson || "").trim(),
         })).filter((winner) => winner.place || winner.name || winner.story || winner.lesson)
+      : [],
+    checklistItems: Array.isArray(display.checklistItems)
+      ? display.checklistItems.map((item) => String(item || "").trim()).filter(Boolean)
       : [],
     details: Array.isArray(display.details)
       ? display.details.map((item) => String(item || "").trim()).filter(Boolean)
