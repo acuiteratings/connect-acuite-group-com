@@ -536,6 +536,84 @@ class PruneOperationalEventsCommandTests(TestCase):
         self.assertIn("Pruned:", output.getvalue())
 
 
+class SyncAnnouncementNotificationsCommandTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="announce.admin@acuite.in",
+            password="testpass123",
+            first_name="Announce",
+            last_name="Admin",
+            access_level=User.AccessLevel.ADMIN,
+            employment_status=User.EmploymentStatus.ACTIVE,
+        )
+
+    def test_sync_command_creates_notification_for_recent_saved_announcement_update(self):
+        post = Post.objects.create(
+            author=self.admin,
+            title="Myself Application - Beta Launch",
+            body="Launch details",
+            kind=Post.PostType.ANNOUNCEMENT,
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            visibility=Post.Visibility.COMPANY,
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+            metadata={
+                "post_as_company": True,
+                "home_announcement_tag": "new_initiatives",
+                "home_announcement_display": {
+                    "summary": "Myself beta is now live.",
+                },
+            },
+        )
+
+        output = StringIO()
+        call_command("sync_announcement_notifications", stdout=output)
+
+        notification = OrgNotification.objects.get(
+            metadata__home_announcement_filter="new_initiatives"
+        )
+        self.assertEqual(notification.message, "Myself Application - Beta Launch")
+        self.assertEqual(notification.metadata["post_id"], post.id)
+        self.assertEqual(notification.metadata["source"], "deploy_announcement_sync")
+        self.assertTrue(notification.metadata["content_signature"])
+        self.assertIn("created=1", output.getvalue())
+
+    def test_sync_command_creates_only_one_notification_for_active_runtime_override(self):
+        Post.objects.create(
+            author=self.admin,
+            title="Wellness at Work: Healthy Habits for a Productive Day",
+            body="Wellness content",
+            kind=Post.PostType.ANNOUNCEMENT,
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            visibility=Post.Visibility.COMPANY,
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now() - timedelta(days=10),
+            metadata={
+                "post_as_company": True,
+                "home_announcement_tag": "people_culture",
+                "home_announcement_display": {
+                    "formatLabel": "Wellness",
+                    "summary": "Productivity is often supported by simple habits.",
+                },
+            },
+        )
+
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 22)):
+            call_command("sync_announcement_notifications")
+            call_command("sync_announcement_notifications")
+
+        notifications = OrgNotification.objects.filter(
+            metadata__home_announcement_filter="people_culture"
+        )
+        self.assertEqual(notifications.count(), 1)
+        self.assertEqual(
+            notifications.first().message,
+            "International Yoga Day Celebration - Event Feedback",
+        )
+
+
 class DailyCelebrationPublishingTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_user(

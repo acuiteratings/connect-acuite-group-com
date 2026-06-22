@@ -456,6 +456,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(notification.category, OrgNotification.Category.ANNOUNCEMENT)
         self.assertEqual(notification.target_tab, "home")
         self.assertEqual(notification.metadata["home_announcement_filter"], "cybersecurity")
+        self.assertTrue(notification.metadata["content_signature"])
 
     def test_user_with_posting_disabled_can_still_comment_and_like(self):
         post = Post.objects.create(

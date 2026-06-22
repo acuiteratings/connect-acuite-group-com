@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from html import escape
@@ -195,6 +196,19 @@ def _send_ceo_request_approval_email(post):
         logger.exception("Could not send MD & CEO request approval email.", extra={"post_id": post.id})
 
 
+def _announcement_content_signature(post):
+    serialized = serialize_post(post)
+    payload = {
+        "title": serialized.get("title", ""),
+        "body": serialized.get("body", ""),
+        "bulletin_meta_lines": (serialized.get("metadata") or {}).get("bulletin_meta_lines", []),
+        "home_announcement_display": (serialized.get("metadata") or {}).get("home_announcement_display", {}),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=True).encode("utf-8")
+    ).hexdigest()
+
+
 def _maybe_notify_org_for_published_post(post, actor, *, action="created"):
     if (
         post.module != Post.Module.BULLETIN
@@ -221,6 +235,7 @@ def _maybe_notify_org_for_published_post(post, actor, *, action="created"):
             metadata={
                 "home_announcement_filter": announcement_tag,
                 "post_id": post.id,
+                "content_signature": _announcement_content_signature(post),
             },
             actor=actor,
         )
