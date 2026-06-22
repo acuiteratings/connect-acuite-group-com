@@ -235,7 +235,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
 
-    def test_people_culture_announcement_shows_epfo_advisory_until_june_20(self):
+    def test_people_culture_announcement_shows_yoga_feedback_until_june_28(self):
         Post.objects.create(
             author=self.admin_user,
             title="Wellness at Work: Healthy Habits for a Productive Day",
@@ -253,57 +253,61 @@ class FeedApiTests(TestCase):
             },
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 10)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 22)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_10_post = response.json()["results"][0]
-        self.assertEqual(june_10_post["title"], "HR Advisory - EPFO Account Details")
-        self.assertIn("unifiedportal-mem.epfindia.gov.in/memberinterface/", june_10_post["body"])
-        self.assertIn("Your mandatory e-nomination is submitted.", june_10_post["body"])
+        june_22_post = response.json()["results"][0]
+        self.assertEqual(june_22_post["title"], "International Yoga Day Celebration - Event Feedback")
+        self.assertIn("forms.cloud.microsoft/Pages/DesignPageV2.aspx", june_22_post["body"])
+        self.assertIn("session format (offline/online)", june_22_post["body"])
         self.assertEqual(
-            june_10_post["metadata"]["home_announcement_display"]["layoutVariant"],
+            june_22_post["metadata"]["home_announcement_display"]["layoutVariant"],
             "advisory_checklist",
         )
         self.assertEqual(
-            june_10_post["metadata"]["home_announcement_display"]["ctaLabel"],
-            "Open EPFO website",
+            june_22_post["metadata"]["home_announcement_display"]["ctaLabel"],
+            "Open Feedback Form",
         )
         self.assertIn(
-            "unifiedportal-mem.epfindia.gov.in/memberinterface/",
-            june_10_post["metadata"]["home_announcement_display"]["ctaTarget"],
+            "forms.cloud.microsoft/Pages/DesignPageV2.aspx",
+            june_22_post["metadata"]["home_announcement_display"]["ctaTarget"],
         )
         self.assertIn(
-            "Your UAN is active (UAN is available on your salary slips)",
-            june_10_post["metadata"]["home_announcement_display"]["checklistItems"],
+            "Instructor effectiveness",
+            june_22_post["metadata"]["home_announcement_display"]["checklistItems"],
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 20)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 28)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_20_post = response.json()["results"][0]
-        self.assertEqual(june_20_post["title"], "HR Advisory - EPFO Account Details")
+        june_28_post = response.json()["results"][0]
+        self.assertEqual(june_28_post["title"], "International Yoga Day Celebration - Event Feedback")
         self.assertEqual(
-            june_20_post["metadata"]["home_announcement_display"]["dateLabel"],
-            "Until 20 June 2026",
+            june_28_post["metadata"]["home_announcement_display"]["dateLabel"],
+            "Conducted on 19 June 2026",
         )
         self.assertEqual(
-            june_20_post["metadata"]["home_announcement_display"]["hostLabel"],
+            june_28_post["metadata"]["home_announcement_display"]["hostLabel"],
             "HR Team",
         )
         self.assertEqual(
-            june_20_post["metadata"]["home_announcement_display"]["venueLabel"],
-            "EPFO Member Portal",
+            june_28_post["metadata"]["home_announcement_display"]["venueLabel"],
+            "Nahur Mumbai, online for other locations",
+        )
+        self.assertEqual(
+            june_28_post["metadata"]["home_announcement_display"]["countdownLabel"],
+            "Through MS Forms to be submitted by 24 June 2026",
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 21)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 29)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_21_post = response.json()["results"][0]
-        self.assertEqual(june_21_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
-        self.assertEqual(june_21_post["body"], "Wellness content")
+        june_29_post = response.json()["results"][0]
+        self.assertEqual(june_29_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
+        self.assertEqual(june_29_post["body"], "Wellness content")
 
     def test_feed_can_exclude_ceo_and_home_announcements_from_bulletin_board(self):
         Post.objects.create(
@@ -543,12 +547,12 @@ class FeedApiTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 10)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 22)):
             response = self.client.post(f"/api/feed/posts/{post.id}/reactions/toggle/")
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["reacted"])
-        self.assertEqual(response.json()["post"]["title"], "HR Advisory - EPFO Account Details")
+        self.assertEqual(response.json()["post"]["title"], "International Yoga Day Celebration - Event Feedback")
         self.assertEqual(response.json()["post"]["reaction_count"], 0)
         self.assertEqual(PostReaction.objects.count(), 0)
 

@@ -7,38 +7,39 @@ from accounts.serializers import serialize_user
 from .models import Comment, PostReaction
 
 
-PEOPLE_CULTURE_ADVISORY_START_DATE = date(2026, 6, 10)
-PEOPLE_CULTURE_ADVISORY_REVERT_DATE = date(2026, 6, 21)
-PEOPLE_CULTURE_ADVISORY_TITLE = "HR Advisory - EPFO Account Details"
-PEOPLE_CULTURE_ADVISORY_LINK = "https://unifiedportal-mem.epfindia.gov.in/memberinterface/"
-PEOPLE_CULTURE_ADVISORY_BODY = (
-    "Are your EPFO details updated?\n\n"
-    f"Please log in to the EPFO website {PEOPLE_CULTURE_ADVISORY_LINK} to check if:\n"
-    "- Your UAN is active (UAN is available on your salary slips)\n"
-    "- Your KYC is updated\n"
-    "- Your mobile number is correct and updated so that you get the OTP and other details on your phone.\n"
-    "- Your mandatory e-nomination is submitted.\n\n"
-    "Please ensure to activate your UAN and update your KYC online to have hassle free PF transfers/claim processing. "
-    "Also please ensure that your e-nomination details are up to date. This is essential to safeguard the financial "
-    "interests of your loved ones and ensure a seamless process in case of unforeseen circumstances.\n\n"
-    "Should you need any assistance, please feel free to reach out to the HR team."
+PEOPLE_CULTURE_ADVISORY_START_DATE = date(2026, 6, 22)
+PEOPLE_CULTURE_ADVISORY_REVERT_DATE = date(2026, 6, 29)
+PEOPLE_CULTURE_ADVISORY_TITLE = "International Yoga Day Celebration - Event Feedback"
+PEOPLE_CULTURE_ADVISORY_LINK = (
+    "https://forms.cloud.microsoft/Pages/DesignPageV2.aspx?subpage=design&token="
+    "c40f43d48d034833936da69e6229c5db&id=pvr0YEaZck-4MmtV4AZAkNzExni0K5NEgxxyG89l8EFURUtNSksyS0YxU0RGMlZQNTlSRzFLRjBBRy4u"
 )
-PEOPLE_CULTURE_ADVISORY_SUMMARY = "Are your EPFO details updated?"
+PEOPLE_CULTURE_ADVISORY_BODY = (
+    "Thank you for participating in our recent Yoga session, conducted both in-office and virtually across locations.\n\n"
+    "Please take a few minutes to share your experience regarding the session content, instructor effectiveness, "
+    "session format (offline/online), and overall satisfaction. Your feedback will help us create more engaging and "
+    "beneficial sessions for everyone.\n\n"
+    "Please find below the link for MS Forms.\n\n"
+    f"International Yoga Day Session Feedback Form: {PEOPLE_CULTURE_ADVISORY_LINK}"
+)
+PEOPLE_CULTURE_ADVISORY_SUMMARY = (
+    "Thank you for participating in our recent Yoga session, conducted both in-office and virtually across locations."
+)
 PEOPLE_CULTURE_ADVISORY_DETAILS = [
-    f"Please log in to the EPFO website to review the items below: {PEOPLE_CULTURE_ADVISORY_LINK}",
     (
-        "Please ensure to activate your UAN and update your KYC online to have hassle free PF transfers/claim processing."
+        "Please take a few minutes to share your experience regarding the session content, instructor effectiveness, "
+        "session format (offline/online), and overall satisfaction."
     ),
     (
-        "Please also ensure that your e-nomination details are up to date. This is essential to safeguard the financial "
-        "interests of your loved ones and ensure a seamless process in case of unforeseen circumstances."
+        "Your feedback will help us create more engaging and beneficial sessions for everyone."
     ),
+    "Please find below the link for MS Forms.",
 ]
 PEOPLE_CULTURE_ADVISORY_CHECKLIST = [
-    "Your UAN is active (UAN is available on your salary slips)",
-    "Your KYC is updated",
-    "Your mobile number is correct and updated so that you get the OTP and other details on your phone.",
-    "Your mandatory e-nomination is submitted.",
+    "Session content",
+    "Instructor effectiveness",
+    "Session format (offline/online)",
+    "Overall satisfaction",
 ]
 
 
@@ -62,24 +63,26 @@ def is_people_culture_advisory_active(post, *, today=None):
 def _people_culture_advisory_metadata(metadata):
     return {
         **metadata,
-        "bulletin_meta_lines": ["Until 20 June 2026 | EPFO Member Portal | HR Team"],
+        "bulletin_meta_lines": [
+            "Conducted on 19 June 2026 | Nahur Mumbai, online for other locations | HR Team"
+        ],
         "home_announcement_display": {
-            "formatLabel": "HR Advisory",
-            "dateLabel": "Until 20 June 2026",
-            "timeLabel": "Action this week",
-            "venueLabel": "EPFO Member Portal",
+            "formatLabel": "Event Feedback",
+            "dateLabel": "Conducted on 19 June 2026",
+            "timeLabel": "Feedback open through 24 June 2026",
+            "venueLabel": "Nahur Mumbai, online for other locations",
             "hostLabel": "HR Team",
             "audienceLabel": "For all employees",
-            "countdownLabel": "Please verify UAN, KYC, mobile number, and e-nomination",
+            "countdownLabel": "Through MS Forms to be submitted by 24 June 2026",
             "summary": PEOPLE_CULTURE_ADVISORY_SUMMARY,
             "details": PEOPLE_CULTURE_ADVISORY_DETAILS,
             "layoutVariant": "advisory_checklist",
             "checklistItems": PEOPLE_CULTURE_ADVISORY_CHECKLIST,
-            "closingNote": "Should you need any assistance, please feel free to reach out to the HR team.",
-            "ctaLabel": "Open EPFO website",
+            "closingNote": "Please take a few minutes to share your feedback through the form below.",
+            "ctaLabel": "Open Feedback Form",
             "ctaTarget": PEOPLE_CULTURE_ADVISORY_LINK,
         },
-        "bulletin_cta_label": "Open EPFO website",
+        "bulletin_cta_label": "Open Feedback Form",
         "bulletin_cta_target": PEOPLE_CULTURE_ADVISORY_LINK,
         "post_as_company": True,
         "company_author_name": "HR",
