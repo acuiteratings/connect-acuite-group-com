@@ -286,7 +286,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(june_28_post["title"], "International Yoga Day Celebration - Event Feedback")
         self.assertEqual(
             june_28_post["metadata"]["home_announcement_display"]["dateLabel"],
-            "Conducted on 19 June 2026",
+            "",
         )
         self.assertEqual(
             june_28_post["metadata"]["home_announcement_display"]["hostLabel"],
@@ -298,7 +298,11 @@ class FeedApiTests(TestCase):
         )
         self.assertEqual(
             june_28_post["metadata"]["home_announcement_display"]["countdownLabel"],
-            "Through MS Forms to be submitted by 24 June 2026",
+            "Through MS Forms to be submitted by 26 June 2026",
+        )
+        self.assertEqual(
+            june_28_post["metadata"]["home_announcement_display"]["timeLabel"],
+            "Feedback open through 26 June 2026",
         )
 
         with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 29)):
