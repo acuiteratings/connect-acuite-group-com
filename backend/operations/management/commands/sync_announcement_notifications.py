@@ -45,6 +45,19 @@ def _announcement_has_runtime_override(post):
     )
 
 
+def _matching_notifications(*, announcement_tag, label, message):
+    return list(
+        OrgNotification.objects.filter(
+            is_active=True,
+            category=OrgNotification.Category.ANNOUNCEMENT,
+            target_tab="home",
+            title=f"{label} announcement updated",
+            message=message,
+            metadata__home_announcement_filter=announcement_tag,
+        ).order_by("-created_at", "-id")
+    )
+
+
 class Command(BaseCommand):
     help = "Backfill missing org notifications for recent or runtime-overridden home announcements."
 
@@ -62,6 +75,8 @@ class Command(BaseCommand):
         cutoff = now - timedelta(days=lookback_days)
         created = 0
         examined = 0
+        updated = 0
+        deactivated = 0
 
         posts = (
             Post.objects.select_related("author")
@@ -91,24 +106,51 @@ class Command(BaseCommand):
 
             examined += 1
             signature = _announcement_content_signature(post)
-            existing = OrgNotification.objects.filter(
-                is_active=True,
-                category=OrgNotification.Category.ANNOUNCEMENT,
-                target_tab="home",
-                metadata__home_announcement_filter=announcement_tag,
-                metadata__content_signature=signature,
-            ).exists()
-            if existing:
-                continue
 
             label = ANNOUNCEMENT_TAG_LABELS.get(
                 announcement_tag,
                 announcement_tag.replace("_", " ").title(),
             )
             serialized = serialize_post(post)
+            message = serialized.get("title", post.title)
+            matching = _matching_notifications(
+                announcement_tag=announcement_tag,
+                label=label,
+                message=message,
+            )
+            keep = matching[0] if matching else None
+            if keep:
+                metadata_changed = False
+                keep_metadata = dict(keep.metadata or {})
+                desired_pairs = {
+                    "post_id": post.id,
+                    "source_post_id": post.id,
+                    "home_announcement_filter": announcement_tag,
+                    "content_signature": signature,
+                }
+                for key, value in desired_pairs.items():
+                    if keep_metadata.get(key) != value:
+                        keep_metadata[key] = value
+                        metadata_changed = True
+                if keep_metadata.get("source") != "deploy_announcement_sync":
+                    keep_metadata["source"] = "deploy_announcement_sync"
+                    metadata_changed = True
+                if metadata_changed:
+                    keep.metadata = keep_metadata
+                    keep.save(update_fields=["metadata"])
+                    updated += 1
+
+                duplicate_ids = [notification.id for notification in matching[1:]]
+                if duplicate_ids:
+                    deactivated += OrgNotification.objects.filter(
+                        id__in=duplicate_ids,
+                        is_active=True,
+                    ).update(is_active=False)
+                continue
+
             notification = create_org_notification(
                 title=f"{label} announcement updated",
-                message=serialized.get("title", post.title),
+                message=message,
                 category=OrgNotification.Category.ANNOUNCEMENT,
                 target_tab="home",
                 metadata={
@@ -125,6 +167,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Announcement notification sync complete: examined={examined}, created={created}"
+                "Announcement notification sync complete: "
+                f"examined={examined}, created={created}, updated={updated}, deactivated={deactivated}"
             )
         )

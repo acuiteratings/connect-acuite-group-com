@@ -613,6 +613,112 @@ class SyncAnnouncementNotificationsCommandTests(TestCase):
             "International Yoga Day Celebration - Event Feedback",
         )
 
+    def test_sync_command_reuses_legacy_matching_notification_without_creating_duplicate(self):
+        post = Post.objects.create(
+            author=self.admin,
+            title="Myself Application - Beta Launch",
+            body="Launch details",
+            kind=Post.PostType.ANNOUNCEMENT,
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            visibility=Post.Visibility.COMPANY,
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+            metadata={
+                "post_as_company": True,
+                "home_announcement_tag": "new_initiatives",
+                "home_announcement_display": {
+                    "summary": "Myself beta is now live.",
+                },
+            },
+        )
+        legacy = OrgNotification.objects.create(
+            title="New Initiatives announcement updated",
+            message="Myself Application - Beta Launch",
+            category=OrgNotification.Category.ANNOUNCEMENT,
+            target_tab="home",
+            metadata={
+                "post_id": post.id,
+                "source_post_id": post.id,
+                "home_announcement_filter": "new_initiatives",
+                "source": "legacy_backfill",
+            },
+            created_by=self.admin,
+        )
+
+        output = StringIO()
+        call_command("sync_announcement_notifications", stdout=output)
+
+        legacy.refresh_from_db()
+        self.assertTrue(legacy.is_active)
+        self.assertEqual(
+            OrgNotification.objects.filter(
+                title="New Initiatives announcement updated",
+                message="Myself Application - Beta Launch",
+                is_active=True,
+            ).count(),
+            1,
+        )
+        self.assertEqual(legacy.metadata["source"], "deploy_announcement_sync")
+        self.assertTrue(legacy.metadata["content_signature"])
+        self.assertIn("created=0", output.getvalue())
+        self.assertIn("updated=1", output.getvalue())
+
+    def test_sync_command_deactivates_duplicate_matching_notifications(self):
+        Post.objects.create(
+            author=self.admin,
+            title="Myself Application - Beta Launch",
+            body="Launch details",
+            kind=Post.PostType.ANNOUNCEMENT,
+            module=Post.Module.BULLETIN,
+            topic="announcements",
+            visibility=Post.Visibility.COMPANY,
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+            metadata={
+                "post_as_company": True,
+                "home_announcement_tag": "new_initiatives",
+                "home_announcement_display": {
+                    "summary": "Myself beta is now live.",
+                },
+            },
+        )
+
+        call_command("sync_announcement_notifications")
+        duplicate = OrgNotification.objects.create(
+            title="New Initiatives announcement updated",
+            message="Myself Application - Beta Launch",
+            category=OrgNotification.Category.ANNOUNCEMENT,
+            target_tab="home",
+            metadata={
+                "home_announcement_filter": "new_initiatives",
+                "source": "manual_duplicate",
+            },
+            created_by=self.admin,
+        )
+
+        output = StringIO()
+        call_command("sync_announcement_notifications", stdout=output)
+
+        duplicate.refresh_from_db()
+        active_notifications = OrgNotification.objects.filter(
+            title="New Initiatives announcement updated",
+            message="Myself Application - Beta Launch",
+            is_active=True,
+        )
+        inactive_notifications = OrgNotification.objects.filter(
+            title="New Initiatives announcement updated",
+            message="Myself Application - Beta Launch",
+            is_active=False,
+        )
+        self.assertEqual(active_notifications.count(), 1)
+        self.assertEqual(inactive_notifications.count(), 1)
+        self.assertEqual(
+            active_notifications.first().metadata["source"],
+            "deploy_announcement_sync",
+        )
+        self.assertIn("deactivated=1", output.getvalue())
+
 
 class DailyCelebrationPublishingTests(TestCase):
     def setUp(self):
