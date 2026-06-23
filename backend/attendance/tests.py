@@ -1,14 +1,14 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.utils import timezone
 
 from accounts.models import EmployeeSSOIdentitySnapshot, User
 from directory.models import DirectoryProfile
 
 from .models import AttendanceDayRecord
-from .services import working_day_status
+from .services import capture_attendance_activity, working_day_status
 
 
 WORKING_DAY = date(2026, 5, 8)
@@ -16,6 +16,7 @@ WORKING_DAY = date(2026, 5, 8)
 
 class AttendanceApiTests(TestCase):
     def setUp(self):
+        self.factory = RequestFactory()
         self.user = User.objects.create_user(
             email="employee@acuite.in",
             password="testpass123",
@@ -90,6 +91,50 @@ class AttendanceApiTests(TestCase):
         self.assertEqual(response.json()["status"], "no_punchout")
         record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
         self.assertEqual(record.punch_in_ip, "122.179.133.53")
+
+    @override_settings(
+        ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16",
+        ATTENDANCE_ACTIVITY_WRITE_THROTTLE_SECONDS=300,
+    )
+    def test_repeated_activity_within_throttle_window_does_not_rewrite_attendance_record(self):
+        request = self.factory.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
+        request.user = self.user
+        first_seen = timezone.make_aware(datetime(2026, 5, 8, 9, 30, 0))
+        second_seen = first_seen + timedelta(seconds=90)
+
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            with patch("attendance.services.timezone.now", return_value=first_seen):
+                first_record = capture_attendance_activity(request)
+            with patch("attendance.services.timezone.now", return_value=second_seen):
+                second_record = capture_attendance_activity(request)
+
+        self.assertIsNotNone(first_record)
+        self.assertIsNotNone(second_record)
+        record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
+        self.assertEqual(record.first_activity_at, first_seen)
+        self.assertEqual(record.last_activity_at, first_seen)
+        self.assertEqual(record.punch_out_at, first_seen)
+
+    @override_settings(
+        ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16",
+        ATTENDANCE_ACTIVITY_WRITE_THROTTLE_SECONDS=300,
+    )
+    def test_activity_after_throttle_window_refreshes_attendance_record(self):
+        request = self.factory.get("/api/attendance/status/", REMOTE_ADDR="10.10.1.7")
+        request.user = self.user
+        first_seen = timezone.make_aware(datetime(2026, 5, 8, 9, 30, 0))
+        second_seen = first_seen + timedelta(minutes=6)
+
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            with patch("attendance.services.timezone.now", return_value=first_seen):
+                capture_attendance_activity(request)
+            with patch("attendance.services.timezone.now", return_value=second_seen):
+                capture_attendance_activity(request)
+
+        record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
+        self.assertEqual(record.first_activity_at, first_seen)
+        self.assertEqual(record.last_activity_at, second_seen)
+        self.assertEqual(record.punch_out_at, second_seen)
 
     @override_settings(ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16")
     def test_non_connect_attendance_employee_is_not_applicable(self):

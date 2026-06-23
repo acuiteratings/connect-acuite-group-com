@@ -367,18 +367,34 @@ def capture_attendance_activity(request, *, source="activity"):
         return None
 
     now = timezone.now()
-    record, _created = AttendanceDayRecord.objects.get_or_create(
-        user=user,
-        attendance_date=today,
-        defaults={
-            "status": AttendanceDayRecord.Status.NO_PUNCHOUT,
-            "punch_in_at": now,
-            "first_activity_at": now,
-            "office_label": office_network.label,
-            "punch_in_ip": ip_text,
-            "punch_in_source": AttendanceDayRecord.Source.ACTIVITY,
-        },
+    throttle_seconds = max(
+        int(getattr(settings, "ATTENDANCE_ACTIVITY_WRITE_THROTTLE_SECONDS", 300) or 0),
+        0,
     )
+    record = AttendanceDayRecord.objects.filter(user=user, attendance_date=today).first()
+    if (
+        record
+        and source != "logout"
+        and throttle_seconds > 0
+        and record.last_activity_at
+        and (record.office_label or "") == office_network.label
+        and (now - record.last_activity_at).total_seconds() < throttle_seconds
+    ):
+        return record
+
+    if not record:
+        record, _created = AttendanceDayRecord.objects.get_or_create(
+            user=user,
+            attendance_date=today,
+            defaults={
+                "status": AttendanceDayRecord.Status.NO_PUNCHOUT,
+                "punch_in_at": now,
+                "first_activity_at": now,
+                "office_label": office_network.label,
+                "punch_in_ip": ip_text,
+                "punch_in_source": AttendanceDayRecord.Source.ACTIVITY,
+            },
+        )
     update_fields = []
     if not record.punch_in_at:
         record.punch_in_at = now

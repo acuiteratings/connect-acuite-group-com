@@ -113,6 +113,8 @@ services:
         value: "15"
       - key: CONNECT_ATTENDANCE_EXPORT_TOKENS
         sync: false
+      - key: ATTENDANCE_ACTIVITY_WRITE_THROTTLE_SECONDS
+        value: "300"
 
   - type: web
     name: acuite-connect-static
