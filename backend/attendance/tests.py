@@ -92,6 +92,30 @@ class AttendanceApiTests(TestCase):
         record = AttendanceDayRecord.objects.get(user=self.user, attendance_date=WORKING_DAY)
         self.assertEqual(record.punch_in_ip, "122.179.133.53")
 
+    @override_settings(ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16")
+    def test_accounts_me_request_records_attendance(self):
+        self.client.force_login(self.user)
+
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/accounts/me/", REMOTE_ADDR="10.10.1.7")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            AttendanceDayRecord.objects.filter(user=self.user, attendance_date=WORKING_DAY).exists()
+        )
+
+    @override_settings(ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16")
+    def test_non_tracked_api_request_does_not_record_attendance(self):
+        self.client.force_login(self.user)
+
+        with patch("attendance.services.timezone.localdate", return_value=WORKING_DAY):
+            response = self.client.get("/api/ops/notifications/?limit=20", REMOTE_ADDR="10.10.1.7")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            AttendanceDayRecord.objects.filter(user=self.user, attendance_date=WORKING_DAY).exists()
+        )
+
     @override_settings(
         ATTENDANCE_OFFICE_NETWORKS="Mumbai=10.10.0.0/16",
         ATTENDANCE_ACTIVITY_WRITE_THROTTLE_SECONDS=300,

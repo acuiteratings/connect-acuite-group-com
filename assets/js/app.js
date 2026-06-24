@@ -1041,22 +1041,18 @@ function loadDataForTab(tabId, { render = true } = {}) {
 }
 
 function warmDataInBackground() {
+  if (document.hidden) {
+    return;
+  }
   const warmups = [
-    ["homeAnnouncements", loadHomeAnnouncementPosts],
-    ["opinionPoll", loadOpinionPoll],
     ["bulletin", loadBulletinPosts],
     ["ceoDesk", loadCeoDeskPosts],
-    ["myPosts", loadMyPosts],
-    ["store", loadStoreData],
-    ["learning", loadLearningData],
-    ["community", loadCommunityData],
-    ["directory", loadDirectoryData],
   ].filter(([key]) => !dataLoadComplete[key] && !tabDependsOnDataKey(state.activeTab, key));
 
   warmups.forEach(([key, loader], index) => {
     window.setTimeout(() => {
       void requestDataLoad(key, loader, { render: false });
-    }, 600 + index * 350);
+    }, 1500 + index * 1800);
   });
 }
 
