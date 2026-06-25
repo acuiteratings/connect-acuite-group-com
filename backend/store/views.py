@@ -162,8 +162,7 @@ def redemption_collection(request):
         return JsonResponse({"detail": "item_id is required."}, status=400)
 
     item = get_object_or_404(BrandStoreItem, pk=item_id, is_active=True)
-    active_redemptions = item.redemptions.filter(status__in=ACTIVE_REDEMPTION_STATUSES).count()
-    if active_redemptions >= item.stock_units:
+    if item.stock_units <= 0:
         return JsonResponse({"detail": "This item is currently out of stock."}, status=400)
 
     if requestable_points_for_user(request.user) < item.point_cost:

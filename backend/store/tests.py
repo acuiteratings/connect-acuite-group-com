@@ -250,6 +250,45 @@ class BrandStoreApiTests(TestCase):
             "Not enough Acuite Coins available for this request.",
         )
 
+    def test_positive_stock_allows_request_even_with_existing_open_requests(self):
+        limited_item = BrandStoreItem.objects.create(
+            name="Acuite Notebook",
+            category=BrandStoreItem.Category.DESK,
+            description="Branded notebook",
+            point_cost=10,
+            stock_units=1,
+            is_active=True,
+        )
+        BrandStoreRedemption.objects.create(
+            item=limited_item,
+            requester=self.admin,
+            status=BrandStoreRedemption.Status.APPROVED,
+            points_locked=limited_item.point_cost,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/store/redemptions/",
+            data=json.dumps({"item_id": limited_item.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_zero_stock_blocks_redemption_request(self):
+        self.item.stock_units = 0
+        self.item.save(update_fields=["stock_units", "updated_at"])
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            "/api/store/redemptions/",
+            data=json.dumps({"item_id": self.item.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "This item is currently out of stock.")
+
     def test_requester_can_cancel_requested_redemption(self):
         redemption = BrandStoreRedemption.objects.create(
             item=self.item,

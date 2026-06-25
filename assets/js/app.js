@@ -4066,7 +4066,7 @@ function renderStoreSummary() {
     return;
   }
   const items = getFilteredStoreItems();
-  const availableItems = appData.storeItems.filter((item) => item.available_units > 0).length;
+  const stockedItems = appData.storeItems.filter((item) => Number(item.stock_units || 0) > 0).length;
 
   container.innerHTML = [
     {
@@ -4080,9 +4080,9 @@ function renderStoreSummary() {
       copy: "Admin-managed branded merchandise, memorabilia and desk items.",
     },
     {
-      kicker: "Availability",
-      title: `${availableItems} ready now`,
-      copy: "Items with at least one available unit for redemption.",
+      kicker: "Stocked",
+      title: `${stockedItems} in stock`,
+      copy: "Items that currently have stock recorded in the live catalog.",
     },
     {
       kicker: "My requests",
@@ -4218,6 +4218,7 @@ function renderStorePolicyCard() {
 function renderStoreItemCard(item) {
   const canAdminister = currentUserCanAdministerConnect();
   const accent = item.accent_hex || "#e8722a";
+  const stockUnits = Number(item.stock_units || 0);
   const activeRedemption = appData.storeRedemptions.find((redemption) => {
     return redemption.item.id === item.id
       && ["requested", "approved", "fulfilled"].includes(redemption.status);
@@ -4225,7 +4226,7 @@ function renderStoreItemCard(item) {
   const availablePoints = Number(appData.storeBalance.available_points || 0);
   const coinCost = Number(item.coin_cost || item.point_cost || 0);
   const missingPoints = Math.max(coinCost - availablePoints, 0);
-  const outOfStock = item.available_units <= 0;
+  const outOfStock = stockUnits <= 0;
   const canRedeem = !activeRedemption && !outOfStock && availablePoints >= coinCost;
   let actionLabel = "Buy with Acuite Coins";
 
@@ -4246,7 +4247,7 @@ function renderStoreItemCard(item) {
         <div class="tool-card-head store-item-head">
           <div>
             <h3>${escapeHtml(item.name)}</h3>
-            <span class="tool-status ${item.available_units > 0 ? "live" : "planned"}">${escapeHtml(item.category_label)}</span>
+            <span class="tool-status ${stockUnits > 0 ? "live" : "planned"}">${escapeHtml(item.category_label)}</span>
           </div>
           <div class="store-item-head-actions">
             <div class="store-item-cost">${escapeHtml(String(coinCost))} coins</div>
