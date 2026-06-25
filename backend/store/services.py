@@ -840,11 +840,12 @@ def build_store_overview(user):
     }
     store_priority = {
         "Acuite Coffee Mug": 0,
-        "Acuite T Shirt": 1,
-        "Acuite Cricket Bat": 2,
-        "Acuite Laptop Bag": 3,
-        "Acuite Necktie": 4,
-        "Acuite Pen": 5,
+        "Vacuum Insulated Coffeemate Stainless Steel Travel Mug": 1,
+        "Acuite T Shirt": 2,
+        "Acuite Cricket Bat": 3,
+        "Acuite Laptop Bag": 4,
+        "Acuite Necktie": 5,
+        "Acuite Pen": 6,
     }
     items = [
         serialize_store_item(item, active_redemptions=active_counts.get(item.id, 0))
