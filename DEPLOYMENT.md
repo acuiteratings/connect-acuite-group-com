@@ -40,6 +40,14 @@ cd backend && python manage.py migrate
 cd backend && python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --workers ${WEB_CONCURRENCY:-1} --max-requests ${GUNICORN_MAX_REQUESTS:-800} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-80} --timeout ${GUNICORN_TIMEOUT:-60}
 ```
 
+The web service pre-deploy step should stay lightweight:
+
+```bash
+cd backend && python manage.py migrate && python manage.py sync_announcement_notifications --days 3 && python manage.py register_build_deploy
+```
+
+Do not run `python manage.py sync_people_directory --full` in the web service pre-deploy hook. Full People sync remains on its dedicated Render cron so app deployments are not blocked by upstream API timeouts or large directory refreshes.
+
 The static asset service runs:
 
 ```bash
