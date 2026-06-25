@@ -54,7 +54,7 @@ class BrandStoreRedemption(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("item", "requester"),
-                condition=models.Q(status__in=("requested", "approved", "fulfilled")),
+                condition=models.Q(status__in=("requested", "approved")),
                 name="store_unique_open_redemption_per_item_requester",
             )
         ]

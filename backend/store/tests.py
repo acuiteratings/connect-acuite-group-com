@@ -167,6 +167,60 @@ class BrandStoreApiTests(TestCase):
         self.assertEqual(BrandStoreRedemption.objects.count(), 1)
         self.assertEqual(response.json()["redemption"]["item"]["name"], "Acuite Mug")
 
+    def test_fulfilled_redemption_does_not_reduce_current_available_stock(self):
+        BrandStoreRedemption.objects.create(
+            item=self.item,
+            requester=self.admin,
+            status=BrandStoreRedemption.Status.FULFILLED,
+            points_locked=self.item.point_cost,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get("/api/store/overview/")
+
+        self.assertEqual(response.status_code, 200)
+        item_payload = next(item for item in response.json()["items"] if item["id"] == self.item.id)
+        self.assertEqual(item_payload["stock_units"], 5)
+        self.assertEqual(item_payload["available_units"], 5)
+
+    def test_user_can_request_same_item_again_after_previous_request_was_fulfilled(self):
+        redemption = BrandStoreRedemption.objects.create(
+            item=self.item,
+            requester=self.user,
+            points_locked=self.item.point_cost,
+        )
+        self.client.force_login(self.admin)
+
+        approve_response = self.client.patch(
+            f"/api/store/redemptions/{redemption.id}/",
+            data=json.dumps({"status": "approved"}),
+            content_type="application/json",
+        )
+        self.assertEqual(approve_response.status_code, 200)
+
+        fulfill_response = self.client.patch(
+            f"/api/store/redemptions/{redemption.id}/",
+            data=json.dumps({"status": "fulfilled"}),
+            content_type="application/json",
+        )
+        self.assertEqual(fulfill_response.status_code, 200)
+
+        self.client.force_login(self.user)
+        repeat_response = self.client.post(
+            "/api/store/redemptions/",
+            data=json.dumps({"item_id": self.item.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(repeat_response.status_code, 201)
+        self.assertEqual(
+            BrandStoreRedemption.objects.filter(
+                item=self.item,
+                requester=self.user,
+            ).count(),
+            2,
+        )
+
     def test_pending_redemption_counts_against_new_request_eligibility(self):
         second_item = BrandStoreItem.objects.create(
             name="Acuite Pen",

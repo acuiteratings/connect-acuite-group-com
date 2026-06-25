@@ -15,7 +15,6 @@ from .serializers import serialize_redemption, serialize_store_item
 ACTIVE_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.REQUESTED,
     BrandStoreRedemption.Status.APPROVED,
-    BrandStoreRedemption.Status.FULFILLED,
 }
 LOCKED_REDEMPTION_STATUSES = {
     BrandStoreRedemption.Status.REQUESTED,
