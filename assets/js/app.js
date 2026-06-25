@@ -4266,9 +4266,6 @@ function renderStoreItemCard(item) {
         </div>
         <p>${escapeHtml(item.description || "Admin-managed branded merchandise available for Acuite Coin redemption inside Connect.")}</p>
         <div class="store-item-meta">
-          <span class="mini-chip ${item.available_units > 0 ? "success" : ""}">
-            ${escapeHtml(`${item.available_units} available`)}
-          </span>
           <span class="mini-item-meta">${escapeHtml(`${item.stock_units} total stock`)}</span>
         </div>
       </div>
