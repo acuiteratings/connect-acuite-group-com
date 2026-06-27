@@ -1074,6 +1074,28 @@ select {
   max-width: 760px;
 }
 
+.announcement-hero-image {
+  margin-top: 22px;
+  width: min(100%, 720px);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--announcement-surface-border);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 40px rgba(8, 15, 23, 0.22);
+}
+
+.announcement-hero-image.poster {
+  width: min(100%, 420px);
+}
+
+.announcement-hero-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .announcement-details {
   display: grid;
   gap: 8px;

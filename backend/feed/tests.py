@@ -235,7 +235,7 @@ class FeedApiTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Leadership announcement")
 
-    def test_people_culture_announcement_shows_yoga_feedback_until_june_28(self):
+    def test_people_culture_announcement_shows_yoga_feedback_until_june_26(self):
         Post.objects.create(
             author=self.admin_user,
             title="Wellness at Work: Healthy Habits for a Productive Day",
@@ -278,40 +278,40 @@ class FeedApiTests(TestCase):
             june_22_post["metadata"]["home_announcement_display"]["checklistItems"],
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 28)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 26)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_28_post = response.json()["results"][0]
-        self.assertEqual(june_28_post["title"], "International Yoga Day Celebration - Event Feedback")
+        june_26_post = response.json()["results"][0]
+        self.assertEqual(june_26_post["title"], "International Yoga Day Celebration - Event Feedback")
         self.assertEqual(
-            june_28_post["metadata"]["home_announcement_display"]["dateLabel"],
+            june_26_post["metadata"]["home_announcement_display"]["dateLabel"],
             "",
         )
         self.assertEqual(
-            june_28_post["metadata"]["home_announcement_display"]["hostLabel"],
+            june_26_post["metadata"]["home_announcement_display"]["hostLabel"],
             "HR Team",
         )
         self.assertEqual(
-            june_28_post["metadata"]["home_announcement_display"]["venueLabel"],
+            june_26_post["metadata"]["home_announcement_display"]["venueLabel"],
             "Nahur Mumbai, online for other locations",
         )
         self.assertEqual(
-            june_28_post["metadata"]["home_announcement_display"]["countdownLabel"],
+            june_26_post["metadata"]["home_announcement_display"]["countdownLabel"],
             "Through MS Forms to be submitted by 26 June 2026",
         )
         self.assertEqual(
-            june_28_post["metadata"]["home_announcement_display"]["timeLabel"],
+            june_26_post["metadata"]["home_announcement_display"]["timeLabel"],
             "Feedback open through 26 June 2026",
         )
 
-        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 29)):
+        with patch("feed.serializers.timezone.localdate", return_value=date(2026, 6, 27)):
             response = self.client.get("/api/feed/posts/?module=bulletin&home_announcements=1")
 
         self.assertEqual(response.status_code, 200)
-        june_29_post = response.json()["results"][0]
-        self.assertEqual(june_29_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
-        self.assertEqual(june_29_post["body"], "Wellness content")
+        june_27_post = response.json()["results"][0]
+        self.assertEqual(june_27_post["title"], "Wellness at Work: Healthy Habits for a Productive Day")
+        self.assertEqual(june_27_post["body"], "Wellness content")
 
     def test_feed_can_exclude_ceo_and_home_announcements_from_bulletin_board(self):
         Post.objects.create(

@@ -3570,6 +3570,13 @@ function renderHomeAnnouncement() {
       <h1 class="announcement-title">${escapeHtml(announcement.title)}</h1>
       <p class="announcement-summary">${escapeHtml(announcement.summary)}</p>
       ${
+        announcement.imageUrl
+          ? `<div class="announcement-hero-image ${announcement.imageStyle === "poster" ? "poster" : ""}">
+              <img src="${escapeHtml(announcement.imageUrl)}" alt="${escapeHtml(announcement.imageAlt || announcement.title)}" loading="lazy">
+            </div>`
+          : ""
+      }
+      ${
         (announcement.details || []).length
           ? renderAnnouncementDetails(announcement)
           : ""
@@ -5558,6 +5565,7 @@ function mapBulletinPost(post) {
     ctaTarget: String(metadata.bulletin_cta_target || "").trim(),
     eventDate: String(metadata.event_date || metadata.eventDate || "").trim(),
     imageDataUrl: String(metadata.bulletin_image_data_url || "").trim(),
+    imageUrl: String(metadata.bulletin_image_url || "").trim(),
     imageAlt: String(metadata.bulletin_image_alt || post.title || "Bulletin image").trim(),
     homeAnnouncementTag: String(metadata.home_announcement_tag || "").trim(),
     homeAnnouncementType: String(metadata.home_announcement_type || "").trim(),
@@ -5718,6 +5726,9 @@ function mapHomeAnnouncementPost(post) {
       : [],
     ctaLabel: String(display.ctaLabel || post.ctaLabel || "").trim(),
     ctaTarget: String(display.ctaTarget || post.ctaTarget || "").trim(),
+    imageUrl: String(display.imageUrl || post.imageUrl || "").trim(),
+    imageAlt: String(display.imageAlt || post.imageAlt || post.title || "Announcement image").trim(),
+    imageStyle: String(display.imageStyle || "").trim(),
     baseMetrics: {
       likes: Number(post.reactionCount || 0),
     },
@@ -7883,9 +7894,9 @@ function renderBulletinPostCard(post) {
       </div>
       ${post.bulletinCard ? renderNativeCelebrationCard(post.bulletinCard) : ""}
       ${
-        !post.bulletinCard && post.imageDataUrl
+        !post.bulletinCard && (post.imageDataUrl || post.imageUrl)
           ? `<div class="bulletin-card-image">
-              <img src="${escapeHtml(post.imageDataUrl)}" alt="${escapeHtml(post.imageAlt)}" loading="lazy">
+              <img src="${escapeHtml(post.imageDataUrl || post.imageUrl)}" alt="${escapeHtml(post.imageAlt)}" loading="lazy">
             </div>`
           : ""
       }

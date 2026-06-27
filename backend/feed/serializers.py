@@ -8,7 +8,7 @@ from .models import Comment, PostReaction
 
 
 PEOPLE_CULTURE_ADVISORY_START_DATE = date(2026, 6, 22)
-PEOPLE_CULTURE_ADVISORY_REVERT_DATE = date(2026, 6, 29)
+PEOPLE_CULTURE_ADVISORY_REVERT_DATE = date(2026, 6, 27)
 PEOPLE_CULTURE_ADVISORY_TITLE = "International Yoga Day Celebration - Event Feedback"
 PEOPLE_CULTURE_ADVISORY_LINK = (
     "https://forms.cloud.microsoft/Pages/DesignPageV2.aspx?subpage=design&token="
