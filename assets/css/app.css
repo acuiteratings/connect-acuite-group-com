@@ -1087,13 +1087,20 @@ select {
 }
 
 .announcement-hero-image.poster {
-  width: min(100%, 420px);
+  width: min(100%, 560px);
+  max-height: 520px;
 }
 
 .announcement-hero-image img {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.announcement-hero-image.poster img {
+  height: 520px;
+  object-fit: cover;
+  object-position: center 55%;
 }
 
 .announcement-details {
