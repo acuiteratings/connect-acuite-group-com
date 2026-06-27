@@ -3511,7 +3511,11 @@ function renderHomeAnnouncement() {
   if (!container) {
     return;
   }
-  container.classList.remove("announcement-layout-story-winners", "announcement-layout-advisory");
+  container.classList.remove(
+    "announcement-layout-story-winners",
+    "announcement-layout-advisory",
+    "announcement-layout-pose-winners",
+  );
 
   if (state.homeAnnouncementFilter === "opinion_poll" && appData.activeOpinionPoll) {
     applyAnnouncementTheme(
@@ -3556,6 +3560,7 @@ function renderHomeAnnouncement() {
   const likeTarget = announcement.isLive ? announcement.sourceId : announcement.id;
   container.classList.toggle("announcement-layout-story-winners", announcement.layoutVariant === "story_winners");
   container.classList.toggle("announcement-layout-advisory", announcement.layoutVariant === "advisory_checklist");
+  container.classList.toggle("announcement-layout-pose-winners", announcement.layoutVariant === "pose_winners");
   container.innerHTML = `
     <div class="announcement-main">
       <div class="announcement-topline">
@@ -3638,6 +3643,37 @@ function renderHomeAnnouncement() {
 }
 
 function renderAnnouncementDetails(announcement) {
+  if (announcement.layoutVariant === "pose_winners" && Array.isArray(announcement.winners) && announcement.winners.length) {
+    return `
+      <div class="announcement-details announcement-details-pose-winners">
+        ${(announcement.details || []).length
+          ? `<div class="announcement-pose-intro">
+              ${(announcement.details || []).map((detail) => `<p>${escapeHtml(detail)}</p>`).join("")}
+            </div>`
+          : ""
+        }
+        <div class="announcement-pose-grid">
+          ${announcement.winners.map((winner, index) => `
+            <article class="announcement-pose-card rank-${index + 1}">
+              <div class="announcement-pose-rank rank-${index + 1}">${escapeHtml(winner.place || "")}</div>
+              <div
+                class="announcement-pose-photo"
+                style="background-image:url('${escapeHtml(winner.imageUrl || "")}'); background-position:${escapeHtml(winner.imagePosition || "center center")}; background-size:${escapeHtml(winner.imageSize || "cover")};"
+                role="img"
+                aria-label="${escapeHtml(`${winner.name || "Winner"} yoga pose`)}"
+              ></div>
+              <div class="announcement-pose-copy">
+                <h3>${escapeHtml(winner.name || "")}</h3>
+                <p>Winning pose</p>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+        ${announcement.closingNote ? `<p class="announcement-story-closing">${escapeHtml(announcement.closingNote)}</p>` : ""}
+      </div>
+    `;
+  }
+
   if (announcement.layoutVariant === "story_winners" && Array.isArray(announcement.winners) && announcement.winners.length) {
     return `
       <div class="announcement-details announcement-details-winners">
@@ -5716,7 +5752,12 @@ function mapHomeAnnouncementPost(post) {
           name: String(winner?.name || "").trim(),
           story: String(winner?.story || "").trim(),
           lesson: String(winner?.lesson || "").trim(),
-        })).filter((winner) => winner.place || winner.name || winner.story || winner.lesson)
+          imageUrl: String(winner?.imageUrl || "").trim(),
+          imagePosition: String(winner?.imagePosition || "").trim(),
+          imageSize: String(winner?.imageSize || "").trim(),
+        })).filter((winner) => (
+          winner.place || winner.name || winner.story || winner.lesson || winner.imageUrl
+        ))
       : [],
     checklistItems: Array.isArray(display.checklistItems)
       ? display.checklistItems.map((item) => String(item || "").trim()).filter(Boolean)
