@@ -5830,7 +5830,9 @@ function getPrimaryCeoDeskMessage() {
     };
   }
   return {
-    date: livePost.metaLines[0] || formatDisplayDate(livePost.createdAt) || DEFAULT_CEO_DESK_MESSAGE.date,
+    date: normalizeCeoDeskDisplayDate(
+      livePost.metaLines[0] || formatDisplayDate(livePost.createdAt) || DEFAULT_CEO_DESK_MESSAGE.date,
+    ),
     title: livePost.title || DEFAULT_CEO_DESK_MESSAGE.title,
     meta: "",
     body: Array.isArray(livePost.body) && livePost.body.length ? livePost.body : DEFAULT_CEO_DESK_MESSAGE.body,
@@ -5851,7 +5853,7 @@ function getCeoDeskArchiveItems() {
     return fallbackItems.slice(0, CEO_DESK_ARCHIVE_LIMIT);
   }
   const liveArchiveItems = livePosts.slice(1, CEO_DESK_ARCHIVE_LIMIT + 1).map((post) => ({
-    datePosted: post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt),
+    datePosted: normalizeCeoDeskDisplayDate(post.metaLines[0] || formatCeoDeskPostedDate(post.createdAt)),
     headline: post.title || "MD & CEO message",
     subjectLine: post.ceoDeskSubjectLine || "",
     body: Array.isArray(post.body) && post.body.length ? post.body : ["Archived message details are not available in this build."],
@@ -5890,7 +5892,7 @@ function getSelectedCeoDeskArchiveMessage() {
     return null;
   }
   return {
-    date: archiveItem.datePosted || "",
+    date: normalizeCeoDeskDisplayDate(archiveItem.datePosted || ""),
     title: archiveItem.headline || "MD & CEO message",
     meta: "",
     body: Array.isArray(archiveItem.body) && archiveItem.body.length ? archiveItem.body : DEFAULT_CEO_DESK_MESSAGE.body,
@@ -7367,13 +7369,47 @@ function formatCeoDeskPostedDate(value) {
   }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    return String(value);
+    return normalizeCeoDeskDisplayDate(value);
   }
-  return parsed.toLocaleDateString("en-IN", {
+  return parsed.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+}
+
+function normalizeCeoDeskDisplayDate(value) {
+  if (!value) {
+    return "";
+  }
+  const raw = String(value).trim();
+  if (!raw) {
+    return "";
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  const monthNameDateMatch = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (monthNameDateMatch) {
+    const [, day, monthName, year] = monthNameDateMatch;
+    const reparsed = new Date(`${monthName} ${day}, ${year}`);
+    if (!Number.isNaN(reparsed.getTime())) {
+      return reparsed.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    }
+  }
+
+  return raw;
 }
 
 function formatMonthDay(value) {
