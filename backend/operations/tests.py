@@ -292,6 +292,13 @@ class OperationsApiTests(TestCase):
             moderation_status=Post.ModerationStatus.PUBLISHED,
             published_at=timezone.now(),
         )
+        commented_post_two = Post.objects.create(
+            author=self.staff,
+            title="Second commented post",
+            body="Another published post",
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+            published_at=timezone.now(),
+        )
         PostReaction.objects.create(post=liked_post_one, user=self.employee)
         PostReaction.objects.create(post=liked_post_two, user=self.employee)
         Comment.objects.create(
@@ -300,11 +307,27 @@ class OperationsApiTests(TestCase):
             body="Thoughtful comment",
             moderation_status=Comment.ModerationStatus.PUBLISHED,
         )
-        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="login_completed")
-        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="employee_sso_login_completed")
-        AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="password_changed_during_login")
+        Comment.objects.create(
+            post=liked_post_one,
+            author=self.employee,
+            body="A second comment on the same post",
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        Comment.objects.create(
+            post=commented_post_two,
+            author=self.employee,
+            body="A comment on a different post",
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        login_one = AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="login_completed")
+        login_two = AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="employee_sso_login_completed")
+        login_three = AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="password_changed_during_login")
         AnalyticsEvent.objects.create(actor=self.employee, category="auth", event_name="logout_completed")
-        AnalyticsEvent.objects.create(actor=quiet_user, category="auth", event_name="login_completed")
+        quiet_login = AnalyticsEvent.objects.create(actor=quiet_user, category="auth", event_name="login_completed")
+        AnalyticsEvent.objects.filter(pk=login_one.pk).update(occurred_at=timezone.now() - timedelta(days=2))
+        AnalyticsEvent.objects.filter(pk=login_two.pk).update(occurred_at=timezone.now() - timedelta(days=2))
+        AnalyticsEvent.objects.filter(pk=login_three.pk).update(occurred_at=timezone.now() - timedelta(days=1))
+        AnalyticsEvent.objects.filter(pk=quiet_login.pk).update(occurred_at=timezone.now())
 
         self.client.force_login(self.admin)
 
@@ -318,8 +341,8 @@ class OperationsApiTests(TestCase):
 
         self.assertEqual(employee_row["employee_code"], "EMP001")
         self.assertEqual(employee_row["likes_given"], 2)
-        self.assertEqual(employee_row["comments_given"], 1)
-        self.assertEqual(employee_row["logins_done"], 3)
+        self.assertEqual(employee_row["comments_given"], 2)
+        self.assertEqual(employee_row["logins_done"], 2)
         self.assertEqual(employee_row["messages_posted"], 2)
         self.assertEqual(employee_row["engagement_score"], 10.0)
         self.assertEqual(quiet_row["employee_code"], "EMP002")

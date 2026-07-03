@@ -558,6 +558,56 @@ class BrandStoreApiTests(TestCase):
         )
         self.assertEqual(earned_after_like - earned_after_unlike, 100)
 
+    def test_second_comment_on_same_post_does_not_award_extra_comment_coins(self):
+        initial_comment_earn_count = CoinLedgerEntry.objects.filter(
+            user=self.user,
+            event_key="published_comment",
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            metadata__post_id=self.post.id,
+        ).count()
+
+        Comment.objects.create(
+            post=self.post,
+            author=self.user,
+            body="Another comment on the same post.",
+        )
+
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                event_key="published_comment",
+                entry_type=CoinLedgerEntry.EntryType.EARN,
+                metadata__post_id=self.post.id,
+            ).count(),
+            initial_comment_earn_count,
+        )
+
+    def test_removing_one_of_multiple_comments_on_same_post_does_not_reverse_comment_coins(self):
+        extra_comment = Comment.objects.create(
+            post=self.post,
+            author=self.user,
+            body="Another comment on the same post.",
+        )
+
+        before_reversal_count = CoinLedgerEntry.objects.filter(
+            user=self.user,
+            event_key="published_comment",
+            entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            metadata__post_id=self.post.id,
+        ).count()
+
+        extra_comment.delete()
+
+        self.assertEqual(
+            CoinLedgerEntry.objects.filter(
+                user=self.user,
+                event_key="published_comment",
+                entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL,
+                metadata__post_id=self.post.id,
+            ).count(),
+            before_reversal_count,
+        )
+
     def test_redemption_creates_hold_then_release_and_spend_entries(self):
         redemption = BrandStoreRedemption.objects.create(
             item=self.item,

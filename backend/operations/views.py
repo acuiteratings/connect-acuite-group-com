@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -438,7 +438,7 @@ def engagement_score_overview(request):
             reaction_type=PostReaction.ReactionType.LIKE,
         )
         .values("user_id")
-        .annotate(total=Count("id"))
+        .annotate(total=Count("post_id", distinct=True))
         .values("total")[:1]
     )
     comments_given_subquery = (
@@ -447,7 +447,7 @@ def engagement_score_overview(request):
             moderation_status=Comment.ModerationStatus.PUBLISHED,
         )
         .values("author_id")
-        .annotate(total=Count("id"))
+        .annotate(total=Count("post_id", distinct=True))
         .values("total")[:1]
     )
     logins_done_subquery = (
@@ -456,8 +456,9 @@ def engagement_score_overview(request):
             category="auth",
             event_name__in=login_event_names,
         )
+        .annotate(login_day=TruncDate("occurred_at", tzinfo=timezone.get_current_timezone()))
         .values("actor_id")
-        .annotate(total=Count("id"))
+        .annotate(total=Count("login_day", distinct=True))
         .values("total")[:1]
     )
     messages_posted_subquery = (

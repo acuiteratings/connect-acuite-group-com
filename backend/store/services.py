@@ -345,6 +345,24 @@ def _reward_cycle_counts(source_type, source_id, event_key):
     )
 
 
+def _post_scoped_reward_counts(user, post_id, event_key):
+    counts = Counter(
+        CoinLedgerEntry.objects.filter(
+            user=user,
+            event_key=event_key,
+            metadata__post_id=post_id,
+            entry_type__in=(
+                CoinLedgerEntry.EntryType.EARN,
+                CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            ),
+        ).values_list("entry_type", flat=True)
+    )
+    return (
+        counts[CoinLedgerEntry.EntryType.EARN],
+        counts[CoinLedgerEntry.EntryType.EARN_REVERSAL],
+    )
+
+
 def _ensure_reward_entry(
     *,
     qualifies,
@@ -448,29 +466,57 @@ def reverse_coin_ledger_for_reaction(reaction):
 
 
 def sync_coin_ledger_for_comment(comment):
-    return _ensure_reward_entry(
-        qualifies=comment.moderation_status == Comment.ModerationStatus.PUBLISHED,
+    qualifies = Comment.objects.filter(
+        author=comment.author,
+        post_id=comment.post_id,
+        moderation_status=Comment.ModerationStatus.PUBLISHED,
+    ).exists()
+    earn_count, reversal_count = _post_scoped_reward_counts(
+        comment.author,
+        comment.post_id,
+        "published_comment",
+    )
+    if qualifies:
+        if earn_count > reversal_count:
+            return None, False
+        return _ensure_ledger_entry(
+            user=comment.author,
+            entry_type=CoinLedgerEntry.EntryType.EARN,
+            event_key="published_comment",
+            amount=COIN_RULES["published_comment"]["coins"],
+            reference_key=_reward_cycle_reference(
+                "comment_post",
+                f"{comment.author_id}:{comment.post_id}",
+                "published_comment",
+                CoinLedgerEntry.EntryType.EARN,
+                earn_count + 1,
+            ),
+            occurred_at=comment.created_at,
+            summary=f"Commented on '{comment.post.title}'",
+            metadata={"post_id": comment.post_id},
+        )
+    if earn_count <= reversal_count:
+        return None, False
+    return _ensure_ledger_entry(
         user=comment.author,
-        source_type="comment",
-        source_id=comment.id,
+        entry_type=CoinLedgerEntry.EntryType.EARN_REVERSAL,
         event_key="published_comment",
-        occurred_at=comment.created_at,
-        summary=f"Commented on '{comment.post.title}'",
+        amount=COIN_RULES["published_comment"]["coins"],
+        reference_key=_reward_cycle_reference(
+            "comment_post",
+            f"{comment.author_id}:{comment.post_id}",
+            "published_comment",
+            CoinLedgerEntry.EntryType.EARN_REVERSAL,
+            reversal_count + 1,
+        ),
+        occurred_at=timezone.now(),
+        summary=f"Reversed: Commented on '{comment.post.title}'",
         metadata={"post_id": comment.post_id},
     )
 
 
 def reverse_coin_ledger_for_comment(comment):
-    return _ensure_reward_entry(
-        qualifies=False,
-        user=comment.author,
-        source_type="comment",
-        source_id=comment.id,
-        event_key="published_comment",
-        occurred_at=timezone.now(),
-        summary=f"Commented on '{comment.post.title}'",
-        metadata={"post_id": comment.post_id},
-    )
+    return sync_coin_ledger_for_comment(comment)
 
 
 def _post_reward_key(post):
