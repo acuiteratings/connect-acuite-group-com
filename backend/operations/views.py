@@ -4,7 +4,8 @@ import json
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count, Q
+from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -431,34 +432,64 @@ def engagement_score_overview(request):
         "employee_sso_login_completed",
         "password_changed_during_login",
     ]
+    likes_given_subquery = (
+        PostReaction.objects.filter(
+            user_id=OuterRef("pk"),
+            reaction_type=PostReaction.ReactionType.LIKE,
+        )
+        .values("user_id")
+        .annotate(total=Count("id"))
+        .values("total")[:1]
+    )
+    comments_given_subquery = (
+        Comment.objects.filter(
+            author_id=OuterRef("pk"),
+            moderation_status=Comment.ModerationStatus.PUBLISHED,
+        )
+        .values("author_id")
+        .annotate(total=Count("id"))
+        .values("total")[:1]
+    )
+    logins_done_subquery = (
+        AnalyticsEvent.objects.filter(
+            actor_id=OuterRef("pk"),
+            category="auth",
+            event_name__in=login_event_names,
+        )
+        .values("actor_id")
+        .annotate(total=Count("id"))
+        .values("total")[:1]
+    )
+    messages_posted_subquery = (
+        Post.objects.filter(
+            author_id=OuterRef("pk"),
+            moderation_status=Post.ModerationStatus.PUBLISHED,
+        )
+        .values("author_id")
+        .annotate(total=Count("id"))
+        .values("total")[:1]
+    )
     users = list(
         User.objects.filter(
             is_active=True,
             employment_status=User.EmploymentStatus.ACTIVE,
         )
         .annotate(
-            likes_given=Count(
-                "post_reactions",
-                filter=Q(post_reactions__reaction_type=PostReaction.ReactionType.LIKE),
-                distinct=True,
+            likes_given=Coalesce(
+                Subquery(likes_given_subquery, output_field=IntegerField()),
+                Value(0),
             ),
-            comments_given=Count(
-                "comments",
-                filter=Q(comments__moderation_status=Comment.ModerationStatus.PUBLISHED),
-                distinct=True,
+            comments_given=Coalesce(
+                Subquery(comments_given_subquery, output_field=IntegerField()),
+                Value(0),
             ),
-            logins_done=Count(
-                "analytics_events",
-                filter=Q(
-                    analytics_events__category="auth",
-                    analytics_events__event_name__in=login_event_names,
-                ),
-                distinct=True,
+            logins_done=Coalesce(
+                Subquery(logins_done_subquery, output_field=IntegerField()),
+                Value(0),
             ),
-            messages_posted=Count(
-                "posts",
-                filter=Q(posts__moderation_status=Post.ModerationStatus.PUBLISHED),
-                distinct=True,
+            messages_posted=Coalesce(
+                Subquery(messages_posted_subquery, output_field=IntegerField()),
+                Value(0),
             ),
         )
         .order_by("display_name", "first_name", "last_name", "email")
