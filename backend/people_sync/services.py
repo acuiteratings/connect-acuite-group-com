@@ -214,12 +214,10 @@ def _map_employment_status(value, *, active_flag=None):
     return User.EmploymentStatus.ACTIVE
 
 
-def _resolve_local_employment_status(existing_user, source_status):
+def _resolve_local_employment_status(_existing_user, source_status):
     if source_status in {User.EmploymentStatus.ALUMNI, User.EmploymentStatus.SUSPENDED}:
         return source_status
     if source_status == User.EmploymentStatus.PENDING:
-        return User.EmploymentStatus.PENDING
-    if existing_user and existing_user.employment_status == User.EmploymentStatus.PENDING:
         return User.EmploymentStatus.PENDING
     return User.EmploymentStatus.ACTIVE
 
@@ -242,11 +240,7 @@ def _find_user_for_sync(employee_id, email):
 
 def _apply_user_fields(user, item, *, source_status, is_new):
     display_name, first_name, last_name = _split_name_parts(item)
-    resolved_status = (
-        User.EmploymentStatus.PENDING
-        if is_new and source_status == User.EmploymentStatus.ACTIVE
-        else _resolve_local_employment_status(None if is_new else user, source_status)
-    )
+    resolved_status = _resolve_local_employment_status(None if is_new else user, source_status)
     source_visible = _directory_visibility_for_source(
         source_status,
         item.get("is_directory_visible"),

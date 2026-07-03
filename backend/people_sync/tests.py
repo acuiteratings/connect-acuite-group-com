@@ -11,7 +11,7 @@ from .services import run_people_sync
 
 
 class PeopleSyncServiceTests(TestCase):
-    def test_incremental_sync_creates_pending_user_and_directory_profile(self):
+    def test_incremental_sync_creates_active_user_and_directory_profile(self):
         def fake_fetch_page(*, updated_since=None, cursor=None):
             self.assertIsNone(updated_since)
             self.assertIsNone(cursor)
@@ -51,7 +51,7 @@ class PeopleSyncServiceTests(TestCase):
         self.assertEqual(run.records_created, 1)
         user = User.objects.get(email="nidhi.shree@acuite.in")
         self.assertEqual(user.employee_code, "ARR-00421")
-        self.assertEqual(user.employment_status, User.EmploymentStatus.PENDING)
+        self.assertEqual(user.employment_status, User.EmploymentStatus.ACTIVE)
         self.assertFalse(user.can_post_in_connect)
         self.assertTrue(user.is_directory_visible)
         profile = user.directory_profile
@@ -60,6 +60,48 @@ class PeopleSyncServiceTests(TestCase):
         self.assertEqual(profile.department_for_connect, "Business Development")
         self.assertEqual(profile.attendance_recording_method, "Field attendance")
         self.assertEqual(profile.city, "Mumbai")
+
+    def test_sync_activates_existing_pending_user_when_people_marks_active(self):
+        user = User.objects.create_user(
+            email="pankaj.bansal@acuite.in",
+            employee_code="ARR-00999",
+            first_name="Pankaj",
+            last_name="Bansal",
+            display_name="Pankaj Bansal",
+            employment_status=User.EmploymentStatus.PENDING,
+            can_post_in_connect=False,
+            is_active=True,
+            must_change_password=False,
+        )
+
+        def fake_fetch_page(*, updated_since=None, cursor=None):
+            return {
+                "generated_at": "2026-04-04T12:00:00Z",
+                "next_cursor": None,
+                "employees": [
+                    {
+                        "employee_id": "ARR-00999",
+                        "email": "pankaj.bansal@acuite.in",
+                        "full_name": "Pankaj Bansal",
+                        "title": "Managing Director & CEO",
+                        "department": "Corporate",
+                        "company_name": "Acuite",
+                        "office_location": "Mumbai",
+                        "city": "Mumbai",
+                        "employment_status": "active",
+                        "is_directory_visible": True,
+                        "source_updated_at": "2026-04-04T11:58:23Z",
+                    }
+                ],
+            }
+
+        run_people_sync(fetch_page=fake_fetch_page)
+
+        user.refresh_from_db()
+        self.assertEqual(user.employment_status, User.EmploymentStatus.ACTIVE)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.can_post_in_connect)
+        self.assertTrue(user.is_directory_visible)
 
     def test_sync_updates_existing_user_and_links_manager(self):
         manager = User.objects.create_user(
