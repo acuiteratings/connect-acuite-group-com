@@ -933,6 +933,22 @@ function consumeBootSession() {
   }
 }
 
+function applyLandingOverrideFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    const landing = String(url.searchParams.get("landing") || "").trim().toLowerCase();
+    if (landing !== "home") {
+      return;
+    }
+    state.activeTab = "home";
+    saveState();
+    url.searchParams.delete("landing");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch (error) {
+    return;
+  }
+}
+
 function safeRender(label, renderFn) {
   try {
     renderFn();
@@ -1159,6 +1175,7 @@ async function init() {
     profileClubs: document.getElementById("profile-clubs"),
     profilePitches: document.getElementById("profile-pitches"),
   };
+  applyLandingOverrideFromUrl();
   bindEvents();
   renderShell();
   if (bootUser) {

@@ -28,7 +28,7 @@ def home(request):
 def login_page(request):
     if request.user.is_authenticated:
         if getattr(request.user, "has_employee_access", False):
-            return redirect("/admin-console.html" if getattr(request.user, "can_administer_connect", False) else "/")
+            return redirect("/?landing=home")
         return redirect("/access-denied.html")
     return render(
         request,

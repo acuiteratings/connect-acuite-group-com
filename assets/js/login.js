@@ -4,10 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function getPostLoginTarget(user) {
   const params = new URLSearchParams(window.location.search);
-  const fallbackPath =
-    user && user.access_rights && user.access_rights.can_administer
-      ? "/admin-console.html"
-      : "/";
+  const fallbackPath = "/?landing=home";
   const next = params.get("next") || fallbackPath;
 
   try {
