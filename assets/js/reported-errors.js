@@ -158,7 +158,7 @@
   function renderReportItem(item) {
     const reporter = item.reporter || item.reporter_email || "Unknown reporter";
     const sourceLabel = item.metadata?.source_label || item.source_tab || "Unknown page";
-    const submittedAt = formatRelativeTime(item.created_at);
+    const submittedAt = formatReportedErrorDate(item.created_at);
     const resolvedAt = item.resolved_at ? formatRelativeTime(item.resolved_at) : "";
     const outcomeLabel = item.resolution_outcome_label || (item.resolution_outcome === "not_an_error" ? "Not an error" : "Resolved");
     const actionMarkup = item.is_resolved
@@ -185,7 +185,7 @@
               <span>${escapeHtml(reporter)}</span>
               <span>${escapeHtml(sourceLabel)}</span>
               ${item.page_path ? `<span>${escapeHtml(item.page_path)}</span>` : ""}
-              ${submittedAt ? `<span>${escapeHtml(submittedAt)}</span>` : ""}
+              ${submittedAt ? `<span>Reported on ${escapeHtml(submittedAt)}</span>` : ""}
             </div>
           </div>
           ${actionMarkup}
@@ -380,6 +380,24 @@
       day: "numeric",
       month: "short",
       year: "numeric",
+    });
+  }
+
+  function formatReportedErrorDate(value) {
+    if (!value) {
+      return "";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value);
+    }
+    return parsed.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   }
 
