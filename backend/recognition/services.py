@@ -154,7 +154,7 @@ def build_birthdays(limit=5):
     ]
 
 
-def build_anniversaries(limit=5):
+def build_anniversaries(limit=10):
     today = timezone.localdate()
     items = []
     for profile in _active_profiles_queryset().exclude(joined_on__isnull=True):
