@@ -6666,7 +6666,7 @@ function renderDirectory() {
     elements.directorySearchInput.value = state.directoryQuery;
   }
 
-  const query = state.directoryQuery.trim().toLowerCase();
+  const query = state.directoryQuery.trim();
   const selectedCompanies = state.directoryFilters.company || [];
   const selectedLocations = state.directoryFilters.location || [];
   const selectedDepartments = state.directoryFilters.department || [];
@@ -6680,10 +6680,7 @@ function renderDirectory() {
     if (selectedDepartments.length && !selectedDepartments.includes(person.departmentForConnect)) {
       return false;
     }
-    if (!query) {
-      return true;
-    }
-    return person.searchText.includes(query);
+    return matchesTokenizedQuery(query, person.searchText);
   });
 
   if (directoryLoadError) {
@@ -7685,6 +7682,27 @@ function formatRelativeTime(value) {
   }
 
   return formatDisplayDate(value);
+}
+
+function tokenizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function matchesTokenizedQuery(query, searchText) {
+  const queryTokens = tokenizeSearchText(query);
+  if (!queryTokens.length) {
+    return true;
+  }
+  const haystackTokens = tokenizeSearchText(searchText);
+  if (!haystackTokens.length) {
+    return false;
+  }
+  return queryTokens.every((token) => haystackTokens.some((haystackToken) => haystackToken.includes(token)));
 }
 
 function directoryCardDetail(label, value) {

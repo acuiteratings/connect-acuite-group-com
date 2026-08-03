@@ -225,6 +225,10 @@
   }
 
   function handleDocumentInput(event) {
+    if (event.target === elements.welcomeEmployeeInput) {
+      syncWelcomeEmployeeSelection();
+      return;
+    }
     if (event.target === elements.newParentEmployeeInput) {
       syncNewParentSelection();
     }
@@ -242,20 +246,22 @@
     if (!elements.welcomeEmployeeOptions) {
       return;
     }
-    elements.welcomeEmployeeOptions.innerHTML = state.directoryEmployees.map((person) => {
-      const optionLabel = buildWelcomeEmployeeOptionLabel(person);
-      return `<option value="${escapeHtml(optionLabel)}"></option>`;
-    }).join("");
+    elements.welcomeEmployeeOptions.innerHTML = state.directoryEmployees.flatMap((person) => (
+      buildWelcomeEmployeeOptionLabels(person).map((optionLabel) => (
+        `<option value="${escapeHtml(optionLabel)}"></option>`
+      ))
+    )).join("");
   }
 
   function renderNewParentEmployeeOptions() {
     if (!elements.newParentEmployeeOptions) {
       return;
     }
-    elements.newParentEmployeeOptions.innerHTML = state.directoryEmployees.map((person) => {
-      const optionLabel = buildWelcomeEmployeeOptionLabel(person);
-      return `<option value="${escapeHtml(optionLabel)}"></option>`;
-    }).join("");
+    elements.newParentEmployeeOptions.innerHTML = state.directoryEmployees.flatMap((person) => (
+      buildWelcomeEmployeeOptionLabels(person).map((optionLabel) => (
+        `<option value="${escapeHtml(optionLabel)}"></option>`
+      ))
+    )).join("");
   }
 
   function buildWelcomeEmployeeOptionLabel(person) {
@@ -267,12 +273,76 @@
     ].filter(Boolean).join(" | ");
   }
 
+  function buildWelcomeEmployeeNameAliases(person) {
+    const parts = String(person?.name || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 3) {
+      return [];
+    }
+    return [
+      `${parts[0]} ${parts[parts.length - 1]}`,
+      `${parts[0]} ${parts.slice(1).join(" ")}`,
+    ].filter((value, index, list) => value && value !== person.name && list.indexOf(value) === index);
+  }
+
+  function buildWelcomeEmployeeOptionLabels(person) {
+    return [
+      buildWelcomeEmployeeOptionLabel(person),
+      ...buildWelcomeEmployeeNameAliases(person),
+    ].filter((value, index, list) => value && list.indexOf(value) === index);
+  }
+
+  function tokenizeSearchText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function matchesTokenizedQuery(query, searchText) {
+    const queryTokens = tokenizeSearchText(query);
+    if (!queryTokens.length) {
+      return true;
+    }
+    const haystackTokens = tokenizeSearchText(searchText);
+    if (!haystackTokens.length) {
+      return false;
+    }
+    return queryTokens.every((token) => haystackTokens.some((haystackToken) => haystackToken.includes(token)));
+  }
+
   function findWelcomeEmployeeByInputValue(value) {
     const needle = String(value || "").trim();
     if (!needle) {
       return null;
     }
-    return state.directoryEmployees.find((person) => buildWelcomeEmployeeOptionLabel(person) === needle) || null;
+    const exactMatch = state.directoryEmployees.find((person) => (
+      buildWelcomeEmployeeOptionLabels(person).includes(needle)
+    ));
+    if (exactMatch) {
+      return exactMatch;
+    }
+    const fuzzyMatches = state.directoryEmployees.filter((person) => (
+      matchesTokenizedQuery(
+        needle,
+        [
+          ...buildWelcomeEmployeeOptionLabels(person),
+          person.title,
+          person.department_for_connect,
+          person.department,
+          person.branch_location,
+          person.location,
+          person.city,
+          person.employee_code,
+          person.email,
+        ].filter(Boolean).join(" "),
+      )
+    ));
+    if (fuzzyMatches.length === 1) {
+      return fuzzyMatches[0];
+    }
+    return null;
   }
 
   function syncWelcomeEmployeeSelection() {
