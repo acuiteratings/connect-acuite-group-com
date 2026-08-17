@@ -46,21 +46,6 @@ async function initLoginPage() {
     });
   }
 
-  try {
-    const session = await auth.fetchCurrentSession({ forceRefresh: true });
-    if (session.authenticated && session.user) {
-      if (session.user.access_rights && session.user.access_rights.can_employee) {
-        window.location.replace(getPostLoginTarget(session.user));
-        return;
-      }
-      window.location.replace("/access-denied.html");
-      return;
-    }
-  } catch (error) {
-    showStatus("Could not verify the current session. You can still continue with Employee SSO.", "warning");
-    return;
-  }
-
   if (ssoEnabled) {
     showStatus("Use Employee SSO to sign in to Acuité Connect.", "info");
   } else {

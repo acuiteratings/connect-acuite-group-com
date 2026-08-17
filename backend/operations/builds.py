@@ -1,4 +1,5 @@
 import os
+import time
 
 from django.conf import settings
 from django.db import OperationalError, ProgrammingError, transaction
@@ -7,6 +8,9 @@ from .models import BuildState
 
 BUILD_PREFIX = "1.000000"
 BUILD_STATE_KEY = "primary"
+BUILD_STATE_CACHE_SECONDS = 60
+_build_state_cache = None
+_build_state_cached_at = 0.0
 
 
 def format_build_number(counter):
@@ -41,15 +45,27 @@ def get_current_build_number():
 
 
 def get_current_build_state():
+    global _build_state_cache
+    global _build_state_cached_at
+
+    now = time.monotonic()
+    if _build_state_cache is not None and (now - _build_state_cached_at) < BUILD_STATE_CACHE_SECONDS:
+        return _build_state_cache
     try:
-        return BuildState.objects.only("display_number", "commit_sha").filter(
+        state = BuildState.objects.only("display_number", "commit_sha").filter(
             singleton_key=BUILD_STATE_KEY
         ).first()
+        _build_state_cache = state
+        _build_state_cached_at = now
+        return state
     except (OperationalError, ProgrammingError):
-        return None
+        return _build_state_cache
 
 
 def register_build_deploy(commit_sha=""):
+    global _build_state_cache
+    global _build_state_cached_at
+
     seed_counter = get_seed_counter()
     with transaction.atomic():
         state, _created = BuildState.objects.select_for_update().get_or_create(
@@ -72,4 +88,6 @@ def register_build_deploy(commit_sha=""):
                 "updated_at",
             ]
         )
+    _build_state_cache = state
+    _build_state_cached_at = time.monotonic()
     return state
